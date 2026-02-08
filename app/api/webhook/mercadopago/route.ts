@@ -7,9 +7,12 @@ import { getMercadoPagoClient } from "@/lib/mercadopago/client";
 import { getResendClient } from "@/lib/email/resend";
 import { courseAccessTemplate, coursePurchaseTemplate } from "@/lib/email/templates";
 
-function verifySignature(request: Request, body: string): boolean {
+function verifySignature(request: Request): boolean {
   const secret = env.mercadoPagoWebhookSecret;
-  if (!secret) return false;
+  if (!secret) {
+    console.error("[mp/webhook] Missing MERCADOPAGO_WEBHOOK_SECRET");
+    return false;
+  }
 
   const xSignature = request.headers.get("x-signature");
   const xRequestId = request.headers.get("x-request-id");
@@ -19,7 +22,7 @@ function verifySignature(request: Request, body: string): boolean {
   const parts: Record<string, string> = {};
   for (const part of xSignature.split(",")) {
     const [key, value] = part.split("=", 2);
-    if (key && value) parts[key.trim()] = value.trim();
+    if (key && value) parts[key.trim()] = value.trim().replace(/^["']|["']$/g, "");
   }
 
   const ts = parts["ts"];
@@ -33,8 +36,8 @@ function verifySignature(request: Request, body: string): boolean {
   // Build manifest: id:[data_id];request-id:[x-request-id];ts:[ts];
   const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
   const hmac = crypto.createHmac("sha256", secret).update(manifest).digest("hex");
-
-  return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(v1));
+  if (hmac.length !== v1.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(hmac, "utf8"), Buffer.from(v1, "utf8"));
 }
 
 export async function POST(request: Request) {
@@ -48,7 +51,7 @@ export async function POST(request: Request) {
   }
 
   // Verify HMAC signature
-  if (!verifySignature(request, body)) {
+  if (!verifySignature(request)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -139,11 +142,11 @@ export async function POST(request: Request) {
         const resend = getResendClient();
         const purchaseEmail = coursePurchaseTemplate({
           courseTitle,
-          dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/cursos`,
+          dashboardUrl: `${env.appUrl}/dashboard/cursos`,
         });
         const accessEmail = courseAccessTemplate({
           courseTitle,
-          dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/cursos`,
+          dashboardUrl: `${env.appUrl}/dashboard/cursos`,
         });
 
         await resend.emails.send({

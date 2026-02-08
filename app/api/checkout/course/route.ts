@@ -13,8 +13,18 @@ function isFormRequest(request: Request) {
   return ct.includes("application/x-www-form-urlencoded") || ct.includes("multipart/form-data");
 }
 
+function hasValidOrigin(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+  return origin === request.nextUrl.origin;
+}
+
 export async function POST(request: NextRequest) {
   const baseUrl = request.nextUrl.origin;
+  if (!hasValidOrigin(request)) {
+    return jsonError("Invalid origin", 403);
+  }
+
   const context = await requireApiUser();
 
   if (!context) {
@@ -88,6 +98,7 @@ export async function POST(request: NextRequest) {
             title: course.title,
             quantity: 1,
             unit_price: localAmount,
+            currency_id: "CLP",
           },
         ],
         payer: {

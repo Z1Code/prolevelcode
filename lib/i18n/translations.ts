@@ -6,6 +6,8 @@ export const translations = {
       about: "Sobre mi",
       contact: "Contacto",
       login: "Login",
+      dashboard: "Dashboard",
+      logout: "Cerrar sesion",
       hire: "Contratar",
     },
     hero: {
@@ -32,6 +34,8 @@ export const translations = {
       about: "About me",
       contact: "Contact",
       login: "Login",
+      dashboard: "Dashboard",
+      logout: "Log out",
       hire: "Hire me",
     },
     hero: {

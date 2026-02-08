@@ -16,7 +16,24 @@ const navItems = [
   { href: "/contacto", key: "contact" as const },
 ];
 
-export function Navbar({ showServices = false }: { showServices?: boolean }) {
+type NavbarUser = {
+  email: string;
+  fullName?: string | null;
+};
+
+function getUserLabel(user: NavbarUser) {
+  const name = user.fullName?.trim();
+  if (name) return name.split(/\s+/)[0];
+  return user.email.split("@")[0] ?? user.email;
+}
+
+export function Navbar({
+  showServices = false,
+  currentUser,
+}: {
+  showServices?: boolean;
+  currentUser?: NavbarUser | null;
+}) {
   const pathname = usePathname();
   const { lang, t, toggle } = useTranslation();
   const [openForPath, setOpenForPath] = useState<string | null>(null);
@@ -67,7 +84,6 @@ export function Navbar({ showServices = false }: { showServices?: boolean }) {
         <div className="navbar-glass-refraction" aria-hidden />
 
         <div className="relative flex h-[64px] items-center px-5 sm:px-6">
-          {/* Left: Logo */}
           <Link
             href="/"
             className="inline-flex flex-shrink-0 items-center gap-2.5 font-heading text-lg font-bold tracking-tight text-white"
@@ -75,7 +91,6 @@ export function Navbar({ showServices = false }: { showServices?: boolean }) {
             ProLevelCode
           </Link>
 
-          {/* Center: Nav links */}
           <nav className="hidden flex-1 items-center justify-center gap-0.5 lg:flex">
             {navItems.map((item) => (
               <Link
@@ -89,7 +104,6 @@ export function Navbar({ showServices = false }: { showServices?: boolean }) {
             ))}
           </nav>
 
-          {/* Right: Lang + Login + CTA */}
           <div className="hidden flex-shrink-0 items-center gap-2 lg:flex">
             <button
               onClick={toggle}
@@ -101,11 +115,26 @@ export function Navbar({ showServices = false }: { showServices?: boolean }) {
               <span className={cn("navbar-lang-option", lang === "en" && "navbar-lang-active")}>EN</span>
             </button>
 
-            <Link href="/login">
-              <Button variant="ghost" size="sm" className="navbar-login-btn">
-                {t.nav.login}
-              </Button>
-            </Link>
+            {currentUser ? (
+              <>
+                <Link href="/dashboard">
+                  <Button variant="ghost" size="sm" className="navbar-login-btn">
+                    {getUserLabel(currentUser)}
+                  </Button>
+                </Link>
+                <form action="/api/auth/logout" method="post">
+                  <Button variant="ghost" size="sm" className="navbar-login-btn" type="submit">
+                    {t.nav.logout}
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <Link href="/login">
+                <Button variant="ghost" size="sm" className="navbar-login-btn">
+                  {t.nav.login}
+                </Button>
+              </Link>
+            )}
 
             {showServices && (
               <Link href="/servicios">
@@ -116,7 +145,6 @@ export function Navbar({ showServices = false }: { showServices?: boolean }) {
             )}
           </div>
 
-          {/* Mobile toggle area */}
           <div className="ml-auto flex items-center gap-2 lg:hidden">
             <button
               onClick={toggle}
@@ -206,11 +234,27 @@ export function Navbar({ showServices = false }: { showServices?: boolean }) {
                   showServices ? "grid-cols-2" : "grid-cols-1",
                 )}
               >
-                <Link href="/login" onClick={closeMenu}>
-                  <Button variant="ghost" size="sm" className="h-9 w-full">
-                    {t.nav.login}
-                  </Button>
-                </Link>
+                {currentUser ? (
+                  <>
+                    <Link href="/dashboard" onClick={closeMenu}>
+                      <Button variant="ghost" size="sm" className="h-9 w-full">
+                        {getUserLabel(currentUser)}
+                      </Button>
+                    </Link>
+                    <form action="/api/auth/logout" method="post" onSubmit={closeMenu}>
+                      <Button variant="ghost" size="sm" className="h-9 w-full" type="submit">
+                        {t.nav.logout}
+                      </Button>
+                    </form>
+                  </>
+                ) : (
+                  <Link href="/login" onClick={closeMenu}>
+                    <Button variant="ghost" size="sm" className="h-9 w-full">
+                      {t.nav.login}
+                    </Button>
+                  </Link>
+                )}
+
                 {showServices && (
                   <Link href="/servicios" onClick={closeMenu}>
                     <Button size="sm" className="h-9 w-full">

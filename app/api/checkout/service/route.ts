@@ -13,8 +13,18 @@ function isFormRequest(request: Request) {
   return ct.includes("application/x-www-form-urlencoded") || ct.includes("multipart/form-data");
 }
 
+function hasValidOrigin(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+  return origin === request.nextUrl.origin;
+}
+
 export async function POST(request: NextRequest) {
   const baseUrl = request.nextUrl.origin;
+  if (!hasValidOrigin(request)) {
+    return jsonError("Invalid origin", 403);
+  }
+
   const context = await requireApiUser();
 
   if (!context) {
@@ -64,53 +74,72 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  const client = getMercadoPagoClient();
-  const preference = new Preference(client);
-  const clpAmount = convertUsdToCLP(parsed.data.quotedAmountCents);
+  try {
+    const client = getMercadoPagoClient();
+    const preference = new Preference(client);
+    const clpAmount = convertUsdToCLP(parsed.data.quotedAmountCents);
 
-  const externalReference = JSON.stringify({
-    type: "service",
-    user_id: context.user.id,
-    service_id: service.id,
-    order_id: order.id,
-  });
+    const externalReference = JSON.stringify({
+      type: "service",
+      user_id: context.user.id,
+      service_id: service.id,
+      order_id: order.id,
+    });
 
-  // Only include notification_url if not localhost
-  const isLocalhost = baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1");
+    // Only include notification_url if not localhost
+    const isLocalhost = baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1");
 
-  const result = await preference.create({
-    body: {
-      items: [
-        {
-          id: service.id,
-          title: `Servicio: ${service.title}`,
-          quantity: 1,
-          unit_price: clpAmount,
-          currency_id: "CLP",
+    const result = await preference.create({
+      body: {
+        items: [
+          {
+            id: service.id,
+            title: `Servicio: ${service.title}`,
+            quantity: 1,
+            unit_price: clpAmount,
+            currency_id: "CLP",
+          },
+        ],
+        payer: {
+          email: context.user.email ?? undefined,
         },
-      ],
-      payer: {
-        email: context.user.email ?? undefined,
+        back_urls: {
+          success: `${baseUrl}/servicios?checkout=success&orderId=${order.id}`,
+          failure: `${baseUrl}/servicios?checkout=failure&orderId=${order.id}`,
+          pending: `${baseUrl}/servicios?checkout=pending&orderId=${order.id}`,
+        },
+        auto_return: "approved",
+        ...(isLocalhost ? {} : { notification_url: `${baseUrl}/api/webhook/mercadopago` }),
+        external_reference: externalReference,
+        statement_descriptor: "PROLEVELCODE",
       },
-      back_urls: {
-        success: `${baseUrl}/servicios?checkout=success&orderId=${order.id}`,
-        failure: `${baseUrl}/servicios?checkout=failure&orderId=${order.id}`,
-        pending: `${baseUrl}/servicios?checkout=pending&orderId=${order.id}`,
-      },
-      auto_return: "approved",
-      ...(isLocalhost ? {} : { notification_url: `${baseUrl}/api/webhook/mercadopago` }),
-      external_reference: externalReference,
-      statement_descriptor: "PROLEVELCODE",
-    },
-  });
+    });
 
-  if (!result.init_point) {
-    return jsonError("Unable to create checkout preference", 500);
+    if (!result.init_point) {
+      throw new Error("MercadoPago did not return init_point");
+    }
+
+    if (isFormRequest(request)) {
+      return NextResponse.redirect(result.init_point, 303);
+    }
+
+    return NextResponse.json({ url: result.init_point, orderId: order.id });
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("[checkout/service] MercadoPago error:", errMsg, err);
+
+    await prisma.serviceOrder.update({
+      where: { id: order.id },
+      data: { status: "cancelled" },
+    });
+
+    if (isFormRequest(request)) {
+      return NextResponse.redirect(
+        `${baseUrl}/servicios?checkout=error&detail=${encodeURIComponent(errMsg.slice(0, 200))}`,
+        303,
+      );
+    }
+
+    return jsonError("Payment service unavailable", 503, { detail: errMsg });
   }
-
-  if (isFormRequest(request)) {
-    return NextResponse.redirect(result.init_point, 303);
-  }
-
-  return NextResponse.json({ url: result.init_point, orderId: order.id });
 }
