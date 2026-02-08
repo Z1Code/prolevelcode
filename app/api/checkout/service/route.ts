@@ -1,17 +1,28 @@
 import { Preference } from "mercadopago";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { checkoutServiceSchema } from "@/lib/validators/api";
 import { requireApiUser } from "@/lib/auth/api";
 import { prisma } from "@/lib/prisma";
 import { getMercadoPagoClient } from "@/lib/mercadopago/client";
-import { getBaseUrl } from "@/lib/payments/helpers";
 import { convertUsdToCLP } from "@/lib/payments/currency";
 import { parseRequestBody } from "@/lib/utils/request-body";
 import { jsonError } from "@/lib/utils/http";
 
-export async function POST(request: Request) {
+function isFormRequest(request: Request) {
+  const ct = request.headers.get("content-type") ?? "";
+  return ct.includes("application/x-www-form-urlencoded") || ct.includes("multipart/form-data");
+}
+
+export async function POST(request: NextRequest) {
+  const baseUrl = request.nextUrl.origin;
   const context = await requireApiUser();
-  if (!context) return jsonError("Unauthorized", 401);
+
+  if (!context) {
+    if (isFormRequest(request)) {
+      return NextResponse.redirect(`${baseUrl}/login`, 303);
+    }
+    return jsonError("Unauthorized", 401);
+  }
 
   const raw = await parseRequestBody<{
     serviceId?: string;
@@ -55,7 +66,6 @@ export async function POST(request: Request) {
 
   const client = getMercadoPagoClient();
   const preference = new Preference(client);
-  const baseUrl = getBaseUrl();
   const clpAmount = convertUsdToCLP(parsed.data.quotedAmountCents);
 
   const externalReference = JSON.stringify({
@@ -64,6 +74,9 @@ export async function POST(request: Request) {
     service_id: service.id,
     order_id: order.id,
   });
+
+  // Only include notification_url if not localhost
+  const isLocalhost = baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1");
 
   const result = await preference.create({
     body: {
@@ -85,7 +98,7 @@ export async function POST(request: Request) {
         pending: `${baseUrl}/servicios?checkout=pending&orderId=${order.id}`,
       },
       auto_return: "approved",
-      notification_url: `${baseUrl}/api/webhook/mercadopago`,
+      ...(isLocalhost ? {} : { notification_url: `${baseUrl}/api/webhook/mercadopago` }),
       external_reference: externalReference,
       statement_descriptor: "PROLEVELCODE",
     },
@@ -95,8 +108,7 @@ export async function POST(request: Request) {
     return jsonError("Unable to create checkout preference", 500);
   }
 
-  const contentType = request.headers.get("content-type") ?? "";
-  if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+  if (isFormRequest(request)) {
     return NextResponse.redirect(result.init_point, 303);
   }
 
