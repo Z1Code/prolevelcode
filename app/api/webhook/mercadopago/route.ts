@@ -52,6 +52,7 @@ export async function POST(request: Request) {
 
   // Verify HMAC signature
   if (!verifySignature(request)) {
+    console.warn("[mp/webhook] Signature verification failed");
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
       },
     });
   } catch {
-    // Unique constraint = duplicate
+    console.log(`[mp/webhook] Duplicate event for payment ${paymentId}, skipping`);
     return NextResponse.json({ received: true, duplicate: true });
   }
 
@@ -95,6 +96,8 @@ export async function POST(request: Request) {
   const mpPaymentId = String(payment.id);
   const amountPaidCents = Math.round((payment.transaction_amount ?? 0) * 100);
   const currency = (payment.currency_id ?? "CLP").toUpperCase();
+
+  console.log(`[mp/webhook] Payment ${mpPaymentId} status=${payment.status} type=${ref.type}`);
 
   if (payment.status === "approved") {
     if (ref.type === "course" && ref.user_id && ref.course_id) {
@@ -202,5 +205,6 @@ export async function POST(request: Request) {
     }
   }
 
+  console.log(`[mp/webhook] Processed payment ${mpPaymentId} successfully`);
   return NextResponse.json({ received: true });
 }

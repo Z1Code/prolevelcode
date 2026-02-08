@@ -7,6 +7,7 @@ import { getMercadoPagoClient } from "@/lib/mercadopago/client";
 import { convertUsdToCLP } from "@/lib/payments/currency";
 import { parseRequestBody } from "@/lib/utils/request-body";
 import { jsonError } from "@/lib/utils/http";
+import { assertRateLimit } from "@/lib/utils/rate-limit";
 
 function isFormRequest(request: Request) {
   const ct = request.headers.get("content-type") ?? "";
@@ -15,7 +16,7 @@ function isFormRequest(request: Request) {
 
 function hasValidOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (!origin) return true;
+  if (!origin) return false;
   return origin === request.nextUrl.origin;
 }
 
@@ -32,6 +33,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.redirect(`${baseUrl}/login`, 303);
     }
     return jsonError("Unauthorized", 401);
+  }
+
+  const allowed = await assertRateLimit("checkout/service", context.user.id, 10, 60);
+  if (!allowed) {
+    return jsonError("Too many requests", 429);
   }
 
   const raw = await parseRequestBody<{
@@ -135,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     if (isFormRequest(request)) {
       return NextResponse.redirect(
-        `${baseUrl}/servicios?checkout=error&detail=${encodeURIComponent(errMsg.slice(0, 200))}`,
+        `${baseUrl}/servicios?checkout=error`,
         303,
       );
     }

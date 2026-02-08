@@ -17,6 +17,6 @@ export async function assertRateLimit(route: string, actorKey: string, maxHits: 
 
     return count <= maxHits;
   } catch {
-    return true;
+    return false;
   }
 }
