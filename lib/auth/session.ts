@@ -70,11 +70,15 @@ export async function destroySession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-  if (token) {
-    const payload = await verifySessionToken(token);
-    if (payload?.sid) {
-      await prisma.session.deleteMany({ where: { id: payload.sid } });
+  try {
+    if (token) {
+      const payload = await verifySessionToken(token);
+      if (payload?.sid) {
+        await prisma.session.deleteMany({ where: { id: payload.sid } });
+      }
     }
+  } catch (error) {
+    console.error("[auth/session] failed while deleting server session", error);
   }
 
   cookieStore.set(SESSION_COOKIE_NAME, "", {
@@ -84,23 +88,28 @@ export async function destroySession() {
 }
 
 export async function getSessionUser(): Promise<{ id: string; email: string } | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-  if (!token) return null;
+    if (!token) return null;
 
-  const payload = await verifySessionToken(token);
-  if (!payload) return null;
+    const payload = await verifySessionToken(token);
+    if (!payload) return null;
 
-  const session = await prisma.session.findUnique({
-    where: { id: payload.sid },
-  });
+    const session = await prisma.session.findUnique({
+      where: { id: payload.sid },
+    });
 
-  if (!session || session.expires_at < new Date()) {
+    if (!session || session.expires_at < new Date()) {
+      return null;
+    }
+
+    return { id: payload.sub, email: payload.email };
+  } catch (error) {
+    console.error("[auth/session] failed to resolve session user", error);
     return null;
   }
-
-  return { id: payload.sub, email: payload.email };
 }
 
 export async function requireAuth(redirectTo = "/login"): Promise<{ id: string; email: string }> {

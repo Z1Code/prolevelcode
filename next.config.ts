@@ -15,6 +15,7 @@ const csp = [
   "frame-ancestors 'none'",
   "upgrade-insecure-requests",
 ].join("; ");
+const appOrigin = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").trim();
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost"],
@@ -62,7 +63,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Access-Control-Allow-Origin",
-            value: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+            value: appOrigin,
           },
           {
             key: "Access-Control-Allow-Methods",
@@ -79,5 +80,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
 
