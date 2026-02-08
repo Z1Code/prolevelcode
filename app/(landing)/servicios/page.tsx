@@ -4,6 +4,17 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/session";
 
+interface ServiceItem {
+  id: string;
+  slug: string;
+  title: string;
+  short_description: string;
+  long_description: string;
+  price_range: string;
+  is_featured: boolean;
+  is_active: boolean;
+}
+
 function estimateAmountInCents(priceRange?: string | null) {
   if (!priceRange) return 200_000;
   const numeric = Number(priceRange.replace(/[^0-9.]/g, ""));
