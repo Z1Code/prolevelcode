@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { recoverAction } from "../actions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,12 @@ export default async function RecoverPage({ searchParams }: RecoverPageProps) {
           </Button>
         </form>
       )}
+
+      <p className="mt-6 text-sm text-slate-400">
+        <Link href="/login" className="liquid-link font-medium">
+          ← Volver a iniciar sesion
+        </Link>
+      </p>
     </>
   );
 }

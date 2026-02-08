@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SecureCoursePlayer } from "@/components/video/secure-course-player";
 import { prisma } from "@/lib/prisma";
@@ -40,6 +41,7 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
 
   return (
     <div>
+      <Link href="/dashboard/cursos" className="mb-3 inline-flex text-xs text-slate-400 hover:text-slate-200">← Mis cursos</Link>
       <h2 className="text-2xl font-semibold">{course.title}</h2>
       <p className="mt-2 text-sm text-slate-400">Reproduccion segura con token auto-destruible.</p>
       <div className="mt-4">

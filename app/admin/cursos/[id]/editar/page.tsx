@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
@@ -18,6 +19,7 @@ export default async function EditCoursePage({ params }: Props) {
 
   return (
     <div>
+      <Link href={`/admin/cursos/${id}`} className="mb-3 inline-flex text-xs text-slate-400 hover:text-slate-200">← Volver al curso</Link>
       <h2 className="text-2xl font-semibold">Editar curso</h2>
       <Card className="mt-4 p-4">
         <form action={updateCourse} className="grid gap-3 md:grid-cols-2">

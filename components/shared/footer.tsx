@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer className="footer-section px-4 pb-6 pt-14">
@@ -5,15 +7,27 @@ export function Footer() {
         <div className="footer-glass-shimmer" aria-hidden />
         <div className="footer-glass-refraction" aria-hidden />
 
-        <div className="relative z-[1] grid gap-10 md:grid-cols-2">
+        <div className="relative z-[1] grid gap-10 md:grid-cols-3">
           <div>
             <h3 className="mb-3 font-semibold text-slate-100">ProLevelCode</h3>
             <p className="text-sm text-slate-300">Desarrollo web e IA para productos que realmente escalan.</p>
           </div>
 
           <div>
-            <h4 className="mb-3 text-sm font-semibold text-slate-200">Social</h4>
+            <h4 className="mb-3 text-sm font-semibold text-slate-200">Navegacion</h4>
             <ul className="space-y-2 text-sm text-slate-300">
+              <li><Link href="/cursos" className="liquid-link">Cursos</Link></li>
+              <li><Link href="/servicios" className="liquid-link">Servicios</Link></li>
+              <li><Link href="/contacto" className="liquid-link">Contacto</Link></li>
+              <li><Link href="/sobre-mi" className="liquid-link">Sobre mi</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="mb-3 text-sm font-semibold text-slate-200">Legal & Social</h4>
+            <ul className="space-y-2 text-sm text-slate-300">
+              <li><Link href="/privacidad" className="liquid-link">Privacidad</Link></li>
+              <li><Link href="/terminos" className="liquid-link">Terminos</Link></li>
               <li>
                 <a href="https://x.com/7uanf" target="_blank" rel="noreferrer" className="liquid-link">
                   X / @7uanf

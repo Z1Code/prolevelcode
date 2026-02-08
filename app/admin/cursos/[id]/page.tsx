@@ -28,6 +28,7 @@ export default async function AdminCourseDetailPage({ params }: AdminCourseDetai
 
   return (
     <div>
+      <Link href="/admin/cursos" className="mb-3 inline-flex text-xs text-slate-400 hover:text-slate-200">← Volver a cursos</Link>
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold">{course.title}</h2>
