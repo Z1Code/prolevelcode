@@ -14,8 +14,25 @@ const FRAMES = Array.from({ length: 249 }, (_, i) =>
   `/sequence/ezgif-frame-${String(i + 1).padStart(3, "0")}.jpg`,
 );
 
+const titleContainer = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.18, delayChildren: 0.1 },
+  },
+};
+
+const titleLine = {
+  hidden: { y: 40, opacity: 0, filter: "blur(8px)" },
+  visible: {
+    y: 0,
+    opacity: 1,
+    filter: "blur(0px)",
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
+  },
+};
+
 export function ShowcaseSection() {
-  const { lang } = useTranslation();
+  const { t } = useTranslation();
   const sectionRef = useRef<HTMLElement>(null);
 
   const { scrollYProgress } = useScroll({
@@ -23,34 +40,30 @@ export function ShowcaseSection() {
     offset: ["start end", "end start"],
   });
 
-  // Parallax: title moves slower than scroll (60 → -40px)
-  const titleY = useTransform(scrollYProgress, [0, 0.5], [60, -40]);
-  const titleOpacity = useTransform(scrollYProgress, [0, 0.18], [0, 1]);
+  // Continuous parallax drift after entrance
+  const parallaxY = useTransform(scrollYProgress, [0, 1], [20, -60]);
 
   return (
     <section ref={sectionRef} className="showcase-section">
       <div className="container-wide flex flex-col items-center">
-        {/* Title with scroll-linked parallax */}
-        <motion.h2
-          className="showcase-title"
-          style={{ y: titleY, opacity: titleOpacity }}
-        >
-          {lang === "es" ? (
-            <>
-              Programa <span className="showcase-title-accent">web/móvil</span>
-              <br />
-              de nivel profesional.
-            </>
-          ) : (
-            <>
-              Professional-grade
-              <br />
-              <span className="showcase-title-accent">web/mobile</span> development.
-            </>
-          )}
-        </motion.h2>
+        <motion.div style={{ y: parallaxY }}>
+          <motion.h2
+            className="showcase-title"
+            variants={titleContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-60px" }}
+          >
+            <motion.span className="showcase-title-line" variants={titleLine}>
+              {t.showcase.line1Prefix}{" "}
+              <span className="showcase-title-accent">{t.showcase.line1Accent}</span>
+            </motion.span>
+            <motion.span className="showcase-title-line" variants={titleLine}>
+              {t.showcase.line2}
+            </motion.span>
+          </motion.h2>
+        </motion.div>
 
-        {/* iPhone with reveal animation */}
         <motion.div
           className="iphone-landscape"
           initial={{ opacity: 0, y: 50, scale: 0.96 }}
@@ -58,7 +71,7 @@ export function ShowcaseSection() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{
             duration: 0.8,
-            ease: [0.16, 1, 0.3, 1],
+            ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
             delay: 0.15,
           }}
         >

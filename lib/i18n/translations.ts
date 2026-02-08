@@ -19,6 +19,11 @@ export const translations = {
       students: "estudiantes",
       satisfied: "satisfechos",
     },
+    showcase: {
+      line1Prefix: "Programa",
+      line1Accent: "web/móvil",
+      line2: "a nivel profesional.",
+    },
   },
   en: {
     nav: {
@@ -39,6 +44,11 @@ export const translations = {
       cta2: "Explore Courses",
       students: "students",
       satisfied: "satisfied",
+    },
+    showcase: {
+      line1Prefix: "Build",
+      line1Accent: "web/mobile",
+      line2: "at a professional level.",
     },
   },
 } as const;

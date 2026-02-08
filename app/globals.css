@@ -1780,7 +1780,7 @@ a {
 
 .showcase-section {
   position: relative;
-  padding-top: clamp(80px, 10vw, 140px);
+  padding-top: clamp(56px, 8vw, 110px);
   padding-bottom: clamp(80px, 10vw, 140px);
   background: #000;
   overflow: hidden;
@@ -1794,7 +1794,13 @@ a {
   letter-spacing: -0.03em;
   color: #f5f5f7;
   max-width: 14ch;
-  margin-bottom: clamp(40px, 6vw, 80px);
+  margin-top: -10px;
+  margin-bottom: clamp(28px, 4.5vw, 56px);
+}
+
+.showcase-title-line {
+  display: block;
+  will-change: transform, opacity, filter;
 }
 
 .showcase-title-accent {
@@ -1815,7 +1821,7 @@ a {
 
 .iphone-landscape {
   position: relative;
-  width: min(92vw, 840px);
+  width: min(78vw, 630px);
   margin-inline: auto;
 }
 
@@ -1983,17 +1989,18 @@ a {
 
 @media (max-width: 767px) {
   .showcase-section {
-    padding-top: 60px;
+    padding-top: 44px;
     padding-bottom: 60px;
   }
 
   .showcase-title {
     max-width: 18ch;
-    margin-bottom: 32px;
+    margin-top: -6px;
+    margin-bottom: 24px;
   }
 
   .iphone-landscape {
-    width: 96vw;
+    width: 84vw;
   }
 
   .iphone-body {
