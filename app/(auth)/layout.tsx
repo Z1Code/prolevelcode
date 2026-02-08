@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="container-wide flex min-h-screen items-center justify-center py-12">

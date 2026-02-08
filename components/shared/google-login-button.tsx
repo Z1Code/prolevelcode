@@ -1,18 +1,24 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export function GoogleLoginButton({ next = "/dashboard" }: { next?: string }) {
-  async function handleClick() {
-    const supabase = createClient();
-    const result = await supabase.auth.signInWithOAuth({
-      provider: "google",
+  function handleClick() {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) return;
+
+    const redirectUri = `${window.location.origin}/auth/callback`;
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "offline",
+      state: next,
+      prompt: "select_account",
     });
 
-    if (!result.error) {
-      window.location.href = next;
-    }
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
 
   return (
@@ -21,5 +27,3 @@ export function GoogleLoginButton({ next = "/dashboard" }: { next?: string }) {
     </Button>
   );
 }
-
-

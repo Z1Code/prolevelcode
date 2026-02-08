@@ -1,14 +1,12 @@
 import { env } from "@/lib/env";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { prisma } from "@/lib/prisma";
 
 export async function bootstrapAdminRoleByEmail(user: { id: string; email?: string | null }) {
   const email = user.email?.toLowerCase().trim();
-  if (!email || !env.adminEmails.includes(email)) {
-    return;
-  }
+  if (!email || !env.adminEmails.includes(email)) return;
 
-  const supabase = createAdminSupabaseClient();
-  await supabase.from("users").update({ role: "superadmin" }).eq("id", user.id);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { role: "superadmin" },
+  });
 }
-
-

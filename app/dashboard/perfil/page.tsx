@@ -1,14 +1,17 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/auth/session";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export default async function DashboardProfilePage() {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
 
-  const { data: profile } = await supabase.from("users").select("full_name,email,avatar_url").eq("id", user?.id ?? "").maybeSingle();
+  const profile = user
+    ? await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { full_name: true, email: true, avatar_url: true },
+      })
+    : null;
 
   return (
     <div>
@@ -22,5 +25,3 @@ export default async function DashboardProfilePage() {
     </div>
   );
 }
-
-

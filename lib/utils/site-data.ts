@@ -8,7 +8,7 @@
 export const defaultServices = [
   {
     title: "Web Apps Full-Stack",
-    description: "Arquitecturas robustas con Next.js, TypeScript, APIs y despliegue en Firebase.",
+    description: "Arquitecturas robustas con Next.js, TypeScript, APIs y despliegue en la nube.",
     price: "Desde $2,000",
     icon: "code",
     slug: "web-apps",
@@ -36,7 +36,7 @@ export const defaultServices = [
   },
   {
     title: "APIs & Integraciones",
-    description: "Integracion con Stripe, Firebase, CRMs y servicios externos.",
+    description: "Integracion con MercadoPago, PostgreSQL, CRMs y servicios externos.",
     price: "Desde $2,000",
     icon: "plug",
     slug: "apis",

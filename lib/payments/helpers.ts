@@ -10,5 +10,3 @@ export function currencyFormatter(amountInCents: number, currency = "USD") {
     currency,
   }).format(amountInCents / 100);
 }
-
-

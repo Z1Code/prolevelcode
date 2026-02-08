@@ -11,7 +11,7 @@ export default async function RecoverPage({ searchParams }: RecoverPageProps) {
   const params = await searchParams;
   const message = typeof params.message === "string" ? params.message : null;
   const error = typeof params.error === "string" ? params.error : null;
-  const oobCode = typeof params.oobCode === "string" ? params.oobCode : null;
+  const token = typeof params.token === "string" ? params.token : null;
 
   return (
     <>
@@ -20,8 +20,8 @@ export default async function RecoverPage({ searchParams }: RecoverPageProps) {
       {message ? <p className="mt-4 text-sm text-emerald-300">{message}</p> : null}
       {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
 
-      {oobCode ? (
-        <ResetPasswordForm oobCode={oobCode} />
+      {token ? (
+        <ResetPasswordForm token={token} />
       ) : (
         <form action={recoverAction} className="mt-6 space-y-3">
           <Input name="email" type="email" placeholder="tu@email.com" required />

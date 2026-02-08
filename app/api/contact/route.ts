@@ -1,6 +1,6 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { contactSchema } from "@/lib/validators/api";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { prisma } from "@/lib/prisma";
 import { getResendClient } from "@/lib/email/resend";
 import { contactNotificationTemplate } from "@/lib/email/templates";
 import { env } from "@/lib/env";
@@ -13,23 +13,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payload", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = createAdminSupabaseClient();
-  const { data: message, error } = await supabase
-    .from("contact_messages")
-    .insert({
+  const message = await prisma.contactMessage.create({
+    data: {
       name: parsed.data.name,
       email: parsed.data.email,
       company: parsed.data.company,
       service_interest: parsed.data.serviceInterest,
       budget_range: parsed.data.budgetRange,
       message: parsed.data.message,
-    })
-    .select("id")
-    .single();
-
-  if (error || !message) {
-    return NextResponse.json({ error: "Unable to save message" }, { status: 500 });
-  }
+    },
+  });
 
   if (env.resendApiKey && env.adminEmails.length > 0) {
     const resend = getResendClient();
@@ -49,5 +42,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true, id: message.id }, { status: 201 });
 }
-
-

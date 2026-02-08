@@ -9,6 +9,8 @@ describe("secure player html", () => {
       title: "Lesson 1",
       remaining: 2,
       expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      tokenId: "test-token-id",
+      heartbeatUrl: "/api/tokens/heartbeat",
     });
 
     expect(html).toContain("youtube-nocookie.com");

@@ -1,6 +1,6 @@
 const steps = [
   { title: "Elige tu curso", description: "Explora el catalogo y selecciona el curso que encaja con tu objetivo." },
-  { title: "Compra segura", description: "Pago con Stripe y acceso instantaneo al completar el checkout." },
+  { title: "Compra segura", description: "Pago con MercadoPago y acceso instantaneo al completar el checkout." },
   { title: "Aprende a tu ritmo", description: "Cada reproduccion usa token seguro con expiracion y control de vistas." },
   { title: "Construye proyectos reales", description: "Terminas cada modulo con piezas listas para portfolio." },
 ];

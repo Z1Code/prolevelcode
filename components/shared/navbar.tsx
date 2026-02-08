@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Settings } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "@/lib/i18n/language-provider";
@@ -16,12 +16,11 @@ const navItems = [
   { href: "/contacto", key: "contact" as const },
 ];
 
-export function Navbar() {
+export function Navbar({ showServices = false }: { showServices?: boolean }) {
   const pathname = usePathname();
-  const { lang, t, toggle, showServices, toggleServices } = useTranslation();
+  const { lang, t, toggle } = useTranslation();
   const [openForPath, setOpenForPath] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const isOpen = openForPath === pathname;
 
   const isActiveLink = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
@@ -55,56 +54,6 @@ export function Navbar() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!settingsOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (!(e.target as HTMLElement).closest(".settings-panel-container")) {
-        setSettingsOpen(false);
-      }
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSettingsOpen(false);
-    };
-    window.addEventListener("click", onClick);
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("click", onClick);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [settingsOpen]);
-
-  const settingsDropdown = (mobile?: boolean) => (
-    <AnimatePresence>
-      {settingsOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: -8, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -8, scale: 0.96 }}
-          transition={{ duration: 0.18, ease: "easeOut" }}
-          className={cn("settings-dropdown", mobile && "settings-dropdown-mobile")}
-        >
-          <p className="settings-dropdown-title">
-            {lang === "es" ? "Configuracion" : "Settings"}
-          </p>
-          <label className="settings-toggle-row">
-            <span className="settings-toggle-label">
-              {lang === "es" ? "Mostrar Servicios" : "Show Services"}
-            </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={showServices}
-              onClick={toggleServices}
-              className={cn("settings-switch", showServices && "settings-switch-on")}
-            >
-              <span className="settings-switch-thumb" />
-            </button>
-          </label>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-
   return (
     <header className="sticky top-0 z-50 px-4 pt-4">
       <div
@@ -123,7 +72,6 @@ export function Navbar() {
             href="/"
             className="inline-flex flex-shrink-0 items-center gap-2.5 font-heading text-lg font-bold tracking-tight text-white"
           >
-            <span className="navbar-brand-dot" aria-hidden />
             ProLevelCode
           </Link>
 
@@ -141,7 +89,7 @@ export function Navbar() {
             ))}
           </nav>
 
-          {/* Right: Settings + Lang + Login + CTA */}
+          {/* Right: Lang + Login + CTA */}
           <div className="hidden flex-shrink-0 items-center gap-2 lg:flex">
             <button
               onClick={toggle}
@@ -170,17 +118,6 @@ export function Navbar() {
 
           {/* Mobile toggle area */}
           <div className="ml-auto flex items-center gap-2 lg:hidden">
-            <div className="settings-panel-container relative">
-              <button
-                onClick={(e) => { e.stopPropagation(); setSettingsOpen((p) => !p); }}
-                className="navbar-icon-btn"
-                aria-label="Settings"
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-              {settingsDropdown(true)}
-            </div>
-
             <button
               onClick={toggle}
               className="navbar-lang-toggle"

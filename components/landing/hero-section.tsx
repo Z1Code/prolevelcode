@@ -25,8 +25,8 @@ const liquidBars = [
   { id: 9, name: "dark-iridescent" },
 ];
 
-export function HeroSection() {
-  const { t, showServices } = useTranslation();
+export function HeroSection({ showServices = false }: { showServices?: boolean }) {
+  const { t } = useTranslation();
   const [userCount, setUserCount] = useState<number | null>(null);
 
   useEffect(() => {

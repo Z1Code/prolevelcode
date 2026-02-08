@@ -14,6 +14,11 @@ enum UserRole {
   superadmin
 }
 
+enum AuthProvider {
+  credentials
+  google
+}
+
 enum EnrollmentStatus {
   active
   refunded
@@ -39,12 +44,14 @@ enum TokenAction {
 }
 
 model User {
-  id               String          @id @db.Uuid
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email            String          @unique
+  password_hash    String?
   full_name        String?
   avatar_url       String?
   role             UserRole        @default(student)
-  stripe_customer_id String?
+  auth_provider    AuthProvider    @default(credentials)
+  email_verified   Boolean         @default(false)
   is_active        Boolean         @default(true)
   last_login       DateTime?
   created_at       DateTime        @default(now()) @db.Timestamptz(6)
@@ -56,8 +63,56 @@ model User {
   serviceOrders    ServiceOrder[]
   adminAuditLogs   AdminAuditLog[] @relation("AdminAuditLogs")
   tokenUsageLogs   TokenUsageLog[]
+  activeSessions   ActiveVideoSession[]
+  sessions         Session[]
+  passwordResets   PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
 
   @@map("users")
+}
+
+model Session {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  token_hash String   @unique
+  ip_address String?
+  user_agent String?
+  expires_at DateTime @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([expires_at])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  token_hash String   @unique
+  expires_at DateTime @db.Timestamptz(6)
+  used_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  token_hash String   @unique
+  expires_at DateTime @db.Timestamptz(6)
+  used_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("email_verification_tokens")
 }
 
 model Course {
@@ -71,8 +126,6 @@ model Course {
   preview_video_url      String?
   price_cents            Int
   currency               String       @default("USD")
-  stripe_price_id        String?
-  stripe_product_id      String?
   difficulty             String?
   category               String?
   tags                   String[]
@@ -132,8 +185,8 @@ model Enrollment {
   id                         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id                    String           @db.Uuid
   course_id                  String           @db.Uuid
-  stripe_payment_intent_id   String?
-  stripe_checkout_session_id String?
+  mp_payment_id              String?
+  mp_preference_id           String?
   amount_paid_cents          Int?
   currency                   String           @default("USD")
   status                     EnrollmentStatus @default(active)
@@ -174,9 +227,9 @@ model VideoToken {
   max_views    Int      @default(1)
   current_views Int     @default(0)
   ttl_seconds  Int      @default(14400)
-  ip_address   Unsupported("inet")?
+  ip_address   String?
   user_agent   String?
-  allowed_ips  Unsupported("inet[]")?
+  allowed_ips  String[]
   is_revoked   Boolean  @default(false)
   revoked_at   DateTime? @db.Timestamptz(6)
   revoked_reason String?
@@ -186,7 +239,8 @@ model VideoToken {
   user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   lesson       Lesson   @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
   course       Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
-  usageLogs     TokenUsageLog[]
+  usageLogs    TokenUsageLog[]
+  activeSession ActiveVideoSession?
 
   @@map("video_tokens")
 }
@@ -195,7 +249,7 @@ model TokenUsageLog {
   id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   token_id        String      @db.Uuid
   user_id         String?     @db.Uuid
-  ip_address      Unsupported("inet")?
+  ip_address      String?
   user_agent      String?
   action          TokenAction
   rejection_reason String?
@@ -237,8 +291,8 @@ model ServiceOrder {
   paid_amount_cents          Int?
   currency                   String             @default("USD")
   customer_config            Json?
-  stripe_payment_intent_id   String?
-  stripe_checkout_session_id String?
+  mp_payment_id              String?
+  mp_preference_id           String?
   no_refund_accepted_at      DateTime?          @db.Timestamptz(6)
   paid_at                    DateTime?          @db.Timestamptz(6)
   created_at                 DateTime           @default(now()) @db.Timestamptz(6)
@@ -311,28 +365,44 @@ model RateLimitEvent {
   actor_key  String
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
+  @@index([route, actor_key, created_at])
   @@map("rate_limit_events")
 }
 
+model ActiveVideoSession {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String   @db.Uuid
+  token_id       String   @unique @db.Uuid
+  fingerprint    String
+  ip_address     String
+  last_heartbeat DateTime @default(now()) @db.Timestamptz(6)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  user  User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  token VideoToken @relation(fields: [token_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, last_heartbeat])
+  @@map("active_video_sessions")
+}
+
 model PaymentTransaction {
-  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  stripe_payment_intent_id String   @unique
-  amount_cents             Int
-  currency                 String
-  status                   String
-  metadata                 Json?
-  created_at               DateTime @default(now()) @db.Timestamptz(6)
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mp_payment_id  String   @unique
+  amount_cents   Int
+  currency       String
+  status         String
+  metadata       Json?
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("payment_transactions")
 }
 
-model StripeEvent {
+model PaymentEvent {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   event_id   String   @unique
   type       String
   payload    Json
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
-  @@map("stripe_events")
+  @@map("payment_events")
 }
-

@@ -6,21 +6,21 @@ import { ProcessSection } from "@/components/landing/process-section";
 import { TestimonialsSection } from "@/components/landing/testimonials-section";
 import { StackSection } from "@/components/landing/stack-section";
 import { FinalCtaSection } from "@/components/landing/final-cta-section";
-import { ServicesVisibility } from "@/components/landing/services-visibility";
+import { getSiteFeatureFlags } from "@/lib/utils/site-config";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const flags = await getSiteFeatureFlags();
+
   return (
     <main>
-      <HeroSection />
+      <HeroSection showServices={flags.showServices} />
       <ShowcaseSection />
-      <ServicesVisibility>
-        <ServicesSection />
-      </ServicesVisibility>
-      <CoursesSection />
-      <ProcessSection />
-      <TestimonialsSection />
-      <StackSection />
-      <FinalCtaSection />
+      {flags.showServices && <ServicesSection />}
+      {flags.showCourses && <CoursesSection />}
+      {flags.showProcess && <ProcessSection />}
+      {flags.showTestimonials && <TestimonialsSection />}
+      {flags.showStack && <StackSection />}
+      {flags.showFinalCta && <FinalCtaSection />}
     </main>
   );
 }

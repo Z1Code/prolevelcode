@@ -1,22 +1,19 @@
 import { NextResponse } from "next/server";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const supabase = createAdminSupabaseClient();
-  const { count, error } = await supabase
-    .from("users")
-    .select("id", { count: "exact", head: true });
+  try {
+    const count = await prisma.user.count();
 
-  if (error) {
+    return NextResponse.json(
+      { count },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
+        },
+      },
+    );
+  } catch {
     return NextResponse.json({ error: "Unable to fetch user count" }, { status: 500 });
   }
-
-  return NextResponse.json(
-    { count: count ?? 0 },
-    {
-      headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
-      },
-    },
-  );
 }

@@ -1,26 +1,21 @@
 import { Card } from "@/components/ui/card";
-import { currencyFormatter } from "@/lib/stripe/helpers";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-
-interface PaymentEnrollment {
-  id: string;
-  amount_paid_cents: number | null;
-  currency: string | null;
-  status: string;
-  enrolled_at: string;
-  users: Array<{ email: string | null }>;
-  courses: Array<{ title: string | null }>;
-}
+import { currencyFormatter } from "@/lib/payments/helpers";
+import { prisma } from "@/lib/prisma";
 
 export default async function AdminPaymentsPage() {
-  const supabase = createAdminSupabaseClient();
-  const { data: enrollments } = await supabase
-    .from("enrollments")
-    .select("id,amount_paid_cents,currency,status,enrolled_at,users(email),courses(title)")
-    .order("enrolled_at", { ascending: false })
-    .limit(100);
-
-  const rows = ((enrollments ?? []) as unknown) as PaymentEnrollment[];
+  const enrollments = await prisma.enrollment.findMany({
+    orderBy: { enrolled_at: "desc" },
+    take: 100,
+    select: {
+      id: true,
+      amount_paid_cents: true,
+      currency: true,
+      status: true,
+      enrolled_at: true,
+      user: { select: { email: true } },
+      course: { select: { title: true } },
+    },
+  });
 
   return (
     <div>
@@ -37,13 +32,13 @@ export default async function AdminPaymentsPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((payment) => (
+            {enrollments.map((payment) => (
               <tr key={payment.id}>
-                <td className="px-4 py-3">{payment.users?.[0]?.email}</td>
-                <td className="px-4 py-3">{payment.courses?.[0]?.title}</td>
-                <td className="px-4 py-3">{currencyFormatter(payment.amount_paid_cents ?? 0, payment.currency ?? "USD")}</td>
+                <td className="px-4 py-3">{payment.user.email}</td>
+                <td className="px-4 py-3">{payment.course.title}</td>
+                <td className="px-4 py-3">{currencyFormatter(payment.amount_paid_cents ?? 0, payment.currency)}</td>
                 <td className="px-4 py-3">{payment.status}</td>
-                <td className="px-4 py-3">{new Date(payment.enrolled_at).toLocaleString("es-ES")}</td>
+                <td className="px-4 py-3">{payment.enrolled_at.toLocaleString("es-ES")}</td>
               </tr>
             ))}
           </tbody>

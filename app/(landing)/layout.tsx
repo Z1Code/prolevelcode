@@ -1,12 +1,15 @@
 import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
+import { getSiteFeatureFlags } from "@/lib/utils/site-config";
 
-export default function LandingLayout({ children }: { children: React.ReactNode }) {
+export default async function LandingLayout({ children }: { children: React.ReactNode }) {
+  const flags = await getSiteFeatureFlags();
+
   return (
-    <>
-      <Navbar />
+    <div className="landing-bg">
+      <Navbar showServices={flags.showServices} />
       {children}
       <Footer />
-    </>
+    </div>
   );
 }

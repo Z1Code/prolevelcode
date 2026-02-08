@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getActiveServices } from "@/lib/utils/data";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/auth/session";
 
 function estimateAmountInCents(priceRange?: string | null) {
   if (!priceRange) return 200_000;
@@ -13,10 +13,7 @@ function estimateAmountInCents(priceRange?: string | null) {
 
 export default async function ServicesPage() {
   const services = await getActiveServices();
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
 
   return (
     <main className="container-wide section-spacing liquid-section">

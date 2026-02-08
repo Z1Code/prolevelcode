@@ -1,10 +1,11 @@
-﻿import Stripe from "stripe";
+import { Preference } from "mercadopago";
 import { NextResponse } from "next/server";
 import { checkoutServiceSchema } from "@/lib/validators/api";
 import { requireApiUser } from "@/lib/auth/api";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { getStripeServerClient } from "@/lib/stripe/client";
-import { getBaseUrl } from "@/lib/stripe/helpers";
+import { prisma } from "@/lib/prisma";
+import { getMercadoPagoClient } from "@/lib/mercadopago/client";
+import { getBaseUrl } from "@/lib/payments/helpers";
+import { convertUsdToCLP } from "@/lib/payments/currency";
 import { parseRequestBody } from "@/lib/utils/request-body";
 import { jsonError } from "@/lib/utils/http";
 
@@ -31,75 +32,73 @@ export async function POST(request: Request) {
     return jsonError("Invalid payload", 400, parsed.error.flatten());
   }
 
-  const supabase = createAdminSupabaseClient();
-  const { data: service } = await supabase
-    .from("services")
-    .select("id,title,is_active")
-    .eq("id", parsed.data.serviceId)
-    .eq("is_active", true)
-    .maybeSingle();
+  const service = await prisma.service.findFirst({
+    where: { id: parsed.data.serviceId, is_active: true },
+    select: { id: true, title: true },
+  });
 
   if (!service) {
     return jsonError("Service not found", 404);
   }
 
-  const { data: order, error: orderError } = await supabase
-    .from("service_orders")
-    .insert({
+  const order = await prisma.serviceOrder.create({
+    data: {
       user_id: context.user.id,
       service_id: service.id,
       quoted_amount_cents: parsed.data.quotedAmountCents,
       currency: "USD",
       status: "pending_payment",
-      customer_config: parsed.data.config,
-      no_refund_accepted_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-
-  if (orderError || !order) {
-    return jsonError("Unable to create service order", 500, orderError?.message);
-  }
-
-  const stripe = getStripeServerClient();
-  const baseUrl = getBaseUrl();
-
-  const params: Stripe.Checkout.SessionCreateParams = {
-    mode: "payment",
-    customer_email: context.user.email ?? undefined,
-    success_url: `${baseUrl}/servicios?checkout=success&orderId=${String(order.id)}`,
-    cancel_url: `${baseUrl}/servicios?checkout=cancelled&orderId=${String(order.id)}`,
-    metadata: {
-      type: "service",
-      user_id: context.user.id,
-      service_id: String(service.id),
-      order_id: String(order.id),
+      customer_config: (parsed.data.config as object) ?? undefined,
+      no_refund_accepted_at: new Date(),
     },
-    line_items: [
-      {
-        quantity: 1,
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: `Servicio: ${String(service.title)}`,
-            description: "Pedido personalizado con no-reembolso aceptado.",
-          },
-          unit_amount: parsed.data.quotedAmountCents,
+  });
+
+  const client = getMercadoPagoClient();
+  const preference = new Preference(client);
+  const baseUrl = getBaseUrl();
+  const clpAmount = convertUsdToCLP(parsed.data.quotedAmountCents);
+
+  const externalReference = JSON.stringify({
+    type: "service",
+    user_id: context.user.id,
+    service_id: service.id,
+    order_id: order.id,
+  });
+
+  const result = await preference.create({
+    body: {
+      items: [
+        {
+          id: service.id,
+          title: `Servicio: ${service.title}`,
+          quantity: 1,
+          unit_price: clpAmount,
+          currency_id: "CLP",
         },
+      ],
+      payer: {
+        email: context.user.email ?? undefined,
       },
-    ],
-  };
+      back_urls: {
+        success: `${baseUrl}/servicios?checkout=success&orderId=${order.id}`,
+        failure: `${baseUrl}/servicios?checkout=failure&orderId=${order.id}`,
+        pending: `${baseUrl}/servicios?checkout=pending&orderId=${order.id}`,
+      },
+      auto_return: "approved",
+      notification_url: `${baseUrl}/api/webhook/mercadopago`,
+      external_reference: externalReference,
+      statement_descriptor: "PROLEVELCODE",
+    },
+  });
 
-  const session = await stripe.checkout.sessions.create(params);
-
-  if (!session.url) {
-    return jsonError("Unable to create checkout session", 500);
+  if (!result.init_point) {
+    return jsonError("Unable to create checkout preference", 500);
   }
 
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
-    return NextResponse.redirect(session.url, 303);
+    return NextResponse.redirect(result.init_point, 303);
   }
 
-  return NextResponse.json({ url: session.url, orderId: String(order.id) });
+  return NextResponse.json({ url: result.init_point, orderId: order.id });
 }

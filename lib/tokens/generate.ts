@@ -1,7 +1,10 @@
-﻿import { nanoid } from "nanoid";
+import { nanoid } from "nanoid";
 import { env } from "@/lib/env";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { prisma } from "@/lib/prisma";
+import { signVideoAccess } from "@/lib/tokens/hmac";
 import type { VideoTokenResponse } from "@/lib/types";
+
+const CONCURRENT_SESSION_STALE_MS = 2 * 60 * 1000; // 2 minutes
 
 interface GenerateVideoTokenParams {
   userId: string;
@@ -9,56 +12,73 @@ interface GenerateVideoTokenParams {
   courseId: string;
   ipAddress: string;
   userAgent: string;
+  fingerprint?: string;
 }
 
 export async function generateVideoToken(params: GenerateVideoTokenParams): Promise<VideoTokenResponse> {
-  const { userId, lessonId, courseId, ipAddress, userAgent } = params;
-  const supabase = createAdminSupabaseClient();
+  const { userId, lessonId, courseId, ipAddress, userAgent, fingerprint } = params;
 
-  const { data: enrollment } = await supabase
-    .from("enrollments")
-    .select("id,status")
-    .eq("user_id", userId)
-    .eq("course_id", courseId)
-    .eq("status", "active")
-    .maybeSingle();
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { user_id: userId, course_id: courseId, status: "active" },
+  });
 
   if (!enrollment) {
     throw new Error("NO_ENROLLMENT");
   }
 
-  const { data: existingTokens } = await supabase
-    .from("video_tokens")
-    .select("id,token,expires_at,max_views,current_views")
-    .eq("user_id", userId)
-    .eq("lesson_id", lessonId)
-    .eq("is_revoked", false)
-    .gt("expires_at", new Date().toISOString())
-    .order("created_at", { ascending: false })
-    .limit(3);
+  // --- Concurrent session check ---
+  // Clean stale sessions first
+  await prisma.activeVideoSession.deleteMany({
+    where: {
+      user_id: userId,
+      last_heartbeat: { lt: new Date(Date.now() - CONCURRENT_SESSION_STALE_MS) },
+    },
+  });
 
-  const existing = existingTokens?.find((item) => Number(item.current_views ?? 0) < Number(item.max_views ?? 0));
+  // Check if user has an active video session on a different device
+  if (fingerprint) {
+    const activeSessions = await prisma.activeVideoSession.findMany({
+      where: { user_id: userId },
+    });
+
+    const otherDevice = activeSessions.find((s) => s.fingerprint !== fingerprint);
+    if (otherDevice) {
+      throw new Error("CONCURRENT_SESSION");
+    }
+  }
+
+  // --- Token reuse ---
+  const existingTokens = await prisma.videoToken.findMany({
+    where: {
+      user_id: userId,
+      lesson_id: lessonId,
+      is_revoked: false,
+      expires_at: { gt: new Date() },
+    },
+    orderBy: { created_at: "desc" },
+    take: 3,
+  });
+
+  const existing = existingTokens.find((item) => item.current_views < item.max_views);
 
   if (existing) {
-    const currentViews = Number(existing.current_views ?? 0);
-    const maxViews = Number(existing.max_views ?? 0);
-
+    const sig = signVideoAccess(existing.id, userId, env.tokenDefaultTtl);
     return {
-      token: String(existing.token),
-      videoUrl: `/api/video/${String(existing.token)}`,
-      expiresAt: String(existing.expires_at),
-      remainingViews: maxViews - currentViews,
+      token: existing.token,
+      videoUrl: `/api/video/${existing.token}?sig=${sig}`,
+      expiresAt: existing.expires_at.toISOString(),
+      remainingViews: existing.max_views - existing.current_views,
     };
   }
 
+  // --- Create new token ---
   const ttlSeconds = env.tokenDefaultTtl;
   const maxViews = env.tokenDefaultMaxViews;
   const token = nanoid(32);
-  const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
 
-  const { data: newToken, error: insertError } = await supabase
-    .from("video_tokens")
-    .insert({
+  const newToken = await prisma.videoToken.create({
+    data: {
       token,
       user_id: userId,
       lesson_id: lessonId,
@@ -69,28 +89,26 @@ export async function generateVideoToken(params: GenerateVideoTokenParams): Prom
       ip_address: ipAddress,
       allowed_ips: [ipAddress],
       user_agent: userAgent,
-    })
-    .select("id,token,expires_at,max_views,current_views")
-    .single();
-
-  if (insertError || !newToken) {
-    console.error(insertError);
-    throw new Error("TOKEN_INSERT_FAILED");
-  }
-
-  await supabase.from("token_usage_logs").insert({
-    token_id: newToken.id,
-    user_id: userId,
-    ip_address: ipAddress,
-    user_agent: userAgent,
-    action: "generated",
+    },
   });
 
+  await prisma.tokenUsageLog.create({
+    data: {
+      token_id: newToken.id,
+      user_id: userId,
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      action: "generated",
+    },
+  });
+
+  const sig = signVideoAccess(newToken.id, userId, ttlSeconds);
+
   return {
-    token: String(newToken.token),
-    videoUrl: `/api/video/${String(newToken.token)}`,
-    expiresAt: String(newToken.expires_at),
-    remainingViews: Number(newToken.max_views ?? 0) - Number(newToken.current_views ?? 0),
+    token: newToken.token,
+    videoUrl: `/api/video/${newToken.token}?sig=${sig}`,
+    expiresAt: newToken.expires_at.toISOString(),
+    remainingViews: newToken.max_views - newToken.current_views,
   };
 }
 
@@ -103,16 +121,16 @@ export async function logTokenUsage(input: {
   rejectionReason?: string;
   metadata?: Record<string, unknown>;
 }) {
-  const supabase = createAdminSupabaseClient();
-
-  await supabase.from("token_usage_logs").insert({
-    token_id: input.tokenId,
-    user_id: input.userId,
-    ip_address: input.ipAddress,
-    user_agent: input.userAgent,
-    action: input.action,
-    rejection_reason: input.rejectionReason ?? null,
-    metadata: input.metadata ?? {},
+  await prisma.tokenUsageLog.create({
+    data: {
+      token_id: input.tokenId,
+      user_id: input.userId,
+      ip_address: input.ipAddress,
+      user_agent: input.userAgent,
+      action: input.action,
+      rejection_reason: input.rejectionReason ?? null,
+      metadata: (input.metadata as object) ?? undefined,
+    },
   });
 }
 
@@ -122,8 +140,10 @@ export function renderSecurePlayerHtml(input: {
   title: string;
   remaining: number;
   expiresAt: string;
+  tokenId: string;
+  heartbeatUrl: string;
 }) {
-  const { youtubeId, userEmail, title, remaining, expiresAt } = input;
+  const { youtubeId, userEmail, title, remaining, expiresAt, tokenId, heartbeatUrl } = input;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -140,11 +160,13 @@ export function renderSecurePlayerHtml(input: {
     .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.08;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem}
     .bar{display:flex;gap:16px;font-size:12px;color:#9ca3af;flex-wrap:wrap;justify-content:center}
     .warn{color:#f97316}
+    .revoked-overlay{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.95);z-index:100}
+    .revoked-overlay h2{color:#ef4444;font-size:20px;text-align:center;max-width:440px;line-height:1.6}
   </style>
 </head>
 <body oncontextmenu="return false">
   <div class="player">
-    <iframe src="https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1&controls=1&iv_load_policy=3" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe id="player-frame" src="https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1&controls=1&iv_load_policy=3" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
     <div class="watermark">${userEmail}</div>
   </div>
   <div class="bar">
@@ -153,22 +175,64 @@ export function renderSecurePlayerHtml(input: {
     <span class="warn">Expira: ${new Date(expiresAt).toLocaleString("es-ES")}</span>
   </div>
   <script>
-    document.addEventListener('keydown', (e) => {
-      const blocked = e.key === 'PrintScreen' || (e.ctrlKey && e.key.toLowerCase() === 'p');
+    // Anti-screenshot / print
+    document.addEventListener('keydown', function(e) {
+      var blocked = e.key === 'PrintScreen' || (e.ctrlKey && e.key.toLowerCase() === 'p');
       if (blocked) {
         e.preventDefault();
         document.body.style.filter = 'blur(24px)';
-        setTimeout(() => document.body.style.filter = '', 1200);
+        setTimeout(function() { document.body.style.filter = ''; }, 1200);
       }
     });
-    const expiry = new Date('${expiresAt}').getTime();
-    setInterval(() => {
+
+    // Expiration check
+    var expiry = new Date('${expiresAt}').getTime();
+    setInterval(function() {
       if (Date.now() > expiry) {
-        const iframe = document.querySelector('iframe');
+        var iframe = document.getElementById('player-frame');
         if (iframe) iframe.src = '';
-        document.body.innerHTML = '<h1 style="color:#ef4444;font-size:20px">Token expirado. Regresa al curso para generar uno nuevo.</h1>';
+        document.body.innerHTML = '<div class="revoked-overlay"><h2>Token expirado. Regresa al curso para generar uno nuevo.</h2></div>';
       }
     }, 15000);
+
+    // Device fingerprint (inline lightweight version)
+    function getFingerprint() {
+      var signals = [
+        screen.width, screen.height, screen.colorDepth,
+        navigator.language, navigator.hardwareConcurrency,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        navigator.platform, navigator.userAgent
+      ].join('|');
+      var hash = 0;
+      for (var i = 0; i < signals.length; i++) {
+        hash = ((hash << 5) - hash) + signals.charCodeAt(i);
+        hash |= 0;
+      }
+      return 'fp_' + Math.abs(hash).toString(36);
+    }
+
+    // Heartbeat — keeps session alive, detects concurrent usage
+    var fp = getFingerprint();
+    function sendHeartbeat() {
+      fetch('${heartbeatUrl}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ tokenId: '${tokenId}', fingerprint: fp })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.active === false) {
+          var iframe = document.getElementById('player-frame');
+          if (iframe) iframe.src = '';
+          document.body.innerHTML = '<div class="revoked-overlay"><h2>Se detect\\u00f3 una sesi\\u00f3n activa en otro dispositivo. Solo se permite una reproducci\\u00f3n simult\\u00e1nea por cuenta.</h2></div>';
+        }
+      })
+      .catch(function() {});
+    }
+
+    sendHeartbeat();
+    setInterval(sendHeartbeat, 30000);
   </script>
 </body>
 </html>`;

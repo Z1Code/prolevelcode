@@ -1,24 +1,12 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { logTokenUsage, renderSecurePlayerHtml } from "@/lib/tokens/generate";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { verifyVideoAccess } from "@/lib/tokens/hmac";
+import { prisma } from "@/lib/prisma";
 import { assertRateLimit } from "@/lib/utils/rate-limit";
 
 interface RouteContext {
   params: Promise<{ tokenId: string }>;
-}
-
-interface VideoTokenJoinRow {
-  id: string;
-  token: string;
-  user_id: string;
-  expires_at: string;
-  max_views: number;
-  current_views: number;
-  is_revoked: boolean;
-  allowed_ips: string[] | null;
-  lessons: Array<{ youtube_video_id: string; title: string }> | null;
-  users: Array<{ email: string }> | null;
 }
 
 export async function GET(request: Request, context: RouteContext) {
@@ -31,33 +19,48 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }
 
-  const supabase = createAdminSupabaseClient();
-  const { data } = await supabase
-    .from("video_tokens")
-    .select("id,token,user_id,expires_at,max_views,current_views,is_revoked,allowed_ips,lessons(youtube_video_id,title),users(email)")
-    .eq("token", tokenId)
-    .maybeSingle();
+  // --- HMAC signature verification ---
+  const url = new URL(request.url);
+  const sig = url.searchParams.get("sig");
 
-  const token = data as VideoTokenJoinRow | null;
+  if (!sig) {
+    return NextResponse.json({ error: "Missing signature" }, { status: 403 });
+  }
+
+  const sigPayload = verifyVideoAccess(sig);
+  if (!sigPayload) {
+    return NextResponse.json({ error: "Invalid or expired signature" }, { status: 403 });
+  }
+
+  // --- Token lookup ---
+  const token = await prisma.videoToken.findUnique({
+    where: { token: tokenId },
+    include: {
+      lesson: { select: { youtube_video_id: true, title: true } },
+      user: { select: { email: true } },
+    },
+  });
 
   if (!token) {
     return NextResponse.json({ error: "Token not found" }, { status: 404 });
   }
 
-  const currentViews = Number(token.current_views ?? 0);
-  const maxViews = Number(token.max_views ?? 0);
+  // Verify HMAC payload matches the token
+  if (sigPayload.tokenId !== token.id || sigPayload.userId !== token.user_id) {
+    return NextResponse.json({ error: "Signature mismatch" }, { status: 403 });
+  }
 
   if (token.is_revoked) {
     await logTokenUsage({ tokenId: token.id, userId: token.user_id, ipAddress, userAgent, action: "rejected", rejectionReason: "revoked" });
     return NextResponse.json({ error: "Token revoked" }, { status: 410 });
   }
 
-  if (new Date(token.expires_at) < new Date()) {
+  if (token.expires_at < new Date()) {
     await logTokenUsage({ tokenId: token.id, userId: token.user_id, ipAddress, userAgent, action: "expired" });
     return NextResponse.json({ error: "Token expired" }, { status: 410 });
   }
 
-  if (currentViews >= maxViews) {
+  if (token.current_views >= token.max_views) {
     await logTokenUsage({ tokenId: token.id, userId: token.user_id, ipAddress, userAgent, action: "rejected", rejectionReason: "max_views" });
     return NextResponse.json({ error: "Max views reached" }, { status: 410 });
   }
@@ -76,41 +79,52 @@ export async function GET(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "IP not allowed" }, { status: 403 });
     }
 
-    await supabase
-      .from("video_tokens")
-      .update({ allowed_ips: [...allowedIps, ipAddress] })
-      .eq("id", token.id);
+    await prisma.videoToken.update({
+      where: { id: token.id },
+      data: { allowed_ips: [...allowedIps, ipAddress] },
+    });
   }
 
-  const { data: updatedToken } = await supabase
-    .from("video_tokens")
-    .update({ current_views: currentViews + 1, last_used_at: new Date().toISOString() })
-    .eq("id", token.id)
-    .eq("current_views", currentViews)
-    .select("current_views,max_views")
-    .single();
+  // Optimistic concurrency: only update if current_views hasn't changed
+  const updated = await prisma.videoToken.updateMany({
+    where: { id: token.id, current_views: token.current_views },
+    data: { current_views: token.current_views + 1, last_used_at: new Date() },
+  });
 
-  if (!updatedToken) {
+  if (updated.count === 0) {
     return NextResponse.json({ error: "Token race condition, retry" }, { status: 409 });
   }
 
-  const lesson = Array.isArray(token.lessons) ? token.lessons[0] : null;
-  const user = Array.isArray(token.users) ? token.users[0] : null;
+  const newCurrentViews = token.current_views + 1;
 
-  if (!lesson?.youtube_video_id || !user?.email) {
+  if (!token.lesson.youtube_video_id || !token.user.email) {
     return NextResponse.json({ error: "Token relations missing" }, { status: 500 });
   }
 
+  // --- Create/update ActiveVideoSession ---
+  await prisma.activeVideoSession.upsert({
+    where: { token_id: token.id },
+    update: { last_heartbeat: new Date(), ip_address: ipAddress },
+    create: {
+      user_id: token.user_id,
+      token_id: token.id,
+      fingerprint: `ip_${ipAddress}`,
+      ip_address: ipAddress,
+    },
+  });
+
   await logTokenUsage({ tokenId: token.id, userId: token.user_id, ipAddress, userAgent, action: "viewed" });
 
-  const remainingViews = Number(updatedToken.max_views ?? 0) - Number(updatedToken.current_views ?? 0);
+  const remainingViews = token.max_views - newCurrentViews;
 
   const html = renderSecurePlayerHtml({
-    youtubeId: lesson.youtube_video_id,
-    userEmail: user.email,
-    title: lesson.title,
+    youtubeId: token.lesson.youtube_video_id,
+    userEmail: token.user.email,
+    title: token.lesson.title,
     remaining: remainingViews,
-    expiresAt: token.expires_at,
+    expiresAt: token.expires_at.toISOString(),
+    tokenId: token.id,
+    heartbeatUrl: "/api/tokens/heartbeat",
   });
 
   return new NextResponse(html, {
@@ -119,7 +133,16 @@ export async function GET(request: Request, context: RouteContext) {
       "X-Frame-Options": "SAMEORIGIN",
       "X-Content-Type-Options": "nosniff",
       "Cache-Control": "no-store, no-cache, must-revalidate",
-      Pragma: "no-cache",
+      "Pragma": "no-cache",
+      "Content-Security-Policy": [
+        "default-src 'self'",
+        "frame-src https://www.youtube-nocookie.com",
+        "script-src 'self' 'unsafe-inline'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data:",
+        "connect-src 'self'",
+        "frame-ancestors 'self'",
+      ].join("; "),
     },
   });
 }

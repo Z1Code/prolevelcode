@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { currencyFormatter } from "@/lib/stripe/helpers";
+import { currencyFormatter } from "@/lib/payments/helpers";
 import { getAdminMetrics } from "@/lib/utils/admin-data";
 
 export default async function AdminHomePage() {
@@ -42,8 +42,8 @@ export default async function AdminHomePage() {
               <tbody>
                 {metrics.latestSales.map((sale) => (
                   <tr key={sale.id}>
-                    <td className="py-2">{sale.users?.[0]?.email ?? "-"}</td>
-                    <td>{sale.courses?.[0]?.title ?? "-"}</td>
+                    <td className="py-2">{sale.user?.email ?? "-"}</td>
+                    <td>{sale.course?.title ?? "-"}</td>
                     <td>{currencyFormatter(sale.amount_paid_cents ?? 0, sale.currency ?? "USD")}</td>
                   </tr>
                 ))}
@@ -68,8 +68,8 @@ export default async function AdminHomePage() {
                 {metrics.latestTokens.map((token) => (
                   <tr key={token.id}>
                     <td className="py-2">{token.token.slice(0, 6)}...</td>
-                    <td>{token.users?.[0]?.email ?? "-"}</td>
-                    <td>{token.lessons?.[0]?.title ?? "-"}</td>
+                    <td>{token.user?.email ?? "-"}</td>
+                    <td>{token.lesson?.title ?? "-"}</td>
                     <td>
                       {token.current_views}/{token.max_views}
                     </td>

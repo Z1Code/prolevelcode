@@ -1,6 +1,7 @@
-﻿import { notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { SecureCoursePlayer } from "@/components/video/secure-course-player";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/auth/session";
 
 interface DashboardCoursePageProps {
   params: Promise<{ slug: string }>;
@@ -8,53 +9,38 @@ interface DashboardCoursePageProps {
 
 export default async function DashboardCoursePage({ params }: DashboardCoursePageProps) {
   const { slug } = await params;
-  const supabase = await createServerSupabaseClient();
+  const user = await getSessionUser();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!user) notFound();
 
-  if (!user) {
-    notFound();
-  }
+  const course = await prisma.course.findUnique({
+    where: { slug },
+    select: { id: true, title: true, slug: true },
+  });
 
-  const { data: enrollments } = await supabase
-    .from("enrollments")
-    .select("id,course_id")
-    .eq("user_id", user.id)
-    .eq("status", "active");
+  if (!course) notFound();
 
-  const enrolledCourseIds = new Set((enrollments ?? []).map((item) => String(item.course_id)));
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { user_id: user.id, course_id: course.id, status: "active" },
+  });
 
-  if (enrolledCourseIds.size === 0) {
-    notFound();
-  }
+  if (!enrollment) notFound();
 
-  const { data: course } = await supabase
-    .from("courses")
-    .select("id,title,slug")
-    .eq("slug", slug)
-    .maybeSingle();
+  const lessons = await prisma.lesson.findMany({
+    where: { course_id: course.id },
+    orderBy: { sort_order: "asc" },
+    select: { id: true, title: true, course_id: true },
+  });
 
-  if (!course || !enrolledCourseIds.has(String(course.id))) {
-    notFound();
-  }
-
-  const { data: lessons } = await supabase
-    .from("lessons")
-    .select("id,title,course_id,sort_order")
-    .eq("course_id", course.id)
-    .order("sort_order", { ascending: true });
-
-  const playerLessons = (lessons ?? []).map((lesson) => ({
-    id: String(lesson.id),
-    title: String(lesson.title),
-    courseId: String(lesson.course_id),
+  const playerLessons = lessons.map((lesson) => ({
+    id: lesson.id,
+    title: lesson.title,
+    courseId: lesson.course_id,
   }));
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold">{String(course.title ?? "Curso")}</h2>
+      <h2 className="text-2xl font-semibold">{course.title}</h2>
       <p className="mt-2 text-sm text-slate-400">Reproduccion segura con token auto-destruible.</p>
       <div className="mt-4">
         <SecureCoursePlayer lessons={playerLessons} />

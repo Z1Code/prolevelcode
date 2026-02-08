@@ -1,21 +1,22 @@
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { prisma } from "@/lib/prisma";
 
 export async function assertRateLimit(route: string, actorKey: string, maxHits: number, windowSeconds: number) {
-  const supabase = createAdminSupabaseClient();
+  try {
+    await prisma.rateLimitEvent.create({
+      data: { route, actor_key: actorKey },
+    });
 
-  const { data, error } = await supabase.rpc("check_rate_limit", {
-    p_route: route,
-    p_actor_key: actorKey,
-    p_max_hits: maxHits,
-    p_window_seconds: windowSeconds,
-  });
+    const cutoff = new Date(Date.now() - windowSeconds * 1000);
+    const count = await prisma.rateLimitEvent.count({
+      where: {
+        route,
+        actor_key: actorKey,
+        created_at: { gte: cutoff },
+      },
+    });
 
-  if (error) {
-    console.error("Rate limit RPC error", error);
+    return count <= maxHits;
+  } catch {
     return true;
   }
-
-  return Boolean(data);
 }
-
-

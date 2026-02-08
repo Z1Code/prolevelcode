@@ -16,7 +16,7 @@ export default function AboutPage() {
         <article className="liquid-surface p-5">
           <h2 className="text-xl font-semibold">Especialidades</h2>
           <p className="mt-2 text-sm text-slate-400">
-            Next.js, TypeScript, Firebase, Stripe, UX premium, integraciones de IA y performance web.
+            Next.js, TypeScript, PostgreSQL, MercadoPago, UX premium, integraciones de IA y performance web.
           </p>
         </article>
       </div>

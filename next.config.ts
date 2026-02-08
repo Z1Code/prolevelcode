@@ -2,16 +2,16 @@ import type { NextConfig } from "next";
 
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.youtube-nocookie.com https://js.stripe.com https://www.googletagmanager.com",
+  "script-src 'self' 'unsafe-inline' https://www.youtube-nocookie.com https://sdk.mercadopago.com https://www.googletagmanager.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
   "media-src 'self' https:",
-  "frame-src 'self' https://www.youtube-nocookie.com https://js.stripe.com",
+  "frame-src 'self' https://www.youtube-nocookie.com https://www.mercadopago.cl https://www.mercadopago.com https://www.mercadopago.com.ar https://www.mercadopago.com.mx https://www.mercadopago.com.br",
   "connect-src 'self' https: wss:",
   "object-src 'none'",
   "base-uri 'self'",
-  "form-action 'self' https://checkout.stripe.com",
+  "form-action 'self' https://www.mercadopago.cl https://www.mercadopago.com https://www.mercadopago.com.ar https://www.mercadopago.com.mx https://www.mercadopago.com.br",
   "frame-ancestors 'none'",
   "upgrade-insecure-requests",
 ].join("; ");
@@ -70,7 +70,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Access-Control-Allow-Headers",
-            value: "Content-Type, Authorization, Stripe-Signature",
+            value: "Content-Type, Authorization, X-Signature, X-Request-Id",
           },
         ],
       },

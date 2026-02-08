@@ -1,13 +1,13 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-
-interface SiteConfigRow {
-  key: string;
-  value: unknown;
-}
+import { prisma } from "@/lib/prisma";
 
 export interface SiteFeatureFlags {
   showServices: boolean;
+  showCourses: boolean;
+  showProcess: boolean;
+  showTestimonials: boolean;
+  showStack: boolean;
+  showFinalCta: boolean;
 }
 
 export function coerceBooleanConfig(value: unknown, fallback = true) {
@@ -23,13 +23,18 @@ export function coerceBooleanConfig(value: unknown, fallback = true) {
 
 export async function getSiteFeatureFlags(): Promise<SiteFeatureFlags> {
   noStore();
-  const supabase = createAdminSupabaseClient();
-  const { data } = await supabase.from("site_config").select("key,value");
-  const rows = (data ?? []) as SiteConfigRow[];
+  const rows = await prisma.siteConfig.findMany({
+    select: { key: true, value: true },
+  });
 
-  const showServicesRow = rows.find((item) => item.key === "show_services");
+  const get = (key: string) => rows.find((r) => r.key === key)?.value;
 
   return {
-    showServices: coerceBooleanConfig(showServicesRow?.value, true),
+    showServices: coerceBooleanConfig(get("show_services"), false),
+    showCourses: coerceBooleanConfig(get("show_courses"), false),
+    showProcess: coerceBooleanConfig(get("show_process"), false),
+    showTestimonials: coerceBooleanConfig(get("show_testimonials"), false),
+    showStack: coerceBooleanConfig(get("show_stack"), false),
+    showFinalCta: coerceBooleanConfig(get("show_final_cta"), false),
   };
 }

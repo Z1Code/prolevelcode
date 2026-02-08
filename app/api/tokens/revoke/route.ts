@@ -1,7 +1,7 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { revokeTokenSchema } from "@/lib/validators/api";
 import { requireApiAdmin } from "@/lib/auth/api";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { prisma } from "@/lib/prisma";
 import { logTokenUsage } from "@/lib/tokens/generate";
 
 export async function POST(request: Request) {
@@ -15,21 +15,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payload", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = createAdminSupabaseClient();
-  const { data: token } = await supabase
-    .from("video_tokens")
-    .update({ is_revoked: true, revoked_at: new Date().toISOString(), revoked_reason: parsed.data.reason })
-    .eq("id", parsed.data.tokenId)
-    .select("id,user_id")
-    .maybeSingle();
-
-  if (!token) {
-    return NextResponse.json({ error: "Token not found" }, { status: 404 });
-  }
+  const token = await prisma.videoToken.update({
+    where: { id: parsed.data.tokenId },
+    data: { is_revoked: true, revoked_at: new Date(), revoked_reason: parsed.data.reason },
+  });
 
   await logTokenUsage({
-    tokenId: String(token.id),
-    userId: token.user_id ? String(token.user_id) : null,
+    tokenId: token.id,
+    userId: token.user_id,
     ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "0.0.0.0",
     userAgent: request.headers.get("user-agent") ?? "unknown",
     action: "revoked",
@@ -39,12 +32,14 @@ export async function POST(request: Request) {
     },
   });
 
-  await supabase.from("admin_audit_logs").insert({
-    admin_user_id: context.user.id,
-    action: "token.revoke",
-    target_table: "video_tokens",
-    target_id: parsed.data.tokenId,
-    metadata: { reason: parsed.data.reason },
+  await prisma.adminAuditLog.create({
+    data: {
+      admin_user_id: context.user.id,
+      action: "token.revoke",
+      target_table: "video_tokens",
+      target_id: parsed.data.tokenId,
+      metadata: { reason: parsed.data.reason },
+    },
   });
 
   return NextResponse.json({ ok: true });

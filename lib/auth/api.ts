@@ -1,44 +1,27 @@
-﻿import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "./session";
 
 export async function requireApiUser() {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return null;
-  }
-
-  return { user, supabase };
+  const user = await getSessionUser();
+  if (!user) return null;
+  return { user };
 }
 
 export async function requireApiAdmin() {
   const context = await requireApiUser();
-
   if (!context) return null;
 
-  const adminClient = createAdminSupabaseClient();
-  const { data: appUser } = await adminClient
-    .from("users")
-    .select("id,role,is_active")
-    .eq("id", context.user.id)
-    .maybeSingle();
+  const appUser = await prisma.user.findUnique({
+    where: { id: context.user.id },
+    select: { id: true, role: true, is_active: true },
+  });
 
-  const role = typeof appUser?.role === "string" ? appUser.role : "student";
-  const isActive = Boolean(appUser?.is_active);
-
-  if (!appUser || !isActive || !["admin", "superadmin"].includes(role)) {
+  if (!appUser || !appUser.is_active || !["admin", "superadmin"].includes(appUser.role)) {
     return null;
   }
 
   return {
     ...context,
-    appUser: {
-      ...appUser,
-      role,
-      is_active: isActive,
-    },
+    appUser,
   };
 }

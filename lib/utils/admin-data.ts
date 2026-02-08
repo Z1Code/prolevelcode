@@ -1,12 +1,12 @@
-﻿import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { prisma } from "@/lib/prisma";
 
 export interface AdminLatestSale {
   id: string;
   amount_paid_cents: number | null;
-  currency: string | null;
-  enrolled_at: string;
-  users: Array<{ email: string | null }>;
-  courses: Array<{ title: string | null }>;
+  currency: string;
+  enrolled_at: Date;
+  user: { email: string };
+  course: { title: string };
 }
 
 export interface AdminLatestToken {
@@ -14,9 +14,9 @@ export interface AdminLatestToken {
   token: string;
   current_views: number;
   max_views: number;
-  expires_at: string;
-  users: Array<{ email: string | null }>;
-  lessons: Array<{ title: string | null }>;
+  expires_at: Date;
+  user: { email: string };
+  lesson: { title: string };
 }
 
 export interface AdminMetricsData {
@@ -29,43 +29,52 @@ export interface AdminMetricsData {
 }
 
 export async function getAdminMetrics(): Promise<AdminMetricsData> {
-  const supabase = createAdminSupabaseClient();
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [revenueMonth, newUsers, activeCourses, activeTokens, latestSales, latestTokens] = await Promise.all([
-    supabase
-      .from("enrollments")
-      .select("amount_paid_cents,enrolled_at")
-      .gte("enrolled_at", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
-    supabase
-      .from("users")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
-    supabase.from("courses").select("id", { count: "exact", head: true }).eq("is_published", true),
-    supabase
-      .from("video_tokens")
-      .select("id", { count: "exact", head: true })
-      .eq("is_revoked", false)
-      .gt("expires_at", new Date().toISOString()),
-    supabase
-      .from("enrollments")
-      .select("id,amount_paid_cents,currency,enrolled_at,users(email),courses(title)")
-      .order("enrolled_at", { ascending: false })
-      .limit(8),
-    supabase
-      .from("video_tokens")
-      .select("id,token,current_views,max_views,expires_at,users(email),lessons(title)")
-      .eq("is_revoked", false)
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false })
-      .limit(8),
+  const [monthlyEnrollments, newUsers, activeCourses, activeTokens, latestSales, latestTokens] = await Promise.all([
+    prisma.enrollment.findMany({
+      where: { enrolled_at: { gte: monthStart } },
+      select: { amount_paid_cents: true },
+    }),
+    prisma.user.count({ where: { created_at: { gte: thirtyDaysAgo } } }),
+    prisma.course.count({ where: { is_published: true } }),
+    prisma.videoToken.count({ where: { is_revoked: false, expires_at: { gt: now } } }),
+    prisma.enrollment.findMany({
+      orderBy: { enrolled_at: "desc" },
+      take: 8,
+      select: {
+        id: true,
+        amount_paid_cents: true,
+        currency: true,
+        enrolled_at: true,
+        user: { select: { email: true } },
+        course: { select: { title: true } },
+      },
+    }),
+    prisma.videoToken.findMany({
+      where: { is_revoked: false, expires_at: { gt: now } },
+      orderBy: { created_at: "desc" },
+      take: 8,
+      select: {
+        id: true,
+        token: true,
+        current_views: true,
+        max_views: true,
+        expires_at: true,
+        user: { select: { email: true } },
+        lesson: { select: { title: true } },
+      },
+    }),
   ]);
 
   return {
-    monthlyRevenueCents: (revenueMonth.data ?? []).reduce((acc, item) => acc + Number(item.amount_paid_cents ?? 0), 0),
-    newUsers: newUsers.count ?? 0,
-    activeCourses: activeCourses.count ?? 0,
-    activeTokens: activeTokens.count ?? 0,
-    latestSales: ((latestSales.data ?? []) as unknown) as AdminLatestSale[],
-    latestTokens: ((latestTokens.data ?? []) as unknown) as AdminLatestToken[],
+    monthlyRevenueCents: monthlyEnrollments.reduce((acc, item) => acc + (item.amount_paid_cents ?? 0), 0),
+    newUsers,
+    activeCourses,
+    activeTokens,
+    latestSales: latestSales as AdminLatestSale[],
+    latestTokens: latestTokens as AdminLatestToken[],
   };
 }

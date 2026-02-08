@@ -1,10 +1,11 @@
-﻿import Stripe from "stripe";
+import { Preference } from "mercadopago";
 import { NextResponse } from "next/server";
 import { checkoutCourseSchema } from "@/lib/validators/api";
 import { requireApiUser } from "@/lib/auth/api";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { getStripeServerClient } from "@/lib/stripe/client";
-import { getBaseUrl } from "@/lib/stripe/helpers";
+import { prisma } from "@/lib/prisma";
+import { getMercadoPagoClient } from "@/lib/mercadopago/client";
+import { getBaseUrl } from "@/lib/payments/helpers";
+import { convertUsdToCLP } from "@/lib/payments/currency";
 import { parseRequestBody } from "@/lib/utils/request-body";
 import { jsonError } from "@/lib/utils/http";
 
@@ -21,68 +22,103 @@ export async function POST(request: Request) {
     return jsonError("Invalid payload", 400, parsed.error.flatten());
   }
 
-  const supabase = createAdminSupabaseClient();
-  const { data: course } = await supabase
-    .from("courses")
-    .select("id,slug,title,price_cents,currency,stripe_price_id,is_published")
-    .eq("id", parsed.data.courseId)
-    .eq("is_published", true)
-    .maybeSingle();
+  const course = await prisma.course.findFirst({
+    where: { id: parsed.data.courseId, is_published: true },
+    select: { id: true, slug: true, title: true, price_cents: true, currency: true },
+  });
 
   if (!course) {
     return jsonError("Course not found", 404);
   }
 
-  const { data: existingEnrollment } = await supabase
-    .from("enrollments")
-    .select("id,status")
-    .eq("user_id", context.user.id)
-    .eq("course_id", course.id)
-    .eq("status", "active")
-    .maybeSingle();
+  const existingEnrollment = await prisma.enrollment.findFirst({
+    where: { user_id: context.user.id, course_id: course.id, status: "active" },
+  });
 
   if (existingEnrollment) {
+    const baseUrl = getBaseUrl();
+    const contentType = request.headers.get("content-type") ?? "";
+    if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+      return NextResponse.redirect(`${baseUrl}/dashboard/cursos/${course.slug}`, 303);
+    }
     return jsonError("Course already purchased", 409);
   }
 
-  const stripe = getStripeServerClient();
-  const baseUrl = getBaseUrl();
+  // Free courses: enroll directly without payment
+  if (course.price_cents === 0) {
+    await prisma.enrollment.create({
+      data: { user_id: context.user.id, course_id: course.id, amount_paid_cents: 0, currency: course.currency, status: "active" },
+    });
+    const baseUrl = getBaseUrl();
+    const contentType = request.headers.get("content-type") ?? "";
+    if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+      return NextResponse.redirect(`${baseUrl}/dashboard/cursos/${course.slug}?checkout=success`, 303);
+    }
+    return NextResponse.json({ url: `/dashboard/cursos/${course.slug}?checkout=success` });
+  }
 
-  const params: Stripe.Checkout.SessionCreateParams = {
-    mode: "payment",
-    customer_email: context.user.email ?? undefined,
-    success_url: `${baseUrl}/dashboard/cursos/${String(course.slug)}?checkout=success`,
-    cancel_url: `${baseUrl}/cursos/${String(course.slug)}?checkout=cancelled`,
-    metadata: {
+  let initPoint: string;
+
+  try {
+    const client = getMercadoPagoClient();
+    const preference = new Preference(client);
+    const baseUrl = getBaseUrl();
+    const localAmount = convertUsdToCLP(course.price_cents);
+
+    const externalReference = JSON.stringify({
       type: "course",
       user_id: context.user.id,
-      course_id: String(course.id),
-    },
-    line_items: course.stripe_price_id
-      ? [{ price: String(course.stripe_price_id), quantity: 1 }]
-      : [
+      course_id: course.id,
+    });
+
+    // Only include notification_url if not localhost (MercadoPago rejects non-public URLs)
+    const isLocalhost = baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1");
+
+    const result = await preference.create({
+      body: {
+        items: [
           {
+            id: course.id,
+            title: course.title,
             quantity: 1,
-            price_data: {
-              currency: String(course.currency ?? "USD").toLowerCase(),
-              product_data: { name: String(course.title) },
-              unit_amount: Number(course.price_cents ?? 0),
-            },
+            unit_price: localAmount,
           },
         ],
-    allow_promotion_codes: true,
-  };
+        payer: {
+          email: context.user.email ?? undefined,
+        },
+        back_urls: {
+          success: `${baseUrl}/dashboard/cursos/${course.slug}?checkout=success`,
+          failure: `${baseUrl}/cursos/${course.slug}?checkout=failure`,
+          pending: `${baseUrl}/cursos/${course.slug}?checkout=pending`,
+        },
+        auto_return: "approved",
+        ...(isLocalhost ? {} : { notification_url: `${baseUrl}/api/webhook/mercadopago` }),
+        external_reference: externalReference,
+        statement_descriptor: "PROLEVELCODE",
+      },
+    });
 
-  const session = await stripe.checkout.sessions.create(params);
+    if (!result.init_point) {
+      throw new Error("MercadoPago did not return init_point");
+    }
 
-  if (!session.url) {
-    return jsonError("Unable to create checkout session", 500);
+    initPoint = result.init_point;
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("[checkout/course] MercadoPago error:", errMsg, err);
+    const baseUrl = getBaseUrl();
+    const contentType = request.headers.get("content-type") ?? "";
+    if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+      return NextResponse.redirect(`${baseUrl}/cursos/${course.slug}?checkout=error&detail=${encodeURIComponent(errMsg.slice(0, 200))}`, 303);
+    }
+    return jsonError("Payment service unavailable", 503, { detail: errMsg });
   }
 
   const contentType = request.headers.get("content-type") ?? "";
   if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
-    return NextResponse.redirect(session.url, 303);
+    return NextResponse.redirect(initPoint, 303);
   }
 
-  return NextResponse.json({ url: session.url });
+  return NextResponse.json({ url: initPoint });
 }

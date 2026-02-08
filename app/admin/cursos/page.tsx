@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 
 export default async function AdminCoursesPage() {
-  const supabase = createAdminSupabaseClient();
-  const { data: courses } = await supabase
-    .from("courses")
-    .select("id,title,slug,is_published,total_lessons,price_cents,currency")
-    .order("created_at", { ascending: false });
+  const courses = await prisma.course.findMany({
+    orderBy: { created_at: "desc" },
+    select: { id: true, title: true, slug: true, is_published: true, total_lessons: true, price_cents: true, currency: true },
+  });
 
   return (
     <div>
@@ -22,16 +21,18 @@ export default async function AdminCoursesPage() {
             <tr>
               <th className="px-4 py-3">Titulo</th>
               <th className="px-4 py-3">Slug</th>
+              <th className="px-4 py-3">Precio</th>
               <th className="px-4 py-3">Lecciones</th>
               <th className="px-4 py-3">Publicado</th>
               <th className="px-4 py-3">Accion</th>
             </tr>
           </thead>
           <tbody>
-            {courses?.map((course) => (
+            {courses.map((course) => (
               <tr key={course.id}>
                 <td className="px-4 py-3">{course.title}</td>
                 <td className="px-4 py-3">{course.slug}</td>
+                <td className="px-4 py-3">${(course.price_cents / 100).toFixed(2)} {course.currency}</td>
                 <td className="px-4 py-3">{course.total_lessons ?? 0}</td>
                 <td className="px-4 py-3">{course.is_published ? "Si" : "No"}</td>
                 <td className="px-4 py-3"><Link href={`/admin/cursos/${course.id}`} className="text-emerald-300">Editar</Link></td>
@@ -43,5 +44,3 @@ export default async function AdminCoursesPage() {
     </div>
   );
 }
-
-

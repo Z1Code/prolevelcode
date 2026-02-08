@@ -1,7 +1,7 @@
 ﻿import { Card } from "@/components/ui/card";
 
 const tools = [
-  "Next.js", "React", "TypeScript", "Tailwind", "Firebase", "Stripe", "OpenAI", "Google Cloud", "Firestore", "Prisma", "Docker", "AWS",
+  "Next.js", "React", "TypeScript", "Tailwind", "PostgreSQL", "MercadoPago", "OpenAI", "Google Cloud", "Neon", "Prisma", "Docker", "AWS",
 ];
 
 export function StackSection() {
