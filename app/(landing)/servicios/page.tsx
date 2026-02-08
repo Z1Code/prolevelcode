@@ -8,9 +8,9 @@ interface ServiceItem {
   id: string;
   slug: string;
   title: string;
-  short_description: string;
-  long_description: string;
-  price_range: string;
+  short_description: string | null;
+  long_description: string | null;
+  price_range: string | null;
   is_featured: boolean;
   is_active: boolean;
 }
@@ -32,7 +32,7 @@ export default async function ServicesPage() {
       <p className="mt-4 max-w-2xl text-slate-300">Selecciona un servicio y paga en linea para bloquear tu kickoff.</p>
 
       <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {services.map((service) => (
+        {services.map((service: ServiceItem) => (
           <Card key={service.id} className="p-6">
             <h2 className="text-xl font-semibold">{service.title}</h2>
             <p className="mt-2 text-sm text-slate-400">{service.short_description}</p>
