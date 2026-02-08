@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { hashToken } from "@/lib/auth/jwt";
 import { createSessionCookie } from "@/lib/auth/session";
 import { bootstrapAdminRoleByEmail } from "@/lib/auth/bootstrap";
-import { env } from "@/lib/env";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -25,7 +24,7 @@ export async function GET(request: NextRequest) {
           code,
           client_id: process.env.GOOGLE_CLIENT_ID ?? "",
           client_secret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-          redirect_uri: `${env.appUrl}/auth/callback`,
+          redirect_uri: `${baseUrl}/auth/callback`,
           grant_type: "authorization_code",
         }),
       });
