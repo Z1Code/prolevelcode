@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export function GoogleLoginButton({ next = "/dashboard" }: { next?: string }) {
   function handleClick() {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim();
     if (!clientId) return;
 
     const redirectUri = `${window.location.origin}/auth/callback`;

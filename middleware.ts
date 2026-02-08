@@ -7,7 +7,7 @@ const AUTH_PAGES = ["/login", "/registro", "/recuperar"];
 const COOKIE_NAME = "plc_session";
 
 function getSecret() {
-  const raw = process.env.AUTH_SECRET;
+  const raw = process.env.AUTH_SECRET?.trim();
   if (!raw) return null;
   return new TextEncoder().encode(raw);
 }

@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "crypto";
 const ALG = "HS256";
 
 function getSecret() {
-  const raw = process.env.AUTH_SECRET;
+  const raw = process.env.AUTH_SECRET?.trim();
   if (!raw) throw new Error("Missing AUTH_SECRET environment variable");
   return new TextEncoder().encode(raw);
 }
