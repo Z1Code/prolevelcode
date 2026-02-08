@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+﻿# ProLevelCode Platform
 
-## Getting Started
+Plataforma full-stack (Next.js App Router + Firebase + Stripe) para:
+- Servicios de desarrollo web/IA
+- Venta y consumo de cursos en video
+- Dashboard de estudiante
+- Panel admin
+- Reproduccion segura con tokens auto-destruibles
 
-First, run the development server:
+## Stack
+- Next.js 16 (App Router) + TypeScript
+- Tailwind CSS 4 + Framer Motion
+- Firebase Auth + Firestore + Storage + Hosting/App Hosting
+- Stripe Checkout + Webhooks
+- Resend (emails transaccionales)
+- Prisma (tipos de dominio)
 
+## Rutas principales
+- Publico: `/`, `/servicios`, `/cursos`, `/cursos/[slug]`, `/sobre-mi`, `/contacto`
+- Auth: `/login`, `/registro`, `/recuperar`, `/auth/callback`
+- Estudiante: `/dashboard`, `/dashboard/cursos`, `/dashboard/cursos/[slug]`, `/dashboard/perfil`
+- Admin: `/admin`, `/admin/cursos`, `/admin/servicios`, `/admin/usuarios`, `/admin/tokens`, `/admin/pagos`, `/admin/contacto`, `/admin/configuracion`
+
+## APIs
+- `POST /api/auth/session`
+- `POST /api/checkout/course`
+- `POST /api/checkout/service`
+- `POST /api/webhook/stripe`
+- `POST /api/tokens/generate`
+- `POST /api/tokens/validate`
+- `POST /api/tokens/revoke`
+- `GET /api/video/[tokenId]`
+- `POST /api/contact`
+- `GET /api/admin/analytics`
+
+## Setup local
+1. Instalar dependencias:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+```
+2. Copiar variables:
+```bash
+cp .env.example .env.local
+```
+3. Configurar Firebase/Stripe/Resend en `.env.local`.
+4. Levantar app:
+```bash
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Firebase
+- Setup paso a paso: `docs-firebase-setup.md`
+- Reglas Firestore: `firestore.rules`
+- Indices Firestore: `firestore.indexes.json`
+- Reglas Storage: `storage.rules`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Testing
+```bash
+pnpm test
+pnpm test:e2e
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy en Firebase
+1. Instalar CLI:
+```bash
+npm i -g firebase-tools
+firebase login
+```
+2. Configurar el proyecto:
+```bash
+firebase use --add
+```
+3. Desplegar con App Hosting (recomendado para Next.js SSR) desde consola Firebase conectando este repo, o con frameworks desde CLI:
+```bash
+firebase deploy
+```
+4. Configurar webhook de Stripe a:
+- `https://tu-dominio.com/api/webhook/stripe`
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Nota de seguridad
+La proteccion de video (watermark + token + TTL + rate limit + logs) es disuasiva y robusta para uso comercial, pero no elimina al 100% la posibilidad de grabacion externa de pantalla.

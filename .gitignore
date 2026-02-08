@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/test-results
+/playwright-report
 
 # next.js
 /.next/
@@ -23,12 +25,20 @@
 # misc
 .DS_Store
 *.pem
+/.pnpm-store
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+firebase-debug.log*
+
+# claude
+.claude/
+
+# windows artifacts
+nul
 
 # env files (can opt-in for committing if needed)
 .env*

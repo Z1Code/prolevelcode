@@ -1,0 +1,338 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  student
+  admin
+  superadmin
+}
+
+enum EnrollmentStatus {
+  active
+  refunded
+  expired
+}
+
+enum ServiceOrderStatus {
+  pending_payment
+  pending_kickoff
+  in_progress
+  completed
+  cancelled
+  refunded
+}
+
+enum TokenAction {
+  generated
+  validated
+  viewed
+  expired
+  revoked
+  rejected
+}
+
+model User {
+  id               String          @id @db.Uuid
+  email            String          @unique
+  full_name        String?
+  avatar_url       String?
+  role             UserRole        @default(student)
+  stripe_customer_id String?
+  is_active        Boolean         @default(true)
+  last_login       DateTime?
+  created_at       DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime        @updatedAt @db.Timestamptz(6)
+
+  enrollments      Enrollment[]
+  lessonProgress   LessonProgress[]
+  videoTokens      VideoToken[]
+  serviceOrders    ServiceOrder[]
+  adminAuditLogs   AdminAuditLog[] @relation("AdminAuditLogs")
+  tokenUsageLogs   TokenUsageLog[]
+
+  @@map("users")
+}
+
+model Course {
+  id                     String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug                   String       @unique
+  title                  String
+  subtitle               String?
+  description            String?
+  long_description       String?
+  thumbnail_url          String?
+  preview_video_url      String?
+  price_cents            Int
+  currency               String       @default("USD")
+  stripe_price_id        String?
+  stripe_product_id      String?
+  difficulty             String?
+  category               String?
+  tags                   String[]
+  total_duration_minutes Int?
+  total_lessons          Int?
+  is_published           Boolean      @default(false)
+  is_featured            Boolean      @default(false)
+  launch_date            DateTime?    @db.Timestamptz(6)
+  created_at             DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime     @updatedAt @db.Timestamptz(6)
+
+  modules                Module[]
+  lessons                Lesson[]
+  enrollments            Enrollment[]
+  lessonProgress         LessonProgress[]
+  videoTokens            VideoToken[]
+
+  @@map("courses")
+}
+
+model Module {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  course_id   String   @db.Uuid
+  title       String
+  description String?
+  sort_order  Int
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  course      Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+
+  @@map("modules")
+}
+
+model Lesson {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  module_id        String           @db.Uuid
+  course_id        String           @db.Uuid
+  title            String
+  description      String?
+  youtube_video_id String
+  duration_minutes Int?
+  sort_order       Int
+  is_free_preview  Boolean          @default(false)
+  resources        Json?
+  created_at       DateTime         @default(now()) @db.Timestamptz(6)
+
+  module           Module           @relation(fields: [module_id], references: [id], onDelete: Cascade)
+  course           Course           @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  lessonProgress   LessonProgress[]
+  videoTokens      VideoToken[]
+
+  @@map("lessons")
+}
+
+model Enrollment {
+  id                         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                    String           @db.Uuid
+  course_id                  String           @db.Uuid
+  stripe_payment_intent_id   String?
+  stripe_checkout_session_id String?
+  amount_paid_cents          Int?
+  currency                   String           @default("USD")
+  status                     EnrollmentStatus @default(active)
+  enrolled_at                DateTime         @default(now()) @db.Timestamptz(6)
+
+  user                       User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  course                     Course           @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, course_id])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String   @db.Uuid
+  lesson_id       String   @db.Uuid
+  course_id       String   @db.Uuid
+  is_completed    Boolean  @default(false)
+  watched_seconds Int      @default(0)
+  last_watched_at DateTime @default(now()) @db.Timestamptz(6)
+  completed_at    DateTime? @db.Timestamptz(6)
+
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  lesson          Lesson   @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  course          Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, lesson_id])
+  @@map("lesson_progress")
+}
+
+model VideoToken {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token        String   @unique
+  user_id      String   @db.Uuid
+  lesson_id    String   @db.Uuid
+  course_id    String   @db.Uuid
+  expires_at   DateTime @db.Timestamptz(6)
+  max_views    Int      @default(1)
+  current_views Int     @default(0)
+  ttl_seconds  Int      @default(14400)
+  ip_address   Unsupported("inet")?
+  user_agent   String?
+  allowed_ips  Unsupported("inet[]")?
+  is_revoked   Boolean  @default(false)
+  revoked_at   DateTime? @db.Timestamptz(6)
+  revoked_reason String?
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  last_used_at DateTime? @db.Timestamptz(6)
+
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  lesson       Lesson   @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  course       Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  usageLogs     TokenUsageLog[]
+
+  @@map("video_tokens")
+}
+
+model TokenUsageLog {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token_id        String      @db.Uuid
+  user_id         String?     @db.Uuid
+  ip_address      Unsupported("inet")?
+  user_agent      String?
+  action          TokenAction
+  rejection_reason String?
+  metadata        Json?
+  created_at      DateTime    @default(now()) @db.Timestamptz(6)
+
+  token           VideoToken  @relation(fields: [token_id], references: [id], onDelete: Cascade)
+  user            User?       @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@map("token_usage_logs")
+}
+
+model Service {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug              String        @unique
+  title             String
+  short_description String?
+  long_description  String?
+  icon              String?
+  price_range       String?
+  delivery_time     String?
+  features          String[]
+  is_featured       Boolean       @default(false)
+  sort_order        Int?
+  is_active         Boolean       @default(true)
+  created_at        DateTime      @default(now()) @db.Timestamptz(6)
+
+  orders            ServiceOrder[]
+
+  @@map("services")
+}
+
+model ServiceOrder {
+  id                         String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                    String             @db.Uuid
+  service_id                 String             @db.Uuid
+  status                     ServiceOrderStatus @default(pending_payment)
+  quoted_amount_cents        Int
+  paid_amount_cents          Int?
+  currency                   String             @default("USD")
+  customer_config            Json?
+  stripe_payment_intent_id   String?
+  stripe_checkout_session_id String?
+  no_refund_accepted_at      DateTime?          @db.Timestamptz(6)
+  paid_at                    DateTime?          @db.Timestamptz(6)
+  created_at                 DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime           @updatedAt @db.Timestamptz(6)
+
+  user                       User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  service                    Service            @relation(fields: [service_id], references: [id], onDelete: Restrict)
+
+  @@map("service_orders")
+}
+
+model ContactMessage {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  email            String
+  company          String?
+  service_interest String?
+  budget_range     String?
+  message          String
+  is_read          Boolean  @default(false)
+  is_archived      Boolean  @default(false)
+  admin_notes      String?
+  responded_at     DateTime? @db.Timestamptz(6)
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("contact_messages")
+}
+
+model Testimonial {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  author_name       String
+  author_role       String?
+  author_avatar_url String?
+  content           String
+  rating            Int?
+  service_or_course String?
+  is_featured       Boolean  @default(false)
+  is_published      Boolean  @default(true)
+  sort_order        Int?
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("testimonials")
+}
+
+model SiteConfig {
+  key        String   @id
+  value      Json
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("site_config")
+}
+
+model AdminAuditLog {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admin_user_id String  @db.Uuid
+  action       String
+  target_table String?
+  target_id    String?
+  metadata     Json?
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  adminUser    User     @relation("AdminAuditLogs", fields: [admin_user_id], references: [id], onDelete: Cascade)
+
+  @@map("admin_audit_logs")
+}
+
+model RateLimitEvent {
+  id         BigInt   @id @default(autoincrement())
+  route      String
+  actor_key  String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("rate_limit_events")
+}
+
+model PaymentTransaction {
+  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stripe_payment_intent_id String   @unique
+  amount_cents             Int
+  currency                 String
+  status                   String
+  metadata                 Json?
+  created_at               DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("payment_transactions")
+}
+
+model StripeEvent {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_id   String   @unique
+  type       String
+  payload    Json
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("stripe_events")
+}
+
