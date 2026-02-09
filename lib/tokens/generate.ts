@@ -16,7 +16,7 @@ interface GenerateVideoTokenParams {
 }
 
 export async function generateVideoToken(params: GenerateVideoTokenParams): Promise<VideoTokenResponse> {
-  const { userId, lessonId, courseId, ipAddress, userAgent, fingerprint } = params;
+  const { userId, lessonId, courseId, ipAddress, userAgent } = params;
 
   const enrollment = await prisma.enrollment.findFirst({
     where: { user_id: userId, course_id: courseId, status: "active" },
@@ -26,26 +26,13 @@ export async function generateVideoToken(params: GenerateVideoTokenParams): Prom
     throw new Error("NO_ENROLLMENT");
   }
 
-  // --- Concurrent session check ---
-  // Clean stale sessions first
+  // --- Clean stale sessions (opportunistic) ---
   await prisma.activeVideoSession.deleteMany({
     where: {
       user_id: userId,
       last_heartbeat: { lt: new Date(Date.now() - CONCURRENT_SESSION_STALE_MS) },
     },
   });
-
-  // Check if user has an active video session on a different device
-  if (fingerprint) {
-    const activeSessions = await prisma.activeVideoSession.findMany({
-      where: { user_id: userId },
-    });
-
-    const otherDevice = activeSessions.find((s) => s.fingerprint !== fingerprint);
-    if (otherDevice) {
-      throw new Error("CONCURRENT_SESSION");
-    }
-  }
 
   // --- Token reuse ---
   const existingTokens = await prisma.videoToken.findMany({

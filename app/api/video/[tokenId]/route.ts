@@ -101,11 +101,13 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Token relations missing" }, { status: 500 });
   }
 
-  // --- Create/update ActiveVideoSession ---
-  await prisma.activeVideoSession.upsert({
-    where: { token_id: token.id },
-    update: { last_heartbeat: new Date(), ip_address: ipAddress },
-    create: {
+  // --- "Last session wins": delete old sessions, create new one ---
+  await prisma.activeVideoSession.deleteMany({
+    where: { user_id: token.user_id },
+  });
+
+  await prisma.activeVideoSession.create({
+    data: {
       user_id: token.user_id,
       token_id: token.id,
       fingerprint: `ip_${ipAddress}`,
