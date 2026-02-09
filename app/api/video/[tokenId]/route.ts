@@ -137,9 +137,9 @@ export async function GET(request: Request, context: RouteContext) {
       "Content-Security-Policy": [
         "default-src 'self'",
         "frame-src https://www.youtube-nocookie.com",
-        "script-src 'self' 'unsafe-inline'",
+        "script-src 'self' 'unsafe-inline' https://www.youtube.com",
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data:",
+        "img-src 'self' data: https://www.youtube-nocookie.com https://i.ytimg.com",
         "connect-src 'self'",
         "frame-ancestors 'self'",
       ].join("; "),

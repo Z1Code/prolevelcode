@@ -134,6 +134,30 @@ export async function logTokenUsage(input: {
   });
 }
 
+/**
+ * XOR-obfuscate a string with a key, then base64-encode.
+ * Not encryption — just enough to keep the YouTube ID out of plain view
+ * in page source and DevTools Elements panel.
+ */
+function obfuscateId(plain: string, key: string): string {
+  let result = "";
+  for (let i = 0; i < plain.length; i++) {
+    result += String.fromCharCode(
+      plain.charCodeAt(i) ^ key.charCodeAt(i % key.length),
+    );
+  }
+  return Buffer.from(result, "binary").toString("base64");
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function renderSecurePlayerHtml(input: {
   youtubeId: string;
   userEmail: string;
@@ -145,19 +169,31 @@ export function renderSecurePlayerHtml(input: {
 }) {
   const { youtubeId, userEmail, title, remaining, expiresAt, tokenId, heartbeatUrl } = input;
 
+  const safeTitle = escapeHtml(title);
+  const safeEmail = escapeHtml(userEmail);
+  const safeTokenId = tokenId.replace(/[^a-zA-Z0-9_-]/g, "");
+  const safeHeartbeatUrl = heartbeatUrl.replace(/[^a-zA-Z0-9/_-]/g, "");
+
+  const obfKey = "pLc$9xW#";
+  const encodedId = obfuscateId(youtubeId, obfKey);
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>${title}</title>
+  <title>${safeTitle}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#000;color:#fff;font-family:Inter,system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;overflow:hidden;user-select:none}
+    body{background:#000;color:#fff;font-family:Inter,system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;overflow:hidden;user-select:none;-webkit-user-select:none}
     .player{position:relative;width:min(95vw,1100px);aspect-ratio:16/9}
-    iframe{width:100%;height:100%;border:0;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
-    .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.08;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem}
+    #vp{width:100%;height:100%;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+    iframe{border:0;border-radius:12px}
+    .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.08;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem;z-index:5}
+    /* Block YouTube title bar at top and logo at bottom-right */
+    .yt-block-top{position:absolute;top:0;left:0;right:0;height:48px;z-index:4;cursor:default;border-radius:12px 12px 0 0}
+    .yt-block-logo{position:absolute;bottom:0;right:0;width:80px;height:48px;z-index:4;cursor:default;border-radius:0 0 12px 0}
     .bar{display:flex;gap:16px;font-size:12px;color:#9ca3af;flex-wrap:wrap;justify-content:center}
     .warn{color:#f97316}
     .revoked-overlay{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.95);z-index:100}
@@ -166,36 +202,80 @@ export function renderSecurePlayerHtml(input: {
 </head>
 <body oncontextmenu="return false">
   <div class="player">
-    <iframe id="player-frame" src="https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1&controls=1&iv_load_policy=3" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-    <div class="watermark">${userEmail}</div>
+    <div id="vp"></div>
+    <div class="yt-block-top"></div>
+    <div class="yt-block-logo"></div>
+    <div class="watermark">${safeEmail}</div>
   </div>
   <div class="bar">
-    <span>${title}</span>
+    <span>${safeTitle}</span>
     <span>Vistas restantes: ${remaining}</span>
     <span class="warn">Expira: ${new Date(expiresAt).toLocaleString("es-ES")}</span>
   </div>
   <script>
-    // Anti-screenshot / print
+  (function(){
+    // --- Decode resource identifier at runtime ---
+    var _d = '${encodedId}';
+    var _k = ['pLc$','9xW#'];
+    function _r(e,k){
+      var b=atob(e),o='',j=0;
+      for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(j));j=(j+1)%k.length;}
+      return o;
+    }
+    var _v = _r(_d, _k[0]+_k[1]);
+
+    // --- Load YouTube IFrame API ---
+    var tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+
+    var player;
+
+    window.onYouTubeIframeAPIReady = function() {
+      player = new YT.Player('vp', {
+        host: 'https://www.youtube-nocookie.com',
+        videoId: _v,
+        playerVars: {
+          autoplay: 0,
+          controls: 1,
+          disablekb: 0,
+          fs: 1,
+          modestbranding: 1,
+          rel: 0,
+          showinfo: 0,
+          iv_load_policy: 3,
+          origin: window.location.origin,
+          enablejsapi: 1,
+          playsinline: 1
+        },
+        events: { onReady: function(){ /* ready */ } }
+      });
+    };
+
+    // --- Anti-screenshot / print / DevTools deterrent ---
     document.addEventListener('keydown', function(e) {
-      var blocked = e.key === 'PrintScreen' || (e.ctrlKey && e.key.toLowerCase() === 'p');
-      if (blocked) {
+      var blur = e.key === 'PrintScreen'
+        || (e.ctrlKey && e.key.toLowerCase() === 'p')
+        || e.key === 'F12'
+        || (e.ctrlKey && e.shiftKey && 'ijk'.indexOf(e.key.toLowerCase()) !== -1)
+        || (e.ctrlKey && e.key.toLowerCase() === 'u');
+      if (blur) {
         e.preventDefault();
         document.body.style.filter = 'blur(24px)';
-        setTimeout(function() { document.body.style.filter = ''; }, 1200);
+        setTimeout(function() { document.body.style.filter = ''; }, 2000);
       }
     });
 
-    // Expiration check
+    // --- Expiration check ---
     var expiry = new Date('${expiresAt}').getTime();
     setInterval(function() {
       if (Date.now() > expiry) {
-        var iframe = document.getElementById('player-frame');
-        if (iframe) iframe.src = '';
+        if (player && player.destroy) player.destroy();
         document.body.innerHTML = '<div class="revoked-overlay"><h2>Token expirado. Regresa al curso para generar uno nuevo.</h2></div>';
       }
     }, 15000);
 
-    // Device fingerprint (inline lightweight version)
+    // --- Device fingerprint ---
     function getFingerprint() {
       var signals = [
         screen.width, screen.height, screen.colorDepth,
@@ -211,20 +291,19 @@ export function renderSecurePlayerHtml(input: {
       return 'fp_' + Math.abs(hash).toString(36);
     }
 
-    // Heartbeat — keeps session alive, detects concurrent usage
+    // --- Heartbeat ---
     var fp = getFingerprint();
     function sendHeartbeat() {
-      fetch('${heartbeatUrl}', {
+      fetch('${safeHeartbeatUrl}', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ tokenId: '${tokenId}', fingerprint: fp })
+        body: JSON.stringify({ tokenId: '${safeTokenId}', fingerprint: fp })
       })
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.active === false) {
-          var iframe = document.getElementById('player-frame');
-          if (iframe) iframe.src = '';
+          if (player && player.destroy) player.destroy();
           document.body.innerHTML = '<div class="revoked-overlay"><h2>Se detect\\u00f3 una sesi\\u00f3n activa en otro dispositivo. Solo se permite una reproducci\\u00f3n simult\\u00e1nea por cuenta.</h2></div>';
         }
       })
@@ -233,6 +312,7 @@ export function renderSecurePlayerHtml(input: {
 
     sendHeartbeat();
     setInterval(sendHeartbeat, 30000);
+  })();
   </script>
 </body>
 </html>`;

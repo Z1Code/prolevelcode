@@ -68,7 +68,6 @@ export async function getCourseBySlug(slug: string) {
             id: true,
             title: true,
             description: true,
-            youtube_video_id: true,
             duration_minutes: true,
             is_free_preview: true,
             sort_order: true,

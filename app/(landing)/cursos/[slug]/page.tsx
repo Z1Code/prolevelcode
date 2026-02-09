@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { currencyFormatter } from "@/lib/payments/helpers";
-import { VideoPreviewModal } from "@/components/video/video-preview-modal";
 
 interface CourseDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -15,7 +14,6 @@ interface CourseDetailPageProps {
 interface CourseLesson {
   id: string;
   title: string;
-  youtube_video_id?: string;
   is_free_preview?: boolean;
   duration_minutes?: number | null;
 }
@@ -24,6 +22,35 @@ interface CourseModule {
   id: string;
   title: string;
   lessons: CourseLesson[];
+}
+
+/**
+ * Compute thumbnail URL server-side so no YouTube IDs leak to the client.
+ */
+async function getCourseThumbnail(course: {
+  id: string;
+  thumbnail_url?: string | null;
+  preview_video_url?: string | null;
+}): Promise<string | null> {
+  if (course.thumbnail_url) return course.thumbnail_url;
+
+  let youtubeId: string | null = course.preview_video_url ?? null;
+  if (!youtubeId) {
+    try {
+      const previewLesson = await prisma.lesson.findFirst({
+        where: { course_id: course.id, is_free_preview: true },
+        orderBy: { sort_order: "asc" },
+        select: { youtube_video_id: true },
+      });
+      youtubeId = previewLesson?.youtube_video_id ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  return youtubeId
+    ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
+    : null;
 }
 
 export default async function CourseDetailPage({ params, searchParams }: CourseDetailPageProps) {
@@ -38,7 +65,6 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
   const modules = (Array.isArray(course.modules) ? course.modules : []) as CourseModule[];
   const user = await getSessionUser();
 
-  // Check if user is already enrolled
   let isEnrolled = false;
   if (user && course.id) {
     const enrollment = await prisma.enrollment.findFirst({
@@ -47,13 +73,7 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
     isEnrolled = !!enrollment;
   }
 
-  // Find first free preview lesson for the preview button and thumbnail
-  const allLessons = modules.flatMap((m) => m.lessons);
-  const previewLesson = allLessons.find((l) => l.is_free_preview && l.youtube_video_id);
-  const previewYoutubeId = course.preview_video_url || previewLesson?.youtube_video_id || null;
-
-  // Thumbnail from YouTube
-  const thumbnailUrl = course.thumbnail_url || (previewYoutubeId ? `https://img.youtube.com/vi/${previewYoutubeId}/maxresdefault.jpg` : null);
+  const thumbnailUrl = await getCourseThumbnail(course);
 
   return (
     <main className="container-wide section-spacing liquid-section">
@@ -91,14 +111,9 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
                 <Button>Inicia sesion para comprar</Button>
               </Link>
             )}
-
-            {previewYoutubeId && (
-              <VideoPreviewModal youtubeId={previewYoutubeId} title={`Preview: ${course.title}`} />
-            )}
           </div>
         </div>
 
-        {/* Thumbnail / preview image */}
         {thumbnailUrl && (
           <div className="aspect-video overflow-hidden rounded-2xl border border-white/10">
             <img
