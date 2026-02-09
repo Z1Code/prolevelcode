@@ -38,16 +38,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ active: false, reason: "unauthorized" }, { status: 403 });
   }
 
-  // Check fingerprint matches — if different device, revoke
-  if (session.fingerprint !== fingerprint) {
+  // First heartbeat after video load: session was created with placeholder
+  // fingerprint (ip_*). Register the real browser fingerprint.
+  const isPlaceholder = session.fingerprint.startsWith("ip_");
+
+  if (!isPlaceholder && session.fingerprint !== fingerprint) {
     await prisma.activeVideoSession.delete({ where: { id: session.id } });
     return NextResponse.json({ active: false, reason: "fingerprint_mismatch" });
   }
 
-  // Update heartbeat
+  // Update heartbeat (and register real fingerprint on first beat)
   await prisma.activeVideoSession.update({
     where: { id: session.id },
-    data: { last_heartbeat: new Date() },
+    data: {
+      last_heartbeat: new Date(),
+      ...(isPlaceholder ? { fingerprint } : {}),
+    },
   });
 
   return NextResponse.json({ active: true });

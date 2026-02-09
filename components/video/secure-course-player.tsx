@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { getDeviceFingerprint } from "@/lib/tokens/fingerprint";
 
@@ -22,8 +22,6 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
   const [tokenData, setTokenData] = useState<TokenPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [revoked, setRevoked] = useState(false);
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fingerprintRef = useRef<string | null>(null);
 
   const currentLesson = useMemo(
@@ -38,55 +36,11 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
     });
   }, []);
 
-  // Heartbeat management
-  const stopHeartbeat = useCallback(() => {
-    if (heartbeatRef.current) {
-      clearInterval(heartbeatRef.current);
-      heartbeatRef.current = null;
-    }
-  }, []);
-
-  const startHeartbeat = useCallback(
-    (token: string) => {
-      stopHeartbeat();
-
-      const send = async () => {
-        if (!fingerprintRef.current) return;
-        try {
-          const res = await fetch("/api/tokens/heartbeat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tokenId: token, fingerprint: fingerprintRef.current }),
-          });
-          const data = await res.json();
-          if (data.active === false) {
-            setRevoked(true);
-            setTokenData(null);
-            stopHeartbeat();
-          }
-        } catch {
-          // Silent fail on heartbeat
-        }
-      };
-
-      send();
-      heartbeatRef.current = setInterval(send, 30000);
-    },
-    [stopHeartbeat],
-  );
-
-  // Cleanup heartbeat on unmount
-  useEffect(() => {
-    return () => stopHeartbeat();
-  }, [stopHeartbeat]);
-
   async function generateToken() {
     if (!currentLesson) return;
 
     setLoading(true);
     setError(null);
-    setRevoked(false);
-    stopHeartbeat();
 
     const response = await fetch("/api/tokens/generate", {
       method: "POST",
@@ -107,7 +61,6 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
     }
 
     setTokenData(payload);
-    startHeartbeat(payload.token);
     setLoading(false);
   }
 
@@ -127,8 +80,7 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
                 onClick={() => {
                   setSelectedLessonId(lesson.id);
                   setTokenData(null);
-                  setRevoked(false);
-                  stopHeartbeat();
+                  setError(null);
                 }}
               >
                 {lesson.title}
@@ -151,13 +103,7 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
 
         {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
 
-        {revoked ? (
-          <div className="mt-4 flex aspect-video items-center justify-center rounded-xl border border-red-500/30 bg-red-500/5">
-            <p className="max-w-sm text-center text-sm text-red-300">
-              Se detectó una sesión activa en otro dispositivo. Solo se permite una reproducción simultánea por cuenta.
-            </p>
-          </div>
-        ) : tokenData ? (
+        {tokenData ? (
           <div className="mt-4">
             <iframe
               src={tokenData.videoUrl}
