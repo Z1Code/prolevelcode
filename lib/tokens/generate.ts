@@ -190,10 +190,13 @@ export function renderSecurePlayerHtml(input: {
     .player{position:relative;width:min(95vw,1100px);aspect-ratio:16/9}
     #vp{width:100%;height:100%;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
     iframe{border:0;border-radius:12px}
-    .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.08;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem;z-index:5}
-    /* Block YouTube title bar at top and logo at bottom-right */
-    .yt-block-top{position:absolute;top:0;left:0;right:0;height:48px;z-index:4;cursor:default;border-radius:12px 12px 0 0}
-    .yt-block-logo{position:absolute;bottom:0;right:0;width:80px;height:48px;z-index:4;cursor:default;border-radius:0 0 12px 0}
+    .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.08;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem;z-index:6}
+    /* Click shield: blocks right-click on iframe, passes left-clicks via JS */
+    .click-shield{position:absolute;inset:0;z-index:3;border-radius:12px;background:rgba(0,0,0,.001)}
+    /* Block YouTube title bar / share / copy-link at top */
+    .yt-block-top{position:absolute;top:0;left:0;right:0;height:80px;z-index:5;cursor:default;border-radius:12px 12px 0 0;background:rgba(0,0,0,.001)}
+    /* Block YouTube logo at bottom-right */
+    .yt-block-logo{position:absolute;bottom:0;right:0;width:160px;height:56px;z-index:5;cursor:default;border-radius:0 0 12px 0;background:rgba(0,0,0,.001)}
     .bar{display:flex;gap:16px;font-size:12px;color:#9ca3af;flex-wrap:wrap;justify-content:center}
     .warn{color:#f97316}
     .revoked-overlay{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.95);z-index:100}
@@ -203,6 +206,7 @@ export function renderSecurePlayerHtml(input: {
 <body oncontextmenu="return false">
   <div class="player">
     <div id="vp"></div>
+    <div class="click-shield" id="clickShield"></div>
     <div class="yt-block-top"></div>
     <div class="yt-block-logo"></div>
     <div class="watermark">${safeEmail}</div>
@@ -312,6 +316,22 @@ export function renderSecurePlayerHtml(input: {
 
     sendHeartbeat();
     setInterval(sendHeartbeat, 30000);
+
+    // --- Click shield: pass left-clicks through, block right-click ---
+    var shield = document.getElementById('clickShield');
+    if (shield) {
+      shield.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+      shield.addEventListener('mousedown', function(e) {
+        if (e.button === 0) {
+          shield.style.pointerEvents = 'none';
+          setTimeout(function() { shield.style.pointerEvents = 'auto'; }, 200);
+        }
+      });
+      shield.addEventListener('touchstart', function() {
+        shield.style.pointerEvents = 'none';
+        setTimeout(function() { shield.style.pointerEvents = 'auto'; }, 400);
+      }, { passive: true });
+    }
   })();
   </script>
 </body>
