@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { currencyFormatter } from "@/lib/payments/helpers";
+import { checkCourseAccess, getUserTier } from "@/lib/access/check-access";
+import { TierBadge } from "@/components/courses/tier-badge";
+import { PaymentMethodSelector } from "@/components/pricing/payment-method-selector";
+import { CoursesCountdown } from "../courses-countdown";
 
 interface CourseDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -25,7 +29,7 @@ interface CourseModule {
 }
 
 /**
- * Compute thumbnail URL server-side so no YouTube IDs leak to the client.
+ * Compute thumbnail URL server-side so no video IDs leak to the client.
  */
 async function getCourseThumbnail(course: {
   id: string;
@@ -34,20 +38,26 @@ async function getCourseThumbnail(course: {
 }): Promise<string | null> {
   if (course.thumbnail_url) return course.thumbnail_url;
 
-  let youtubeId: string | null = course.preview_video_url ?? null;
-  if (!youtubeId) {
-    try {
-      const previewLesson = await prisma.lesson.findFirst({
-        where: { course_id: course.id, is_free_preview: true },
-        orderBy: { sort_order: "asc" },
-        select: { youtube_video_id: true },
-      });
-      youtubeId = previewLesson?.youtube_video_id ?? null;
-    } catch {
-      return null;
+  try {
+    const previewLesson = await prisma.lesson.findFirst({
+      where: { course_id: course.id, is_free_preview: true },
+      orderBy: { sort_order: "asc" },
+      select: { bunny_video_id: true, bunny_thumbnail_url: true, youtube_video_id: true },
+    });
+
+    if (previewLesson?.bunny_thumbnail_url) return previewLesson.bunny_thumbnail_url;
+    if (previewLesson?.bunny_video_id) {
+      const { getBunnyThumbnailUrl } = await import("@/lib/bunny/signed-url");
+      return getBunnyThumbnailUrl(previewLesson.bunny_video_id);
     }
+    if (previewLesson?.youtube_video_id) {
+      return `https://img.youtube.com/vi/${previewLesson.youtube_video_id}/maxresdefault.jpg`;
+    }
+  } catch {
+    // fallback
   }
 
+  const youtubeId = course.preview_video_url ?? null;
   return youtubeId
     ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
     : null;
@@ -65,18 +75,22 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
   const modules = (Array.isArray(course.modules) ? course.modules : []) as CourseModule[];
   const user = await getSessionUser();
 
-  let isEnrolled = false;
+  let hasAccess = false;
+  let userTier: "pro" | "basic" | null = null;
   if (user && course.id) {
-    const enrollment = await prisma.enrollment.findFirst({
-      where: { user_id: user.id, course_id: course.id, status: "active" },
-    });
-    isEnrolled = !!enrollment;
+    const access = await checkCourseAccess(user.id, course.id);
+    hasAccess = access.granted;
+    userTier = await getUserTier(user.id);
   }
+
+  const courseTierAccess = (course as { tier_access?: string }).tier_access ?? "basic";
+  const isComingSoon = (course as { is_coming_soon?: boolean }).is_coming_soon ?? false;
 
   const thumbnailUrl = await getCourseThumbnail(course);
 
   return (
     <main className="container-wide section-spacing liquid-section">
+      <CoursesCountdown>
       {checkout === "error" && (
         <div className="mb-6 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           No se pudo iniciar el pago. Intenta de nuevo mas tarde o contactanos.
@@ -89,7 +103,10 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
       )}
       <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
         <div>
-          <h1 className="text-4xl font-bold md:text-5xl">{course.title}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-bold md:text-5xl">{course.title}</h1>
+            <TierBadge tier={courseTierAccess} isComingSoon={isComingSoon} />
+          </div>
           <p className="mt-4 max-w-3xl text-slate-300">{course.long_description ?? course.subtitle ?? course.description}</p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -97,15 +114,29 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
               <span className="liquid-pill text-sm">{currencyFormatter(course.price_cents, course.currency)}</span>
             )}
 
-            {isEnrolled ? (
+            {isComingSoon ? (
+              <span className="text-sm text-amber-300">Este curso estara disponible proximamente</span>
+            ) : hasAccess ? (
               <Link href={`/dashboard/cursos/${slug}`}>
                 <Button>Ir al curso →</Button>
               </Link>
             ) : user ? (
-              <form action="/api/checkout/course" method="post">
-                <input type="hidden" name="courseId" value={course.id ?? ""} />
-                <Button type="submit">Comprar curso</Button>
-              </form>
+              <div className="space-y-3">
+                {/* Tier-locked: suggest upgrading */}
+                {courseTierAccess === "pro" && userTier !== "pro" && (
+                  <div className="rounded-lg border border-violet-400/20 bg-violet-500/5 p-3">
+                    <p className="text-sm text-violet-200">
+                      Este curso requiere el plan Pro.{" "}
+                      <Link href="/planes" className="font-medium underline">Ver planes</Link>
+                    </p>
+                  </div>
+                )}
+                <PaymentMethodSelector
+                  courseId={course.id ?? ""}
+                  mpAction="/api/checkout/course"
+                  binanceAction="/api/checkout/binance/course"
+                />
+              </div>
             ) : (
               <Link href={`/login?next=${encodeURIComponent(`/cursos/${slug}`)}`}>
                 <Button>Inicia sesion para comprar</Button>
@@ -151,6 +182,7 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
           ))}
         </div>
       </section>
+      </CoursesCountdown>
     </main>
   );
 }
