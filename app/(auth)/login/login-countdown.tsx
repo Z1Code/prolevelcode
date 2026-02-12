@@ -28,12 +28,12 @@ function getTimeLeft() {
   };
 }
 
-function formatTime(zone: string) {
-  return new Date().toLocaleTimeString("es-CL", {
+// Format the TARGET date in each timezone to show local launch time
+function launchTime(zone: string) {
+  return new Date(TARGET).toLocaleTimeString("es-CL", {
     timeZone: zone,
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
     hour12: true,
   });
 }
@@ -42,14 +42,13 @@ export function LoginCountdown({ children }: { children: React.ReactNode }) {
   const [timeLeft, setTimeLeft] = useState<ReturnType<typeof getTimeLeft>>(
     getTimeLeft
   );
-  const [now, setNow] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setNow(Date.now());
+    setMounted(true);
     const id = setInterval(() => {
       const t = getTimeLeft();
       setTimeLeft(t);
-      setNow(Date.now());
       if (!t) clearInterval(id);
     }, 1000);
     return () => clearInterval(id);
@@ -91,20 +90,20 @@ export function LoginCountdown({ children }: { children: React.ReactNode }) {
         Sabado 14 de febrero — 5:00 PM (hora Chile)
       </p>
 
-      {now > 0 && (
+      {mounted && (
         <div className="mt-8 w-full">
           <p className="mb-3 text-xs uppercase tracking-wider text-slate-500">
-            Hora actual por pais
+            Hora de lanzamiento en tu pais
           </p>
           <div className="grid grid-cols-3 gap-2">
             {TIMEZONES.map((tz) => (
               <div
                 key={tz.zone}
-                className="flex flex-col items-center rounded-lg border border-white/5 bg-white/[0.03] px-2 py-2"
+                className="flex flex-col items-center rounded-lg border border-white/5 bg-white/[0.03] px-2 py-2.5"
               >
                 <span className="text-[11px] text-slate-500">{tz.label}</span>
-                <span className="text-sm font-medium tabular-nums text-slate-300">
-                  {formatTime(tz.zone)}
+                <span className="text-sm font-semibold tabular-nums text-slate-200">
+                  {launchTime(tz.zone)}
                 </span>
               </div>
             ))}
