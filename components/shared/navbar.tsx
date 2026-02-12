@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Menu, X, ChevronDown } from "lucide-react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "@/lib/i18n/language-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 
 const navItems = [
-  { href: "/cursos", key: "courses" as const },
   { href: "/becas", key: "scholarships" as const },
   { href: "/sobre-mi", key: "about" as const },
   { href: "/contacto", key: "contact" as const },
+];
+
+const learnSubitems = [
+  { href: "/guias", key: "guides" as const, desc: { es: "Aprende paso a paso", en: "Learn step by step" } },
+  { href: "/cursos", key: "courses" as const, desc: { es: "Cursos con video", en: "Video courses" } },
 ];
 
 type NavbarUser = {
@@ -38,11 +42,47 @@ export function Navbar({
   const { lang, t, toggle } = useTranslation();
   const [openForPath, setOpenForPath] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [learnOpen, setLearnOpen] = useState(false);
+  const [mobileLearnOpen, setMobileLearnOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ left: 0, top: 0 });
+  const learnBtnRef = useRef<HTMLButtonElement>(null);
+  const learnWrapRef = useRef<HTMLDivElement>(null);
+  const learnTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const isOpen = openForPath === pathname;
 
   const isActiveLink = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-  const closeMenu = () => setOpenForPath(null);
+  const isLearnActive = learnSubitems.some((item) => isActiveLink(item.href));
+  const closeMenu = () => {
+    setOpenForPath(null);
+    setMobileLearnOpen(false);
+  };
   const toggleMenu = () => setOpenForPath((prev) => (prev === pathname ? null : pathname));
+
+  // Measure button viewport position for fixed dropdown placement
+  const measureBtn = useCallback(() => {
+    const btn = learnBtnRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    setDropdownPos({
+      left: r.left + r.width / 2,
+      top: r.bottom + 8,
+    });
+  }, []);
+
+  const openLearnDropdown = useCallback(() => {
+    measureBtn();
+    setLearnOpen(true);
+  }, [measureBtn]);
+
+  const handleLearnEnter = useCallback(() => {
+    clearTimeout(learnTimeout.current);
+    learnTimeout.current = setTimeout(openLearnDropdown, 80);
+  }, [openLearnDropdown]);
+
+  const handleLearnLeave = useCallback(() => {
+    clearTimeout(learnTimeout.current);
+    learnTimeout.current = setTimeout(() => setLearnOpen(false), 200);
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 14);
@@ -71,6 +111,12 @@ export function Navbar({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isOpen]);
 
+  // Close dropdown on route change
+  useEffect(() => {
+    setLearnOpen(false);
+    setMobileLearnOpen(false);
+  }, [pathname]);
+
   return (
     <header className="sticky top-0 z-50 px-4 pt-4">
       <div
@@ -92,6 +138,37 @@ export function Navbar({
           </Link>
 
           <nav className="hidden flex-1 items-center justify-center gap-0.5 lg:flex">
+            {/* "Aprender" trigger — dropdown renders outside the shell */}
+            <div
+              ref={learnWrapRef}
+              onMouseEnter={handleLearnEnter}
+              onMouseLeave={handleLearnLeave}
+            >
+              <button
+                ref={learnBtnRef}
+                type="button"
+                onClick={() => {
+                  if (learnOpen) {
+                    setLearnOpen(false);
+                  } else {
+                    openLearnDropdown();
+                  }
+                }}
+                className={cn(
+                  "navbar-link inline-flex items-center gap-1",
+                  isLearnActive && "navbar-link-active",
+                )}
+              >
+                {t.nav.learn}
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 transition-transform duration-200",
+                    learnOpen && "rotate-180",
+                  )}
+                />
+              </button>
+            </div>
+
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -189,6 +266,48 @@ export function Navbar({
         </div>
       </div>
 
+      {/* ── Desktop "Aprender" dropdown — rendered OUTSIDE navbar-shell to avoid overflow:hidden clipping ── */}
+      <AnimatePresence>
+        {learnOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.96 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="pointer-events-none fixed z-[60] hidden w-56 lg:block"
+            style={{
+              left: dropdownPos.left - 112,
+              top: dropdownPos.top,
+            }}
+            onMouseEnter={handleLearnEnter}
+            onMouseLeave={handleLearnLeave}
+          >
+            <div className="pointer-events-auto navbar-dropdown-glass w-56 p-2">
+              <div className="navbar-dropdown-shimmer" aria-hidden />
+              <div className="navbar-dropdown-refraction" aria-hidden />
+              <div className="relative z-10">
+                {learnSubitems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setLearnOpen(false)}
+                    className={cn(
+                      "flex flex-col gap-0.5 rounded-xl px-3 py-2.5 transition-colors duration-150",
+                      isActiveLink(item.href)
+                        ? "bg-white/10 text-white"
+                        : "text-slate-300 hover:bg-white/7 hover:text-white",
+                    )}
+                  >
+                    <span className="text-[13.5px] font-semibold">{t.nav[item.key]}</span>
+                    <span className="text-[11px] text-slate-500">{item.desc[lang]}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {isOpen ? (
           <motion.button
@@ -215,6 +334,53 @@ export function Navbar({
           >
             <div className="navbar-mobile-panel">
               <nav className="flex flex-col gap-1.5">
+                {/* Mobile "Aprender" accordion */}
+                <button
+                  type="button"
+                  onClick={() => setMobileLearnOpen((v) => !v)}
+                  className={cn(
+                    "navbar-mobile-link justify-between",
+                    isLearnActive && "navbar-mobile-link-active",
+                  )}
+                >
+                  {t.nav.learn}
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform duration-200",
+                      mobileLearnOpen && "rotate-180",
+                    )}
+                  />
+                </button>
+
+                <AnimatePresence>
+                  {mobileLearnOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="ml-3 flex flex-col gap-1 border-l border-white/8 pl-3">
+                        {learnSubitems.map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={closeMenu}
+                            className={cn(
+                              "navbar-mobile-link text-sm",
+                              isActiveLink(item.href) && "navbar-mobile-link-active",
+                            )}
+                            aria-current={isActiveLink(item.href) ? "page" : undefined}
+                          >
+                            {t.nav[item.key]}
+                          </Link>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {navItems.map((item) => (
                   <Link
                     key={item.href}

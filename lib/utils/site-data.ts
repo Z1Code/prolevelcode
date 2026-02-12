@@ -1,6 +1,13 @@
 ﻿export const navLinks = [
   { href: "/servicios", label: "Servicios" },
-  { href: "/cursos", label: "Cursos" },
+  {
+    label: "Aprender",
+    children: [
+      { href: "/guias", label: "Guias" },
+      { href: "/cursos", label: "Cursos" },
+    ],
+  },
+  { href: "/becas", label: "Becas" },
   { href: "/sobre-mi", label: "Sobre mi" },
   { href: "/contacto", label: "Contacto" },
 ];

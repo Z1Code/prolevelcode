@@ -2,6 +2,8 @@ export const translations = {
   es: {
     nav: {
       services: "Servicios",
+      learn: "Aprender",
+      guides: "Guias",
       courses: "Cursos",
       scholarships: "Becas",
       about: "Sobre mi",
@@ -31,6 +33,8 @@ export const translations = {
   en: {
     nav: {
       services: "Services",
+      learn: "Learn",
+      guides: "Guides",
       courses: "Courses",
       scholarships: "Scholarships",
       about: "About me",
