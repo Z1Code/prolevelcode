@@ -17,7 +17,6 @@ export function Footer() {
             <h4 className="mb-3 text-sm font-semibold text-slate-200">Navegacion</h4>
             <ul className="space-y-2 text-sm text-slate-300">
               <li><Link href="/cursos" className="liquid-link">Cursos</Link></li>
-              <li><Link href="/servicios" className="liquid-link">Servicios</Link></li>
               <li><Link href="/contacto" className="liquid-link">Contacto</Link></li>
               <li><Link href="/sobre-mi" className="liquid-link">Sobre mi</Link></li>
             </ul>

@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 
 const navItems = [
-  { href: "/servicios", key: "services" as const },
   { href: "/cursos", key: "courses" as const },
   { href: "/sobre-mi", key: "about" as const },
   { href: "/contacto", key: "contact" as const },
