@@ -27,6 +27,8 @@ export interface CourseCard {
   total_lessons: number | null;
   is_published: boolean;
   is_featured: boolean;
+  is_coming_soon: boolean;
+  tier_access: string;
 }
 
 export interface Enrollment {
@@ -66,6 +68,25 @@ export interface AdminMetric {
 export interface ApiError {
   error: string;
   details?: unknown;
+}
+
+export interface TierPurchaseInfo {
+  id: string;
+  tier: "basic" | "pro";
+  status: string;
+  payment_provider: string;
+  purchased_at: string;
+  expires_at: string | null;
+}
+
+export interface ScholarshipInfo {
+  id: string;
+  recipient_email: string;
+  status: string;
+  invite_token: string;
+  granted_at: string;
+  redeemed_at: string | null;
+  expires_at: string | null;
 }
 
 

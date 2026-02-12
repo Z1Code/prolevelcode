@@ -30,6 +30,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <nav className="space-y-1 text-sm">
             <Link className="block rounded-lg px-2 py-2 transition hover:bg-white/10" href="/dashboard">Resumen</Link>
             <Link className="block rounded-lg px-2 py-2 transition hover:bg-white/10" href="/dashboard/cursos">Mis cursos</Link>
+            <Link className="block rounded-lg px-2 py-2 transition hover:bg-white/10" href="/dashboard/plan">Mi plan</Link>
+            <Link className="block rounded-lg px-2 py-2 transition hover:bg-white/10" href="/dashboard/consultas">Consultas</Link>
             <Link className="block rounded-lg px-2 py-2 transition hover:bg-white/10" href="/cursos">Explorar cursos</Link>
             <Link className="block rounded-lg px-2 py-2 transition hover:bg-white/10" href="/dashboard/perfil">Perfil</Link>
           </nav>

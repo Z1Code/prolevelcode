@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { SecureCoursePlayer } from "@/components/video/secure-course-player";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
+import { checkCourseAccess } from "@/lib/access/check-access";
 
 interface DashboardCoursePageProps {
   params: Promise<{ slug: string }>;
@@ -21,11 +22,9 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
 
   if (!course) notFound();
 
-  const enrollment = await prisma.enrollment.findFirst({
-    where: { user_id: user.id, course_id: course.id, status: "active" },
-  });
+  const access = await checkCourseAccess(user.id, course.id);
 
-  if (!enrollment) notFound();
+  if (!access.granted) notFound();
 
   const lessons = await prisma.lesson.findMany({
     where: { course_id: course.id },

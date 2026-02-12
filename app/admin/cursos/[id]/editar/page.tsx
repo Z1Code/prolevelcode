@@ -56,6 +56,13 @@ export default async function EditCoursePage({ params }: Props) {
             <span className="text-xs text-slate-400">Preview Video (YouTube ID)</span>
             <Input name="preview_video_url" defaultValue={course.preview_video_url ?? ""} />
           </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-slate-400">Tier de acceso</span>
+            <select name="tier_access" className="liquid-field h-11 w-full rounded-xl px-4 text-sm text-white outline-none" defaultValue={course.tier_access}>
+              <option value="basic">Basic</option>
+              <option value="pro">Pro</option>
+            </select>
+          </label>
           <div className="flex items-end gap-4">
             <label className="flex items-center gap-2 text-sm text-slate-300">
               <input type="checkbox" name="is_published" defaultChecked={course.is_published} className="h-4 w-4 accent-emerald-400" />
@@ -64,6 +71,10 @@ export default async function EditCoursePage({ params }: Props) {
             <label className="flex items-center gap-2 text-sm text-slate-300">
               <input type="checkbox" name="is_featured" defaultChecked={course.is_featured} className="h-4 w-4 accent-emerald-400" />
               Destacado
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" name="is_coming_soon" defaultChecked={course.is_coming_soon} className="h-4 w-4 accent-amber-400" />
+              Proximamente
             </label>
           </div>
           <div className="md:col-span-2">

@@ -52,18 +52,19 @@ export async function registerAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("fullName") ?? "").trim();
+  const scholarshipToken = String(formData.get("scholarship") ?? "").trim();
 
   if (!email || !password) {
-    redirect(`/registro?error=${encodeURIComponent("Email y contraseña son requeridos")}`);
+    redirect(`/registro?error=${encodeURIComponent("Email y contraseña son requeridos")}${scholarshipToken ? `&scholarship=${scholarshipToken}` : ""}`);
   }
 
   if (password.length < 8) {
-    redirect(`/registro?error=${encodeURIComponent("La contraseña debe tener al menos 8 caracteres")}`);
+    redirect(`/registro?error=${encodeURIComponent("La contraseña debe tener al menos 8 caracteres")}${scholarshipToken ? `&scholarship=${scholarshipToken}` : ""}`);
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    redirect(`/registro?error=${encodeURIComponent("Ya existe una cuenta con este email")}`);
+    redirect(`/registro?error=${encodeURIComponent("Ya existe una cuenta con este email")}${scholarshipToken ? `&scholarship=${scholarshipToken}` : ""}`);
   }
 
   const passwordHash = hashPassword(password);
@@ -75,6 +76,31 @@ export async function registerAction(formData: FormData) {
       auth_provider: "credentials",
     },
   });
+
+  // Auto-link scholarship if token provided
+  if (scholarshipToken) {
+    try {
+      const scholarship = await prisma.scholarship.findUnique({
+        where: { invite_token: scholarshipToken },
+      });
+
+      if (scholarship && scholarship.status === "pending") {
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        await prisma.scholarship.update({
+          where: { id: scholarship.id },
+          data: {
+            recipient_user_id: user.id,
+            status: "active",
+            redeemed_at: now,
+            expires_at: expiresAt,
+          },
+        });
+      }
+    } catch {
+      // scholarship link failure shouldn't block registration
+    }
+  }
 
   const rawToken = generateToken();
   const tokenHash = hashToken(rawToken);
@@ -103,6 +129,10 @@ export async function registerAction(formData: FormData) {
     });
   } catch {
     // email send failure shouldn't block registration
+  }
+
+  if (scholarshipToken) {
+    redirect("/login?message=Cuenta creada y beca activada. Revisa tu email para verificar tu cuenta.");
   }
 
   redirect("/login?message=Cuenta creada. Revisa tu email para verificar tu cuenta.");

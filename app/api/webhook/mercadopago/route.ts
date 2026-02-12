@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   }
 
-  let ref: { type?: string; user_id?: string; course_id?: string; service_id?: string; order_id?: string };
+  let ref: { type?: string; user_id?: string; course_id?: string; service_id?: string; order_id?: string; tier?: string };
   try {
     ref = JSON.parse(payment.external_reference);
   } catch {
@@ -165,6 +165,52 @@ export async function POST(request: Request) {
           subject: accessEmail.subject,
           html: accessEmail.html,
         });
+      }
+    }
+
+    if (ref.type === "tier" && ref.user_id && ref.tier) {
+      await prisma.tierPurchase.create({
+        data: {
+          user_id: ref.user_id,
+          tier: ref.tier,
+          status: "active",
+          payment_provider: "mercadopago",
+          payment_reference: mpPaymentId,
+          amount_paid_cents: amountPaidCents,
+          currency,
+          // lifetime: no expires_at
+        },
+      });
+
+      await prisma.paymentTransaction.create({
+        data: {
+          mp_payment_id: mpPaymentId,
+          payment_provider: "mercadopago",
+          amount_cents: amountPaidCents,
+          currency,
+          status: "approved",
+          metadata: { type: "tier", tier: ref.tier, user_id: ref.user_id },
+        },
+      });
+
+      // Send confirmation email
+      const tierUser = await prisma.user.findUnique({
+        where: { id: ref.user_id },
+        select: { email: true },
+      });
+
+      if (tierUser?.email) {
+        try {
+          const resend = getResendClient();
+          await resend.emails.send({
+            from: "ProLevelCode <no-reply@prolevelcode.dev>",
+            to: tierUser.email,
+            subject: `Plan ${ref.tier === "pro" ? "Pro" : "Basic"} activado`,
+            html: `<h2>Tu plan ${ref.tier === "pro" ? "Pro" : "Basic"} esta activo</h2><p>Ya tienes acceso a ${ref.tier === "pro" ? "todos los cursos" : "los cursos Basic"}.</p><p><a href="${env.appUrl}/dashboard/plan">Ver mi plan</a></p>`,
+          });
+        } catch {
+          // silent
+        }
       }
     }
 

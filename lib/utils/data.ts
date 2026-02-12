@@ -23,6 +23,8 @@ export async function getPublishedCourses(): Promise<CourseCard[]> {
         total_lessons: true,
         is_published: true,
         is_featured: true,
+        is_coming_soon: true,
+        tier_access: true,
       },
     });
 
@@ -47,6 +49,8 @@ export async function getPublishedCourses(): Promise<CourseCard[]> {
     total_lessons: course.lessons,
     is_published: true,
     is_featured: true,
+    is_coming_soon: false,
+    tier_access: "basic",
   }));
 }
 

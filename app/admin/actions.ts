@@ -45,11 +45,13 @@ export async function createCourse(fd: FormData) {
   const preview_video_url = str(fd, "preview_video_url") || null;
   const is_published = bool(fd, "is_published");
   const is_featured = bool(fd, "is_featured");
+  const is_coming_soon = bool(fd, "is_coming_soon");
+  const tier_access = str(fd, "tier_access") || "basic";
 
   if (!title) redirect("/admin/cursos/new?error=titulo-requerido");
 
   const course = await prisma.course.create({
-    data: { title, slug, subtitle, description, price_cents, currency, difficulty, category, preview_video_url, is_published, is_featured },
+    data: { title, slug, subtitle, description, price_cents, currency, difficulty, category, preview_video_url, is_published, is_featured, is_coming_soon, tier_access },
   });
 
   revalidatePath("/admin/cursos");
@@ -71,12 +73,14 @@ export async function updateCourse(fd: FormData) {
   const preview_video_url = str(fd, "preview_video_url") || null;
   const is_published = bool(fd, "is_published");
   const is_featured = bool(fd, "is_featured");
+  const is_coming_soon = bool(fd, "is_coming_soon");
+  const tier_access = str(fd, "tier_access") || "basic";
 
   if (!id || !title) redirect(`/admin/cursos/${id}/editar?error=titulo-requerido`);
 
   await prisma.course.update({
     where: { id },
-    data: { title, slug, subtitle, description, price_cents, currency, difficulty, category, preview_video_url, is_published, is_featured },
+    data: { title, slug, subtitle, description, price_cents, currency, difficulty, category, preview_video_url, is_published, is_featured, is_coming_soon, tier_access },
   });
 
   revalidatePath("/admin/cursos");
@@ -155,11 +159,12 @@ export async function createLesson(fd: FormData) {
   const course_id = str(fd, "course_id");
   const module_id = str(fd, "module_id");
   const title = str(fd, "title");
-  const youtube_video_id = str(fd, "youtube_video_id");
+  const bunny_video_id = str(fd, "bunny_video_id") || null;
+  const youtube_video_id = str(fd, "youtube_video_id") || null;
   const duration_minutes = int(fd, "duration_minutes") || null;
   const is_free_preview = bool(fd, "is_free_preview");
 
-  if (!title || !youtube_video_id) {
+  if (!title || (!bunny_video_id && !youtube_video_id)) {
     revalidatePath(`/admin/cursos/${course_id}/lecciones`);
     return;
   }
@@ -174,6 +179,7 @@ export async function createLesson(fd: FormData) {
       course_id,
       module_id,
       title,
+      bunny_video_id,
       youtube_video_id,
       duration_minutes,
       sort_order: (maxOrder._max.sort_order ?? 0) + 1,
@@ -194,18 +200,19 @@ export async function updateLesson(fd: FormData) {
   const course_id = str(fd, "course_id");
   const module_id = str(fd, "module_id");
   const title = str(fd, "title");
-  const youtube_video_id = str(fd, "youtube_video_id");
+  const bunny_video_id = str(fd, "bunny_video_id") || null;
+  const youtube_video_id = str(fd, "youtube_video_id") || null;
   const duration_minutes = int(fd, "duration_minutes") || null;
   const is_free_preview = bool(fd, "is_free_preview");
 
-  if (!title || !youtube_video_id) {
+  if (!title || (!bunny_video_id && !youtube_video_id)) {
     revalidatePath(`/admin/cursos/${course_id}/lecciones`);
     return;
   }
 
   await prisma.lesson.update({
     where: { id },
-    data: { module_id, title, youtube_video_id, duration_minutes, is_free_preview },
+    data: { module_id, title, bunny_video_id, youtube_video_id, duration_minutes, is_free_preview },
   });
 
   revalidatePath(`/admin/cursos/${course_id}/lecciones`);
@@ -221,6 +228,47 @@ export async function deleteLesson(fd: FormData) {
   await prisma.course.update({ where: { id: course_id }, data: { total_lessons: count } });
 
   revalidatePath(`/admin/cursos/${course_id}/lecciones`);
+}
+
+/* ─────────────── CRYPTO PAYMENTS ─────────────── */
+
+export async function approveCryptoPayment(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  const { fulfillCryptoPayment } = await import("@/lib/crypto/fulfill");
+
+  const payment = await prisma.cryptoPayment.findUnique({ where: { id } });
+  if (!payment || payment.status === "completed") {
+    revalidatePath("/admin/pagos");
+    return;
+  }
+
+  await prisma.cryptoPayment.update({
+    where: { id },
+    data: {
+      status: "completed",
+      tx_hash: "manual_admin_approval",
+      completed_at: new Date(),
+    },
+  });
+
+  await fulfillCryptoPayment(payment);
+  revalidatePath("/admin/pagos");
+}
+
+export async function rejectCryptoPayment(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  await prisma.cryptoPayment.update({
+    where: { id },
+    data: { status: "expired" },
+  });
+
+  revalidatePath("/admin/pagos");
 }
 
 /* ─────────────── ENROLLMENTS ─────────────── */
@@ -261,4 +309,25 @@ export async function deleteEnrollment(fd: FormData) {
   const id = str(fd, "id");
   await prisma.enrollment.delete({ where: { id } });
   revalidatePath("/admin/matriculas");
+}
+
+/* ─────────────── PRO QUERIES ─────────────── */
+
+export async function answerProQuery(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  const answer = str(fd, "answer");
+
+  if (!id || !answer) return;
+
+  await prisma.proQuery.update({
+    where: { id },
+    data: {
+      answer,
+      status: "answered",
+      answered_at: new Date(),
+    },
+  });
+
+  revalidatePath("/admin/consultas");
 }

@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { signVideoAccess } from "@/lib/tokens/hmac";
+import { checkCourseAccess } from "@/lib/access/check-access";
 import type { VideoTokenResponse } from "@/lib/types";
 
 const CONCURRENT_SESSION_STALE_MS = 2 * 60 * 1000; // 2 minutes
@@ -18,11 +19,9 @@ interface GenerateVideoTokenParams {
 export async function generateVideoToken(params: GenerateVideoTokenParams): Promise<VideoTokenResponse> {
   const { userId, lessonId, courseId, ipAddress, userAgent } = params;
 
-  const enrollment = await prisma.enrollment.findFirst({
-    where: { user_id: userId, course_id: courseId, status: "active" },
-  });
+  const access = await checkCourseAccess(userId, courseId);
 
-  if (!enrollment) {
+  if (!access.granted) {
     throw new Error("NO_ENROLLMENT");
   }
 
@@ -145,66 +144,35 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#39;");
 }
 
-export function renderSecurePlayerHtml(input: {
-  youtubeId: string;
+interface SecurePlayerInput {
   userEmail: string;
   title: string;
   remaining: number;
   expiresAt: string;
   tokenId: string;
   heartbeatUrl: string;
-}) {
-  const { youtubeId, userEmail, title, remaining, expiresAt, tokenId, heartbeatUrl } = input;
+  // Bunny Stream (preferred)
+  bunnyEmbedUrl?: string;
+  // YouTube fallback
+  youtubeId?: string;
+}
+
+export function renderSecurePlayerHtml(input: SecurePlayerInput) {
+  const { userEmail, title, remaining, expiresAt, tokenId, heartbeatUrl, bunnyEmbedUrl, youtubeId } = input;
 
   const safeTitle = escapeHtml(title);
   const safeEmail = escapeHtml(userEmail);
   const safeTokenId = tokenId.replace(/[^a-zA-Z0-9_-]/g, "");
   const safeHeartbeatUrl = heartbeatUrl.replace(/[^a-zA-Z0-9/_-]/g, "");
 
-  const obfKey = "pLc$9xW#";
-  const encodedId = obfuscateId(youtubeId, obfKey);
+  const useBunny = !!bunnyEmbedUrl;
 
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex,nofollow" />
-  <title>${safeTitle}</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#000;color:#fff;font-family:Inter,system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;overflow:hidden;user-select:none;-webkit-user-select:none}
-    .player{position:relative;width:min(95vw,1100px);aspect-ratio:16/9}
-    #vp{width:100%;height:100%;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
-    iframe{border:0;border-radius:12px}
-    .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.08;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem;z-index:6}
-    /* Click shield: blocks right-click on iframe, passes left-clicks via JS */
-    .click-shield{position:absolute;inset:0;z-index:3;border-radius:12px;background:rgba(0,0,0,.001)}
-    /* Block YouTube title bar / share / copy-link at top */
-    .yt-block-top{position:absolute;top:0;left:0;right:0;height:80px;z-index:5;cursor:default;border-radius:12px 12px 0 0;background:rgba(0,0,0,.001)}
-    /* Block YouTube logo at bottom-right */
-    .yt-block-logo{position:absolute;bottom:0;right:0;width:160px;height:56px;z-index:5;cursor:default;border-radius:0 0 12px 0;background:rgba(0,0,0,.001)}
-    .bar{display:flex;gap:16px;font-size:12px;color:#9ca3af;flex-wrap:wrap;justify-content:center}
-    .warn{color:#f97316}
-    .revoked-overlay{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.95);z-index:100}
-    .revoked-overlay h2{color:#ef4444;font-size:20px;text-align:center;max-width:440px;line-height:1.6}
-  </style>
-</head>
-<body oncontextmenu="return false">
-  <div class="player">
-    <div id="vp"></div>
-    <div class="click-shield" id="clickShield"></div>
-    <div class="yt-block-top"></div>
-    <div class="yt-block-logo"></div>
-    <div class="watermark">${safeEmail}</div>
-  </div>
-  <div class="bar">
-    <span>${safeTitle}</span>
-    <span>Vistas restantes: ${remaining}</span>
-    <span class="warn">Expira: ${new Date(expiresAt).toLocaleString("es-ES")}</span>
-  </div>
-  <script>
-  (function(){
+  // YouTube-specific: XOR obfuscation of video ID
+  let youtubeBlock = "";
+  if (!useBunny && youtubeId) {
+    const obfKey = "pLc$9xW#";
+    const encodedId = obfuscateId(youtubeId, obfKey);
+    youtubeBlock = `
     // --- Decode resource identifier at runtime ---
     var _d = '${encodedId}';
     var _k = ['pLc$','9xW#'];
@@ -220,28 +188,83 @@ export function renderSecurePlayerHtml(input: {
     tag.src = 'https://www.youtube.com/iframe_api';
     document.head.appendChild(tag);
 
-    var player;
-
     window.onYouTubeIframeAPIReady = function() {
       player = new YT.Player('vp', {
         host: 'https://www.youtube-nocookie.com',
         videoId: _v,
         playerVars: {
-          autoplay: 0,
-          controls: 1,
-          disablekb: 0,
-          fs: 1,
-          modestbranding: 1,
-          rel: 0,
-          showinfo: 0,
-          iv_load_policy: 3,
-          origin: window.location.origin,
-          enablejsapi: 1,
-          playsinline: 1
+          autoplay: 0, controls: 1, disablekb: 0, fs: 1,
+          modestbranding: 1, rel: 0, showinfo: 0, iv_load_policy: 3,
+          origin: window.location.origin, enablejsapi: 1, playsinline: 1
         },
-        events: { onReady: function(){ /* ready */ } }
+        events: { onReady: function(){} }
       });
-    };
+    };`;
+  }
+
+  // Bunny-specific: signed iframe embed
+  let bunnyBlock = "";
+  if (useBunny) {
+    const safeBunnyUrl = escapeHtml(bunnyEmbedUrl!);
+    bunnyBlock = `
+    // --- Bunny Stream iframe ---
+    var iframe = document.createElement('iframe');
+    iframe.src = '${safeBunnyUrl}';
+    iframe.setAttribute('loading', 'lazy');
+    iframe.setAttribute('allow', 'accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture');
+    iframe.setAttribute('allowfullscreen', 'true');
+    iframe.style.cssText = 'width:100%;height:100%;border:0;border-radius:12px';
+    document.getElementById('vp').appendChild(iframe);`;
+  }
+
+  // YouTube needs extra blocking overlays
+  const ytOverlays = !useBunny
+    ? `<div class="yt-block-top"></div><div class="yt-block-logo"></div>`
+    : "";
+
+  const ytStyles = !useBunny
+    ? `
+    .yt-block-top{position:absolute;top:0;left:0;right:0;height:80px;z-index:5;cursor:default;border-radius:12px 12px 0 0;background:rgba(0,0,0,.001)}
+    .yt-block-logo{position:absolute;bottom:0;right:0;width:160px;height:56px;z-index:5;cursor:default;border-radius:0 0 12px 0;background:rgba(0,0,0,.001)}`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>${safeTitle}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#000;color:#fff;font-family:Inter,system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;overflow:hidden;user-select:none;-webkit-user-select:none}
+    .player{position:relative;width:min(95vw,1100px);aspect-ratio:16/9}
+    #vp{width:100%;height:100%;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+    iframe{border:0;border-radius:12px}
+    .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.08;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem;z-index:6}
+    .click-shield{position:absolute;inset:0;z-index:3;border-radius:12px;background:rgba(0,0,0,.001)}${ytStyles}
+    .bar{display:flex;gap:16px;font-size:12px;color:#9ca3af;flex-wrap:wrap;justify-content:center}
+    .warn{color:#f97316}
+    .revoked-overlay{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.95);z-index:100}
+    .revoked-overlay h2{color:#ef4444;font-size:20px;text-align:center;max-width:440px;line-height:1.6}
+  </style>
+</head>
+<body oncontextmenu="return false">
+  <div class="player">
+    <div id="vp"></div>
+    <div class="click-shield" id="clickShield"></div>
+    ${ytOverlays}
+    <div class="watermark">${safeEmail}</div>
+  </div>
+  <div class="bar">
+    <span>${safeTitle}</span>
+    <span>Vistas restantes: ${remaining}</span>
+    <span class="warn">Expira: ${new Date(expiresAt).toLocaleString("es-ES")}</span>
+  </div>
+  <script>
+  (function(){
+    var player;
+    ${useBunny ? bunnyBlock : youtubeBlock}
 
     // --- Anti-screenshot / print / DevTools deterrent ---
     document.addEventListener('keydown', function(e) {

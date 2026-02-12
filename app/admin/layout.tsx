@@ -11,6 +11,7 @@ const adminLinks = [
   { href: "/admin/tokens", label: "Tokens" },
   { href: "/admin/matriculas", label: "Matriculas" },
   { href: "/admin/pagos", label: "Pagos" },
+  { href: "/admin/consultas", label: "Consultas Pro" },
   { href: "/admin/contacto", label: "Contacto" },
   { href: "/admin/configuracion", label: "Configuracion" },
   { href: "/", label: "← Inicio" },

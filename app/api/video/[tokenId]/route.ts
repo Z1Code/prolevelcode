@@ -4,6 +4,7 @@ import { logTokenUsage, renderSecurePlayerHtml } from "@/lib/tokens/generate";
 import { verifyVideoAccess } from "@/lib/tokens/hmac";
 import { prisma } from "@/lib/prisma";
 import { assertRateLimit } from "@/lib/utils/rate-limit";
+import { getBunnyEmbedUrl } from "@/lib/bunny/signed-url";
 
 interface RouteContext {
   params: Promise<{ tokenId: string }>;
@@ -36,7 +37,7 @@ export async function GET(request: Request, context: RouteContext) {
   const token = await prisma.videoToken.findUnique({
     where: { token: tokenId },
     include: {
-      lesson: { select: { youtube_video_id: true, title: true } },
+      lesson: { select: { youtube_video_id: true, bunny_video_id: true, title: true } },
       user: { select: { email: true } },
     },
   });
@@ -97,7 +98,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   const newCurrentViews = token.current_views + 1;
 
-  if (!token.lesson.youtube_video_id || !token.user.email) {
+  if ((!token.lesson.bunny_video_id && !token.lesson.youtube_video_id) || !token.user.email) {
     return NextResponse.json({ error: "Token relations missing" }, { status: 500 });
   }
 
@@ -119,15 +120,46 @@ export async function GET(request: Request, context: RouteContext) {
 
   const remainingViews = token.max_views - newCurrentViews;
 
+  // Determine video source: prefer Bunny, fallback to YouTube
+  const useBunny = !!token.lesson.bunny_video_id;
+  let bunnyEmbedUrl: string | undefined;
+
+  if (useBunny) {
+    const bunny = getBunnyEmbedUrl(token.lesson.bunny_video_id!);
+    bunnyEmbedUrl = bunny.url;
+  }
+
   const html = renderSecurePlayerHtml({
-    youtubeId: token.lesson.youtube_video_id,
     userEmail: token.user.email,
     title: token.lesson.title,
     remaining: remainingViews,
     expiresAt: token.expires_at.toISOString(),
     tokenId: token.id,
     heartbeatUrl: "/api/tokens/heartbeat",
+    bunnyEmbedUrl,
+    youtubeId: token.lesson.youtube_video_id ?? undefined,
   });
+
+  // CSP headers differ based on video provider
+  const csp = useBunny
+    ? [
+        "default-src 'self'",
+        "frame-src https://iframe.mediadelivery.net",
+        "script-src 'self' 'unsafe-inline'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: https://*.b-cdn.net",
+        "connect-src 'self'",
+        "frame-ancestors 'self'",
+      ]
+    : [
+        "default-src 'self'",
+        "frame-src https://www.youtube-nocookie.com",
+        "script-src 'self' 'unsafe-inline' https://www.youtube.com",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: https://www.youtube-nocookie.com https://i.ytimg.com",
+        "connect-src 'self'",
+        "frame-ancestors 'self'",
+      ];
 
   return new NextResponse(html, {
     headers: {
@@ -136,15 +168,7 @@ export async function GET(request: Request, context: RouteContext) {
       "X-Content-Type-Options": "nosniff",
       "Cache-Control": "no-store, no-cache, must-revalidate",
       "Pragma": "no-cache",
-      "Content-Security-Policy": [
-        "default-src 'self'",
-        "frame-src https://www.youtube-nocookie.com",
-        "script-src 'self' 'unsafe-inline' https://www.youtube.com",
-        "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data: https://www.youtube-nocookie.com https://i.ytimg.com",
-        "connect-src 'self'",
-        "frame-ancestors 'self'",
-      ].join("; "),
+      "Content-Security-Policy": csp.join("; "),
     },
   });
 }

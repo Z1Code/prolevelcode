@@ -134,7 +134,7 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
                 <PaymentMethodSelector
                   courseId={course.id ?? ""}
                   mpAction="/api/checkout/course"
-                  binanceAction="/api/checkout/binance/course"
+                  cryptoAction="/api/checkout/crypto/course"
                 />
               </div>
             ) : (

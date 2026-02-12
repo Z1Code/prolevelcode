@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
+import { getUserTier } from "@/lib/access/check-access";
 
 export default async function DashboardHomePage() {
   const user = await getSessionUser();
@@ -15,6 +17,8 @@ export default async function DashboardHomePage() {
     where: { user_id: user?.id ?? "", is_completed: true },
   });
 
+  const currentTier = user ? await getUserTier(user.id) : null;
+
   return (
     <div>
       <h2 className="text-2xl font-semibold">Resumen</h2>
@@ -28,8 +32,17 @@ export default async function DashboardHomePage() {
           <p className="mt-2 text-2xl font-semibold">{completedLessons}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-slate-400">Estado</p>
-          <p className="mt-2 text-2xl font-semibold text-emerald-300">Activo</p>
+          <p className="text-sm text-slate-400">Plan</p>
+          <p className={`mt-2 text-2xl font-semibold ${
+            currentTier === "pro" ? "text-violet-300" : currentTier === "basic" ? "text-emerald-300" : "text-slate-500"
+          }`}>
+            {currentTier === "pro" ? "Pro" : currentTier === "basic" ? "Basic" : "Sin plan"}
+          </p>
+          {!currentTier && (
+            <Link href="/planes" className="mt-1 text-xs text-slate-400 hover:text-white">
+              Ver planes →
+            </Link>
+          )}
         </Card>
       </div>
 
