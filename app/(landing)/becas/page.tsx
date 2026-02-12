@@ -159,12 +159,12 @@ export default async function BecasPage({ searchParams }: BecasPageProps) {
           </Card>
         )}
 
-        {/* ── Application form ── */}
-        {!currentTier && !myScholarship && user && (
+        {/* ── Application form (visible to everyone without tier/scholarship) ── */}
+        {!currentTier && !myScholarship && (
           <Card className="mt-6 p-6">
             <h2 className="text-xl font-semibold">Aplicar a una beca</h2>
 
-            {myApplication?.status === "pending" ? (
+            {user && myApplication?.status === "pending" ? (
               <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/5 p-4">
                 <p className="text-sm text-amber-200">Tu aplicacion esta en revision.</p>
                 <p className="mt-2 text-xs text-slate-400">
@@ -174,33 +174,33 @@ export default async function BecasPage({ searchParams }: BecasPageProps) {
                   &quot;{myApplication.reason}&quot;
                 </p>
               </div>
-            ) : myApplication?.status === "rejected" ? (
+            ) : user && myApplication?.status === "rejected" ? (
               <div className="mt-4">
                 <div className="mb-4 rounded-xl border border-red-400/20 bg-red-500/5 p-3">
                   <p className="text-sm text-red-300">Tu aplicacion anterior no fue aprobada. Puedes intentar de nuevo.</p>
                 </div>
                 <ApplicationForm />
               </div>
-            ) : (
+            ) : user ? (
               <div className="mt-4">
                 <ApplicationForm />
               </div>
+            ) : (
+              <div className="mt-4">
+                <ApplicationForm disabled />
+                <div className="mt-3 flex items-center gap-3 rounded-xl border border-violet-400/20 bg-violet-500/5 px-4 py-3">
+                  <p className="text-sm text-slate-300">Registrate para enviar tu aplicacion.</p>
+                  <div className="ml-auto flex shrink-0 gap-2">
+                    <Link href="/registro?next=/becas">
+                      <Button size="sm">Registrarse</Button>
+                    </Link>
+                    <Link href="/login?next=/becas">
+                      <Button size="sm" variant="ghost">Login</Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
             )}
-          </Card>
-        )}
-
-        {/* ── Not logged in ── */}
-        {!user && (
-          <Card className="mt-6 p-6 text-center">
-            <p className="text-sm text-slate-400">Inicia sesion o registrate para aplicar a una beca.</p>
-            <div className="mt-3 flex justify-center gap-3">
-              <Link href="/login?next=/becas">
-                <Button size="sm">Iniciar sesion</Button>
-              </Link>
-              <Link href="/registro?next=/becas">
-                <Button size="sm" variant="ghost">Registrarse</Button>
-              </Link>
-            </div>
           </Card>
         )}
       </div>
@@ -208,25 +208,28 @@ export default async function BecasPage({ searchParams }: BecasPageProps) {
   );
 }
 
-function ApplicationForm() {
+function ApplicationForm({ disabled }: { disabled?: boolean }) {
   return (
-    <form action={applyForScholarship}>
+    <form action={disabled ? undefined : applyForScholarship}>
       <p className="text-xs text-slate-500">
         Escribe un mensaje directo y concreto. Ejemplo: &quot;Soy estudiante de ingenieria y quiero aprender React para mi proyecto de tesis.&quot;
       </p>
       <textarea
         name="reason"
-        required
+        required={!disabled}
+        disabled={disabled}
         minLength={20}
         maxLength={500}
         rows={4}
         placeholder="Explica brevemente por que te gustaria recibir la beca..."
-        className="mt-3 w-full rounded-xl border border-slate-600/50 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-violet-500/50 focus:outline-none focus:ring-1 focus:ring-violet-500/50"
+        className="mt-3 w-full rounded-xl border border-slate-600/50 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-violet-500/50 focus:outline-none focus:ring-1 focus:ring-violet-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
       />
-      <div className="mt-2 flex items-center justify-between">
-        <p className="text-[10px] text-slate-500">Min 20, max 500 caracteres</p>
-        <Button type="submit" size="sm">Enviar aplicacion</Button>
-      </div>
+      {!disabled && (
+        <div className="mt-2 flex items-center justify-between">
+          <p className="text-[10px] text-slate-500">Min 20, max 500 caracteres</p>
+          <Button type="submit" size="sm">Enviar aplicacion</Button>
+        </div>
+      )}
     </form>
   );
 }
