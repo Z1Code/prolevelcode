@@ -28,8 +28,23 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   rocket: Rocket,
 };
 
-export function GuideCard({ guide, index }: { guide: Guide; index: number }) {
+export function GuideCard({ guide, index, locked = false }: { guide: Guide; index: number; locked?: boolean }) {
   const Icon = iconMap[guide.icon] ?? Sparkles;
+
+  const inner = (
+    <div className="flex items-start gap-3.5">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5">
+        <Icon className="h-5 w-5 text-slate-300" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <h3 className="text-[15px] font-semibold text-white group-hover:text-emerald-300 transition-colors duration-200">
+          {guide.title}
+        </h3>
+        <p className="mt-0.5 text-sm text-slate-500 line-clamp-1">{guide.description}</p>
+      </div>
+      <span className="shrink-0 text-xs text-slate-600">{guide.estimatedMinutes} min</span>
+    </div>
+  );
 
   return (
     <motion.div
@@ -38,23 +53,18 @@ export function GuideCard({ guide, index }: { guide: Guide; index: number }) {
       viewport={{ once: true, margin: "-30px" }}
       transition={{ duration: 0.4, delay: index * 0.08, ease: "easeOut" }}
     >
-      <Link
-        href={`/guias/${guide.slug}`}
-        className="group block rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-all duration-300 hover:border-white/15 hover:bg-white/[0.06]"
-      >
-        <div className="flex items-start gap-3.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5">
-            <Icon className="h-5 w-5 text-slate-300" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-[15px] font-semibold text-white group-hover:text-emerald-300 transition-colors duration-200">
-              {guide.title}
-            </h3>
-            <p className="mt-0.5 text-sm text-slate-500 line-clamp-1">{guide.description}</p>
-          </div>
-          <span className="shrink-0 text-xs text-slate-600">{guide.estimatedMinutes} min</span>
+      {locked ? (
+        <div className="block rounded-xl border border-white/8 bg-white/[0.03] p-4">
+          {inner}
         </div>
-      </Link>
+      ) : (
+        <Link
+          href={`/guias/${guide.slug}`}
+          className="group block rounded-xl border border-white/8 bg-white/[0.03] p-4 transition-all duration-300 hover:border-white/15 hover:bg-white/[0.06]"
+        >
+          {inner}
+        </Link>
+      )}
     </motion.div>
   );
 }

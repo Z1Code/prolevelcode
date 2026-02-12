@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import type { GuidePhase } from "@/lib/guides/types";
 import { GuideCard } from "./guide-card";
 
-export function PhaseSection({ phase }: { phase: GuidePhase }) {
+export function PhaseSection({ phase, locked = false }: { phase: GuidePhase; locked?: boolean }) {
   return (
     <motion.section
       initial={{ opacity: 0, y: 40 }}
@@ -26,7 +26,7 @@ export function PhaseSection({ phase }: { phase: GuidePhase }) {
 
       <div className="grid gap-2">
         {phase.guides.map((guide, i) => (
-          <GuideCard key={guide.slug} guide={guide} index={i} />
+          <GuideCard key={guide.slug} guide={guide} index={i} locked={locked} />
         ))}
       </div>
     </motion.section>

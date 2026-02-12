@@ -1,16 +1,23 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Clock } from "lucide-react";
-import { getGuideBySlug, getAdjacentGuides, getPhaseForGuide, getAllGuideSlugs } from "@/lib/guides/helpers";
+import { ArrowLeft, Clock, Lock } from "lucide-react";
+import { getGuideBySlug, getAdjacentGuides, getPhaseForGuide } from "@/lib/guides/helpers";
 import { GuideStepper } from "@/components/guides/guide-stepper";
 import { GuideNav } from "@/components/guides/guide-nav";
+import { getSessionUser } from "@/lib/auth/session";
+import { getUserTier } from "@/lib/access/check-access";
+import type { TierLevel } from "@/lib/guides/types";
+
+const tierRank: Record<TierLevel, number> = { free: 0, basic: 1, pro: 2 };
+
+function canAccess(userTier: TierLevel | null, required: TierLevel): boolean {
+  if (required === "free") return true;
+  if (!userTier) return false;
+  return tierRank[userTier] >= tierRank[required];
+}
 
 interface GuidePageProps {
   params: Promise<{ slug: string }>;
-}
-
-export async function generateStaticParams() {
-  return getAllGuideSlugs().map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: GuidePageProps) {
@@ -27,6 +34,52 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
   const { slug } = await params;
   const guide = getGuideBySlug(slug);
   if (!guide) notFound();
+
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    redirect(`/login?next=/guias/${slug}`);
+  }
+
+  const rawTier = await getUserTier(sessionUser.id);
+  const userTier: TierLevel = rawTier ?? "free";
+
+  if (!canAccess(userTier, guide.tier)) {
+    return (
+      <main className="container-wide section-spacing liquid-section">
+        <div className="mx-auto max-w-md py-20 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/5">
+            <Lock className="h-6 w-6 text-slate-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-white">Acceso restringido</h1>
+          <p className="mt-2 text-sm text-slate-400">
+            Esta guia requiere el plan{" "}
+            <span className={guide.tier === "pro" ? "text-violet-400 font-semibold" : "text-emerald-400 font-semibold"}>
+              {guide.tier === "pro" ? "Pro" : "Basic"}
+            </span>{" "}
+            para acceder.
+          </p>
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <Link
+              href="/guias"
+              className="inline-flex h-10 items-center rounded-full border border-white/15 bg-white/5 px-5 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              Volver a guias
+            </Link>
+            <Link
+              href="/planes"
+              className={`inline-flex h-10 items-center rounded-full border px-5 text-sm font-semibold transition ${
+                guide.tier === "pro"
+                  ? "border-violet-500/30 bg-violet-500/15 text-violet-300 hover:bg-violet-500/25"
+                  : "border-emerald-500/30 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
+              }`}
+            >
+              Ver planes
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   const phase = getPhaseForGuide(slug);
   const { prev, next } = getAdjacentGuides(slug);
