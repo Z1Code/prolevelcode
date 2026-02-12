@@ -3,6 +3,7 @@ export const translations = {
     nav: {
       services: "Servicios",
       courses: "Cursos",
+      scholarships: "Becas",
       about: "Sobre mi",
       contact: "Contacto",
       login: "Login",
@@ -31,6 +32,7 @@ export const translations = {
     nav: {
       services: "Services",
       courses: "Courses",
+      scholarships: "Scholarships",
       about: "About me",
       contact: "Contact",
       login: "Login",

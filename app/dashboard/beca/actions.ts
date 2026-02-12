@@ -2,43 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { nanoid } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { getResendClient } from "@/lib/email/resend";
 import { env } from "@/lib/env";
-import { EARLY_PRO_LIMIT } from "@/lib/tiers/config";
+import { isEarlyProScholarship } from "@/lib/scholarships/helpers";
 
-export async function grantScholarship(fd: FormData) {
+/** Pro user manually assigns their scholarship to a specific email */
+export async function assignScholarship(fd: FormData) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
 
+  const scholarshipId = (fd.get("scholarshipId") as string)?.trim();
   const recipientEmail = (fd.get("recipientEmail") as string)?.trim().toLowerCase();
-  if (!recipientEmail) {
-    redirect("/dashboard/beca?error=email-requerido");
-  }
 
-  // Verify user has active Pro tier
-  const proTier = await prisma.tierPurchase.findFirst({
-    where: {
-      user_id: user.id,
-      tier: "pro",
-      status: "active",
-      OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }],
-    },
-  });
-
-  if (!proTier) {
-    redirect("/dashboard/beca?error=no-pro");
-  }
-
-  // Check if this tier purchase already has a scholarship
-  const existingScholarship = await prisma.scholarship.findUnique({
-    where: { tier_purchase_id: proTier.id },
-  });
-
-  if (existingScholarship) {
-    redirect("/dashboard/beca?error=ya-otorgada");
+  if (!scholarshipId || !recipientEmail) {
+    redirect("/dashboard/beca?error=datos-requeridos");
   }
 
   // Don't allow self-scholarship
@@ -46,39 +25,32 @@ export async function grantScholarship(fd: FormData) {
     redirect("/dashboard/beca?error=no-auto-beca");
   }
 
-  // Check if this Pro purchase is among the first N → permanent scholarship
-  const firstProPurchases = await prisma.tierPurchase.findMany({
-    where: { tier: "pro", status: "active" },
-    orderBy: { purchased_at: "asc" },
-    take: EARLY_PRO_LIMIT,
-    select: { id: true },
+  const scholarship = await prisma.scholarship.findFirst({
+    where: { id: scholarshipId, grantor_id: user.id, status: "unassigned" },
   });
 
-  const isEarlyPro = firstProPurchases.some((p) => p.id === proTier.id);
+  if (!scholarship) {
+    redirect("/dashboard/beca?error=beca-no-disponible");
+  }
 
-  const inviteToken = nanoid(32);
-
-  await prisma.scholarship.create({
+  await prisma.scholarship.update({
+    where: { id: scholarship.id },
     data: {
-      grantor_id: user.id,
-      tier_purchase_id: proTier.id,
-      recipient_email: recipientEmail,
       status: "pending",
-      invite_token: inviteToken,
-      // Early Pro users grant permanent scholarships (no expiry set on grant,
-      // redemption page also skips setting expires_at)
+      recipient_email: recipientEmail,
+      assigned_at: new Date(),
     },
   });
 
-  // Send email
-  const isPermanent = isEarlyPro;
+  // Send email with redemption link
+  const isPermanent = await isEarlyProScholarship(scholarship.tier_purchase_id);
   const durationText = isPermanent
     ? "acceso permanente (de por vida)"
     : "30 dias de acceso";
 
   try {
     const resend = getResendClient();
-    const redeemUrl = `${env.appUrl}/beca/redeem?token=${inviteToken}`;
+    const redeemUrl = `${env.appUrl}/beca/redeem?token=${scholarship.invite_token}`;
     await resend.emails.send({
       from: "ProLevelCode <no-reply@prolevelcode.dev>",
       to: recipientEmail,
@@ -86,16 +58,17 @@ export async function grantScholarship(fd: FormData) {
       html: `
         <h2>Beca de ProLevelCode</h2>
         <p>Alguien te ha otorgado ${durationText} a los cursos Basic de ProLevelCode.</p>
+        <p>Codigo de beca: <strong>${scholarship.scholarship_code}</strong></p>
         <p><a href="${redeemUrl}" style="background:#6366f1;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Activar beca</a></p>
         <p>Este enlace es unico y no expira hasta ser usado.</p>
       `,
     });
   } catch {
-    // email failure shouldn't block the grant
+    // email failure shouldn't block
   }
 
   revalidatePath("/dashboard/beca");
-  redirect("/dashboard/beca?success=otorgada");
+  redirect("/dashboard/beca?success=asignada");
 }
 
 export async function revokeScholarship(fd: FormData) {
@@ -106,7 +79,7 @@ export async function revokeScholarship(fd: FormData) {
   if (!scholarshipId) return;
 
   await prisma.scholarship.updateMany({
-    where: { id: scholarshipId, grantor_id: user.id },
+    where: { id: scholarshipId, grantor_id: user.id, status: { in: ["pending", "unassigned"] } },
     data: { status: "revoked" },
   });
 

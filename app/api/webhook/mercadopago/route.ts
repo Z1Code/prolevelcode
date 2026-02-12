@@ -169,7 +169,7 @@ export async function POST(request: Request) {
     }
 
     if (ref.type === "tier" && ref.user_id && ref.tier) {
-      await prisma.tierPurchase.create({
+      const tierPurchase = await prisma.tierPurchase.create({
         data: {
           user_id: ref.user_id,
           tier: ref.tier,
@@ -181,6 +181,12 @@ export async function POST(request: Request) {
           // lifetime: no expires_at
         },
       });
+
+      // Auto-create scholarship slot for Pro purchases
+      if (ref.tier === "pro") {
+        const { createScholarshipForProPurchase } = await import("@/lib/scholarships/helpers");
+        await createScholarshipForProPurchase(ref.user_id, tierPurchase.id);
+      }
 
       await prisma.paymentTransaction.create({
         data: {

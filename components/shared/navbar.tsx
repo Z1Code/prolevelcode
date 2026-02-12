@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils/cn";
 
 const navItems = [
   { href: "/cursos", key: "courses" as const },
+  { href: "/becas", key: "scholarships" as const },
   { href: "/sobre-mi", key: "about" as const },
   { href: "/contacto", key: "contact" as const },
 ];

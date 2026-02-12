@@ -311,6 +311,96 @@ export async function deleteEnrollment(fd: FormData) {
   revalidatePath("/admin/matriculas");
 }
 
+/* ─────────────── SCHOLARSHIP ADMIN ─────────────── */
+
+export async function adminAssignScholarship(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const scholarshipId = str(fd, "scholarship_id");
+  const applicationId = str(fd, "application_id");
+
+  if (!scholarshipId || !applicationId) return;
+
+  const scholarship = await prisma.scholarship.findUnique({ where: { id: scholarshipId } });
+  const application = await prisma.scholarshipApplication.findUnique({
+    where: { id: applicationId },
+    include: { user: { select: { id: true, email: true } } },
+  });
+
+  if (!scholarship || !application || scholarship.status !== "unassigned" || application.status !== "pending") {
+    revalidatePath("/admin/becas");
+    return;
+  }
+
+  // Determine if permanent
+  const { isEarlyProScholarship } = await import("@/lib/scholarships/helpers");
+  const isPermanent = await isEarlyProScholarship(scholarship.tier_purchase_id);
+  const now = new Date();
+  const expiresAt = isPermanent ? null : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  await prisma.$transaction([
+    prisma.scholarship.update({
+      where: { id: scholarship.id },
+      data: {
+        status: "active",
+        recipient_email: application.user.email,
+        recipient_user_id: application.user.id,
+        application_id: application.id,
+        applicant_reason: application.reason,
+        assigned_at: now,
+        redeemed_at: now,
+        expires_at: expiresAt,
+      },
+    }),
+    prisma.scholarshipApplication.update({
+      where: { id: application.id },
+      data: { status: "approved", reviewed_at: now },
+    }),
+  ]);
+
+  // Notify Pro user
+  try {
+    const { getResendClient } = await import("@/lib/email/resend");
+    const { env } = await import("@/lib/env");
+    const grantor = await prisma.user.findUnique({
+      where: { id: scholarship.grantor_id },
+      select: { email: true },
+    });
+    if (grantor?.email) {
+      const resend = getResendClient();
+      await resend.emails.send({
+        from: "ProLevelCode <no-reply@prolevelcode.dev>",
+        to: grantor.email,
+        subject: `Tu beca ${scholarship.scholarship_code} fue asignada`,
+        html: `
+          <h2>Tu beca fue asignada</h2>
+          <p>Codigo: <strong>${scholarship.scholarship_code}</strong></p>
+          <p>Asignada a: <strong>${application.user.email}</strong></p>
+          <p>Su mensaje:</p>
+          <blockquote style="border-left:3px solid #6366f1;padding-left:12px;color:#555;">${application.reason}</blockquote>
+          <p><a href="${env.appUrl}/dashboard/beca">Ver mis becas</a></p>
+        `,
+      });
+    }
+  } catch {
+    // silent
+  }
+
+  revalidatePath("/admin/becas");
+}
+
+export async function adminRejectApplication(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  await prisma.scholarshipApplication.update({
+    where: { id },
+    data: { status: "rejected", reviewed_at: new Date() },
+  });
+
+  revalidatePath("/admin/becas");
+}
+
 /* ─────────────── PRO QUERIES ─────────────── */
 
 export async function answerProQuery(fd: FormData) {

@@ -72,6 +72,7 @@ model User {
   scholarshipsReceived   Scholarship[] @relation("ScholarshipsReceived")
   cryptoPayments         CryptoPayment[]
   proQueries             ProQuery[]
+  scholarshipApplications ScholarshipApplication[]
 
   @@map("users")
 }
@@ -441,21 +442,43 @@ model TierPurchase {
 
 model Scholarship {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scholarship_code  String    @unique // "BECA-XXXX" human-readable identifier
   grantor_id        String    @db.Uuid
   tier_purchase_id  String    @unique @db.Uuid
-  recipient_email   String
+  recipient_email   String?   // set when grantor assigns manually
   recipient_user_id String?   @db.Uuid
-  status            String    @default("pending") // pending | active | expired | revoked
+  status            String    @default("unassigned") // unassigned | pending | active | expired | revoked
   invite_token      String    @unique
+  pool_available_at DateTime  @db.Timestamptz(6) // when it enters the pool (purchase + 7 days)
+  application_id    String?   @unique @db.Uuid // linked ScholarshipApplication if assigned from pool
+  applicant_reason  String?   // copied from application for Pro user notification
   granted_at        DateTime  @default(now()) @db.Timestamptz(6)
+  assigned_at       DateTime? @db.Timestamptz(6) // when grantor assigned or auto-assigned
   redeemed_at       DateTime? @db.Timestamptz(6)
   expires_at        DateTime? @db.Timestamptz(6)
 
-  grantor      User         @relation("ScholarshipsGranted", fields: [grantor_id], references: [id], onDelete: Cascade)
-  recipient    User?        @relation("ScholarshipsReceived", fields: [recipient_user_id], references: [id], onDelete: SetNull)
-  tierPurchase TierPurchase @relation(fields: [tier_purchase_id], references: [id], onDelete: Cascade)
+  grantor      User                    @relation("ScholarshipsGranted", fields: [grantor_id], references: [id], onDelete: Cascade)
+  recipient    User?                   @relation("ScholarshipsReceived", fields: [recipient_user_id], references: [id], onDelete: SetNull)
+  tierPurchase TierPurchase            @relation(fields: [tier_purchase_id], references: [id], onDelete: Cascade)
+  application  ScholarshipApplication? @relation(fields: [application_id], references: [id], onDelete: SetNull)
 
+  @@index([status, pool_available_at])
   @@map("scholarships")
+}
+
+model ScholarshipApplication {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String    @db.Uuid
+  reason      String    // why they should receive the scholarship
+  status      String    @default("pending") // pending | approved | rejected
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  reviewed_at DateTime? @db.Timestamptz(6)
+
+  user        User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  scholarship Scholarship?
+
+  @@index([status, created_at])
+  @@map("scholarship_applications")
 }
 
 model BinancePayment {

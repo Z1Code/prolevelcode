@@ -52,7 +52,7 @@ export async function fulfillCryptoPayment(payment: {
       },
     });
   } else if (payment.type === "tier") {
-    await prisma.tierPurchase.create({
+    const tierPurchase = await prisma.tierPurchase.create({
       data: {
         user_id: payment.user_id,
         tier: payment.target_id,
@@ -63,6 +63,12 @@ export async function fulfillCryptoPayment(payment: {
         currency: "USDT",
       },
     });
+
+    // Auto-create scholarship slot for Pro purchases
+    if (payment.target_id === "pro") {
+      const { createScholarshipForProPurchase } = await import("@/lib/scholarships/helpers");
+      await createScholarshipForProPurchase(payment.user_id, tierPurchase.id);
+    }
 
     await prisma.paymentTransaction.create({
       data: {

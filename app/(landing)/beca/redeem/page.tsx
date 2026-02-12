@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { EARLY_PRO_LIMIT } from "@/lib/tiers/config";
+import { isEarlyProScholarship } from "@/lib/scholarships/helpers";
 import Link from "next/link";
 
 interface RedeemPageProps {
@@ -13,33 +13,28 @@ interface RedeemPageProps {
 async function redeemScholarship(token: string, userId: string) {
   const scholarship = await prisma.scholarship.findUnique({
     where: { invite_token: token },
-    include: { tierPurchase: true },
   });
 
-  if (!scholarship || scholarship.status !== "pending") {
+  if (!scholarship || (scholarship.status !== "pending" && scholarship.status !== "unassigned")) {
     return { error: "invalid" as const };
   }
 
-  // Check if the grantor's Pro purchase is among the first N → permanent scholarship
-  const firstProPurchases = await prisma.tierPurchase.findMany({
-    where: { tier: "pro", status: "active" },
-    orderBy: { purchased_at: "asc" },
-    take: EARLY_PRO_LIMIT,
-    select: { id: true },
-  });
-
-  const isPermanent = firstProPurchases.some((p) => p.id === scholarship.tier_purchase_id);
-
+  const isPermanent = await isEarlyProScholarship(scholarship.tier_purchase_id);
   const now = new Date();
-  const expiresAt = isPermanent
-    ? null // lifetime
-    : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+  const expiresAt = isPermanent ? null : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
 
   await prisma.scholarship.update({
     where: { id: scholarship.id },
     data: {
       recipient_user_id: userId,
+      recipient_email: user?.email ?? scholarship.recipient_email,
       status: "active",
+      assigned_at: scholarship.assigned_at ?? now,
       redeemed_at: now,
       expires_at: expiresAt,
     },
@@ -65,7 +60,6 @@ export default async function RedeemBecaPage({ searchParams }: RedeemPageProps) 
     );
   }
 
-  // Validate token
   const scholarship = await prisma.scholarship.findUnique({
     where: { invite_token: token },
     include: { grantor: { select: { full_name: true, email: true } } },
@@ -85,11 +79,11 @@ export default async function RedeemBecaPage({ searchParams }: RedeemPageProps) 
     );
   }
 
-  if (scholarship.status !== "pending") {
+  if (scholarship.status !== "pending" && scholarship.status !== "unassigned") {
     const statusMsg = {
       active: "Esta beca ya fue activada.",
       expired: "Esta beca ha expirado.",
-      revoked: "Esta beca fue revocada por el otorgante.",
+      revoked: "Esta beca fue revocada.",
     }[scholarship.status] ?? "Esta beca no esta disponible.";
 
     return (
@@ -108,11 +102,9 @@ export default async function RedeemBecaPage({ searchParams }: RedeemPageProps) 
   const user = await getSessionUser();
 
   if (!user) {
-    // Redirect to registration with scholarship token
     redirect(`/registro?scholarship=${token}`);
   }
 
-  // User is logged in: redeem immediately
   const result = await redeemScholarship(token, user.id);
 
   if (result.error) {
@@ -133,8 +125,10 @@ export default async function RedeemBecaPage({ searchParams }: RedeemPageProps) 
   return (
     <main className="container-wide section-spacing liquid-section">
       <Card className="mx-auto max-w-lg p-6 text-center">
-        <h1 className="text-2xl font-bold text-emerald-300">Beca activada</h1>
-        <p className="mt-2 text-sm text-slate-400">
+        <div className="text-5xl">🎉</div>
+        <h1 className="mt-3 text-2xl font-bold text-emerald-300">Beca activada</h1>
+        <p className="mt-1 text-xs font-mono text-slate-500">{scholarship.scholarship_code}</p>
+        <p className="mt-3 text-sm text-slate-300">
           Tienes {durationText} a los cursos Basic de ProLevelCode.
           {scholarship.grantor.full_name && (
             <> Gracias a {scholarship.grantor.full_name}.</>
