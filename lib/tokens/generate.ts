@@ -26,7 +26,7 @@ export async function generateVideoToken(params: GenerateVideoTokenParams): Prom
       lesson_id: lessonId,
       is_revoked: false,
       expires_at: { gt: new Date() },
-      current_views: { lt: 50 },
+      current_views: { lt: 10 },
     },
     orderBy: { created_at: "desc" },
   });
@@ -36,7 +36,7 @@ export async function generateVideoToken(params: GenerateVideoTokenParams): Prom
       token: existing.token,
       videoUrl: `/api/video/${existing.token}`,
       expiresAt: existing.expires_at.toISOString(),
-      remainingViews: 50 - existing.current_views,
+      remainingViews: 10 - existing.current_views,
     };
   }
 
@@ -51,7 +51,7 @@ export async function generateVideoToken(params: GenerateVideoTokenParams): Prom
       lesson_id: lessonId,
       course_id: courseId,
       expires_at: expiresAt,
-      max_views: 50,
+      max_views: 10,
       ttl_seconds: 86400,
       ip_address: ipAddress,
       allowed_ips: [],
@@ -63,7 +63,7 @@ export async function generateVideoToken(params: GenerateVideoTokenParams): Prom
     token: newToken.token,
     videoUrl: `/api/video/${newToken.token}`,
     expiresAt: newToken.expires_at.toISOString(),
-    remainingViews: 50,
+    remainingViews: 10,
   };
 }
 

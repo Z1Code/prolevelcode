@@ -21,35 +21,63 @@ export default async function DashboardCoursesPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold">Mis cursos</h2>
-      {currentTier && (
-        <p className="mt-1 text-sm text-slate-400">
-          Plan activo: <span className={currentTier === "pro" ? "text-violet-300" : "text-emerald-300"}>{currentTier === "pro" ? "Pro" : "Basic"}</span>
-        </p>
-      )}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold tracking-tight">Mis cursos</h2>
+        {currentTier && (
+          <p className="mt-1 text-sm text-slate-500">
+            Plan activo:{" "}
+            <span className={currentTier === "pro" ? "font-medium text-amber-300" : "font-medium text-slate-300"}>
+              {currentTier === "pro" ? "Pro" : "Basic"}
+            </span>
+          </p>
+        )}
+      </div>
 
       {courses.length > 0 ? (
-        <div className="mt-4 space-y-3">
+        <div className="space-y-3">
           {courses.map((course) => (
-            <Card key={course.id} className="p-4">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold">{course.title}</h3>
-                <TierBadge tier={course.tier_access} />
-              </div>
-              <p className="mt-1 text-sm text-slate-400">{course.subtitle}</p>
-              <Link href={`/dashboard/cursos/${course.slug}`} className="mt-3 inline-flex text-sm text-emerald-300">
-                Abrir curso
-              </Link>
-            </Card>
+            <Link key={course.id} href={`/dashboard/cursos/${course.slug}`} className="block">
+              <Card className="group relative overflow-hidden p-5 transition-all duration-200 hover:border-emerald-400/15 hover:shadow-[0_0_20px_rgba(52,211,153,0.04)]">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="relative flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="truncate text-sm font-semibold text-slate-200 transition-colors group-hover:text-white">
+                        {course.title}
+                      </h3>
+                      <TierBadge tier={course.tier_access} />
+                    </div>
+                    {course.subtitle && (
+                      <p className="mt-1 truncate text-xs text-slate-500">{course.subtitle}</p>
+                    )}
+                  </div>
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0 text-slate-600 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-emerald-400">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </Card>
+            </Link>
           ))}
         </div>
       ) : (
-        <div className="mt-6 text-center text-sm text-slate-400">
-          <p>{currentTier ? "No hay cursos disponibles aun." : "Necesitas un plan para acceder a los cursos."}</p>
-          <Link href="/planes" className="mt-2 inline-flex text-emerald-300">
-            Ver planes →
-          </Link>
-        </div>
+        <Card className="p-8 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6 text-slate-600">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <p className="text-sm text-slate-400">
+              {currentTier ? "No hay cursos disponibles aun." : "Necesitas un plan para acceder a los cursos."}
+            </p>
+            <Link
+              href="/planes"
+              className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-300 transition-all duration-200 hover:border-emerald-400/30 hover:bg-emerald-500/15"
+            >
+              Ver planes
+            </Link>
+          </div>
+        </Card>
       )}
     </div>
   );
