@@ -101,7 +101,7 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
                   </span>
                   <span className="min-w-0 flex-1 truncate">{lesson.title}</span>
                   {lesson.durationMinutes != null && lesson.durationMinutes > 0 && (
-                    <span className="shrink-0 rounded bg-white/5 px-1.5 py-0.5 text-[10px] tabular-nums text-slate-500">
+                    <span className="shrink-0 rounded-md border border-cyan-400/15 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-cyan-300">
                       {lesson.durationMinutes}m
                     </span>
                   )}
