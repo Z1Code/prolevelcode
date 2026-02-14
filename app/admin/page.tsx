@@ -12,13 +12,10 @@ export default async function AdminHomePage() {
         <Card className="p-4">
           <p className="text-sm text-slate-400">Ingresos mes</p>
           <p className="mt-2 text-2xl font-semibold">
-            {currencyFormatter(metrics.monthlyRevenueCLP, "CLP")}
+            {currencyFormatter(metrics.monthlyRevenueCents, "CLP")}
           </p>
           <p className="mt-1 text-sm text-emerald-400">
-            ≈ {currencyFormatter(Math.round(metrics.monthlyRevenueCLP / metrics.clpToUsdRate * 100), "USD")}
-            {metrics.monthlyRevenueUSD > 0 && (
-              <> + {currencyFormatter(metrics.monthlyRevenueUSD, "USD")}</>
-            )}
+            ≈ {currencyFormatter(Math.round(metrics.monthlyRevenueCents / metrics.clpPerUsd), "USD")}
           </p>
         </Card>
         <Card className="p-4">
@@ -44,7 +41,8 @@ export default async function AdminHomePage() {
                 <tr>
                   <th>Email</th>
                   <th>Curso</th>
-                  <th>Monto</th>
+                  <th>CLP</th>
+                  <th>USD</th>
                 </tr>
               </thead>
               <tbody>
@@ -52,7 +50,8 @@ export default async function AdminHomePage() {
                   <tr key={sale.id}>
                     <td className="py-2">{sale.user?.email ?? "-"}</td>
                     <td>{sale.course?.title ?? "-"}</td>
-                    <td>{currencyFormatter(sale.amount_paid_cents ?? 0, sale.currency ?? "USD")}</td>
+                    <td>{currencyFormatter(sale.amount_paid_cents ?? 0, "CLP")}</td>
+                    <td className="text-emerald-400">≈ {currencyFormatter(Math.round((sale.amount_paid_cents ?? 0) / metrics.clpPerUsd), "USD")}</td>
                   </tr>
                 ))}
               </tbody>

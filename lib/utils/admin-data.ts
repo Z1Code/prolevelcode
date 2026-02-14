@@ -20,9 +20,8 @@ export interface AdminLatestToken {
 }
 
 export interface AdminMetricsData {
-  monthlyRevenueCLP: number;
-  monthlyRevenueUSD: number;
-  clpToUsdRate: number;
+  monthlyRevenueCents: number;
+  clpPerUsd: number;
   newUsers: number;
   activeCourses: number;
   activeTokens: number;
@@ -50,7 +49,7 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
   const [monthlyEnrollments, newUsers, activeCourses, activeTokens, latestSales, latestTokens] = await Promise.all([
     prisma.enrollment.findMany({
       where: { enrolled_at: { gte: monthStart } },
-      select: { amount_paid_cents: true, currency: true },
+      select: { amount_paid_cents: true },
     }),
     prisma.user.count({ where: { created_at: { gte: thirtyDaysAgo } } }),
     prisma.course.count({ where: { is_published: true } }),
@@ -83,21 +82,11 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
     }),
   ]);
 
-  let monthlyRevenueCLP = 0;
-  let monthlyRevenueUSD = 0;
-  for (const item of monthlyEnrollments) {
-    const cents = item.amount_paid_cents ?? 0;
-    if (item.currency === "CLP") {
-      monthlyRevenueCLP += cents;
-    } else {
-      monthlyRevenueUSD += cents;
-    }
-  }
+  const monthlyRevenueCents = monthlyEnrollments.reduce((acc, item) => acc + (item.amount_paid_cents ?? 0), 0);
 
   return {
-    monthlyRevenueCLP,
-    monthlyRevenueUSD,
-    clpToUsdRate,
+    monthlyRevenueCents,
+    clpPerUsd: clpToUsdRate,
     newUsers,
     activeCourses,
     activeTokens,
