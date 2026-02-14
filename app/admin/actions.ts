@@ -37,9 +37,6 @@ export async function createCourse(fd: FormData) {
   const slug = str(fd, "slug") || slugify(title);
   const subtitle = str(fd, "subtitle") || null;
   const description = str(fd, "description") || null;
-  const price_dollars = Number(fd.get("price_dollars")) || 0;
-  const price_cents = Math.round(price_dollars * 100);
-  const currency = str(fd, "currency") || "USD";
   const difficulty = str(fd, "difficulty") || null;
   const category = str(fd, "category") || null;
   const preview_video_url = str(fd, "preview_video_url") || null;
@@ -51,7 +48,7 @@ export async function createCourse(fd: FormData) {
   if (!title) redirect("/admin/cursos/new?error=titulo-requerido");
 
   const course = await prisma.course.create({
-    data: { title, slug, subtitle, description, price_cents, currency, difficulty, category, preview_video_url, is_published, is_featured, is_coming_soon, tier_access },
+    data: { title, slug, subtitle, description, price_cents: 0, currency: "USD", difficulty, category, preview_video_url, is_published, is_featured, is_coming_soon, tier_access },
   });
 
   revalidatePath("/admin/cursos");
@@ -65,9 +62,6 @@ export async function updateCourse(fd: FormData) {
   const slug = str(fd, "slug") || slugify(title);
   const subtitle = str(fd, "subtitle") || null;
   const description = str(fd, "description") || null;
-  const price_dollars = Number(fd.get("price_dollars")) || 0;
-  const price_cents = Math.round(price_dollars * 100);
-  const currency = str(fd, "currency") || "USD";
   const difficulty = str(fd, "difficulty") || null;
   const category = str(fd, "category") || null;
   const preview_video_url = str(fd, "preview_video_url") || null;
@@ -80,7 +74,7 @@ export async function updateCourse(fd: FormData) {
 
   await prisma.course.update({
     where: { id },
-    data: { title, slug, subtitle, description, price_cents, currency, difficulty, category, preview_video_url, is_published, is_featured, is_coming_soon, tier_access },
+    data: { title, slug, subtitle, description, difficulty, category, preview_video_url, is_published, is_featured, is_coming_soon, tier_access },
   });
 
   revalidatePath("/admin/cursos");
