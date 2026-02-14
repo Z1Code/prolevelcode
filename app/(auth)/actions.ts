@@ -116,7 +116,7 @@ export async function registerAction(formData: FormData) {
     const resend = getResendClient();
     const verifyUrl = `${env.appUrl}/auth/callback?type=verify-email&token=${rawToken}`;
     await resend.emails.send({
-      from: "ProLevelCode <no-reply@prolevelcode.dev>",
+      from: "ProLevelCode <no-reply@prolevelcode.com>",
       to: email,
       subject: "Verifica tu email - ProLevelCode",
       html: `
@@ -166,7 +166,7 @@ export async function magicLinkAction(formData: FormData) {
     const resend = getResendClient();
     const loginUrl = `${env.appUrl}/auth/callback?type=magic-link&token=${rawToken}&next=${encodeURIComponent(next)}`;
     await resend.emails.send({
-      from: "ProLevelCode <no-reply@prolevelcode.dev>",
+      from: "ProLevelCode <no-reply@prolevelcode.com>",
       to: email,
       subject: "Tu magic link - ProLevelCode",
       html: `
@@ -212,7 +212,7 @@ export async function recoverAction(formData: FormData) {
     const resend = getResendClient();
     const resetUrl = `${env.appUrl}/recuperar?token=${rawToken}`;
     await resend.emails.send({
-      from: "ProLevelCode <no-reply@prolevelcode.dev>",
+      from: "ProLevelCode <no-reply@prolevelcode.com>",
       to: email,
       subject: "Recuperar contraseña - ProLevelCode",
       html: `
