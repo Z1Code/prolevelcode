@@ -11,12 +11,23 @@ export default async function AdminHomePage() {
       <div className="mt-4 grid gap-4 md:grid-cols-4">
         <Card className="p-4">
           <p className="text-sm text-slate-400">Ingresos mes</p>
-          <p className="mt-2 text-2xl font-semibold">
-            {currencyFormatter(metrics.monthlyRevenueCents, "CLP")}
-          </p>
-          <p className="mt-1 text-sm text-emerald-400">
-            ≈ {currencyFormatter(Math.round(metrics.monthlyRevenueCents / metrics.clpPerUsd), "USD")}
-          </p>
+          {metrics.monthlyClpCents > 0 && (
+            <p className="mt-2 text-2xl font-semibold">
+              {currencyFormatter(metrics.monthlyClpCents, "CLP")}
+              <span className="ml-2 text-sm font-normal text-emerald-400">
+                ≈ {currencyFormatter(Math.round(metrics.monthlyClpCents / metrics.clpPerUsd), "USD")}
+              </span>
+            </p>
+          )}
+          {metrics.monthlyUsdCents > 0 && (
+            <p className={`${metrics.monthlyClpCents > 0 ? "mt-1" : "mt-2"} text-2xl font-semibold`}>
+              {currencyFormatter(metrics.monthlyUsdCents, "USD")}
+              <span className="ml-2 text-sm font-normal text-slate-400">USDT</span>
+            </p>
+          )}
+          {metrics.monthlyClpCents === 0 && metrics.monthlyUsdCents === 0 && (
+            <p className="mt-2 text-2xl font-semibold text-slate-500">$0</p>
+          )}
         </Card>
         <Card className="p-4">
           <p className="text-sm text-slate-400">Nuevos users</p>
@@ -41,19 +52,31 @@ export default async function AdminHomePage() {
                 <tr>
                   <th>Email</th>
                   <th>Curso</th>
-                  <th>CLP</th>
-                  <th>USD</th>
+                  <th>Monto</th>
+                  <th>Equiv.</th>
                 </tr>
               </thead>
               <tbody>
-                {metrics.latestSales.map((sale) => (
-                  <tr key={sale.id}>
-                    <td className="py-2">{sale.user?.email ?? "-"}</td>
-                    <td>{sale.course?.title ?? "-"}</td>
-                    <td>{currencyFormatter(sale.amount_paid_cents ?? 0, "CLP")}</td>
-                    <td className="text-emerald-400">≈ {currencyFormatter(Math.round((sale.amount_paid_cents ?? 0) / metrics.clpPerUsd), "USD")}</td>
-                  </tr>
-                ))}
+                {metrics.latestSales.map((sale) => {
+                  const cents = sale.amount_paid_cents ?? 0;
+                  const isUsd = sale.currency === "USD";
+                  return (
+                    <tr key={sale.id}>
+                      <td className="py-2">{sale.user?.email ?? "-"}</td>
+                      <td>{sale.course?.title ?? "-"}</td>
+                      <td>
+                        {isUsd
+                          ? currencyFormatter(cents, "USD")
+                          : currencyFormatter(cents, "CLP")}
+                      </td>
+                      <td className="text-emerald-400">
+                        {isUsd
+                          ? `≈ ${currencyFormatter(cents * metrics.clpPerUsd, "CLP")}`
+                          : `≈ ${currencyFormatter(Math.round(cents / metrics.clpPerUsd), "USD")}`}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
