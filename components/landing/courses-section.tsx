@@ -21,12 +21,10 @@ export function CoursesSection() {
                   <div>
                     <h3 className="text-xl font-semibold">{course.title}</h3>
                     <p className="mt-1 text-sm text-slate-400">{course.subtitle}</p>
-                    <p className="mt-2 text-sm text-slate-300">Rating {course.rating} - {course.students} estudiantes</p>
                     <p className="mt-3 text-sm text-slate-400">{course.modules} modulos - {course.lessons} lecciones - {course.duration}</p>
-                    <div className="mt-4 flex flex-wrap items-center gap-3">
-                      <span className="liquid-pill text-sm">{course.price}</span>
+                    <div className="mt-4">
                       <Link href={`/cursos/${course.slug}`} className="liquid-link text-sm font-medium">
-                        Comprar ahora
+                        Ver curso
                       </Link>
                     </div>
                   </div>
@@ -38,6 +36,9 @@ export function CoursesSection() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/cursos">
               <Button>Ver todos los cursos</Button>
+            </Link>
+            <Link href="/planes">
+              <Button variant="ghost">Ver planes</Button>
             </Link>
             <Card className="flex flex-wrap items-center gap-3 px-4 py-3 text-xs text-slate-300">
               <span>Videos protegidos con token auto-destruible</span>

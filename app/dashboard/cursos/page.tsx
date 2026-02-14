@@ -9,7 +9,7 @@ export default async function DashboardCoursesPage() {
   const user = await getSessionUser();
   const currentTier = user ? await getUserTier(user.id) : null;
 
-  // Directly enrolled courses
+  // Directly enrolled courses (grandfathered individual purchases)
   const enrollments = await prisma.enrollment.findMany({
     where: { user_id: user?.id ?? "", status: "active" },
     include: { course: { select: { id: true, title: true, slug: true, subtitle: true, tier_access: true } } },
@@ -29,34 +29,24 @@ export default async function DashboardCoursesPage() {
     tierCourses = tierCourses.filter((c) => !enrolledCourseIds.has(c.id));
   }
 
+  // Merge all courses into one list
+  const allCourses = [
+    ...enrollments.map((e) => ({ ...e.course, source: "enrolled" as const })),
+    ...tierCourses.map((c) => ({ ...c, source: "tier" as const })),
+  ];
+
   return (
     <div>
       <h2 className="text-2xl font-semibold">Mis cursos</h2>
-
-      {enrollments.length > 0 && (
-        <div className="mt-4 space-y-3">
-          <h3 className="text-sm font-medium text-slate-400">Comprados individualmente</h3>
-          {enrollments.map((item) => (
-            <Card key={item.id} className="p-4">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold">{item.course.title}</h3>
-                <TierBadge tier={item.course.tier_access} />
-              </div>
-              <p className="mt-1 text-sm text-slate-400">{item.course.subtitle}</p>
-              <Link href={`/dashboard/cursos/${item.course.slug}`} className="mt-3 inline-flex text-sm text-emerald-300">
-                Abrir curso
-              </Link>
-            </Card>
-          ))}
-        </div>
+      {currentTier && (
+        <p className="mt-1 text-sm text-slate-400">
+          Plan activo: <span className={currentTier === "pro" ? "text-violet-300" : "text-emerald-300"}>{currentTier === "pro" ? "Pro" : "Basic"}</span>
+        </p>
       )}
 
-      {tierCourses.length > 0 && (
-        <div className="mt-6 space-y-3">
-          <h3 className="text-sm font-medium text-slate-400">
-            Disponibles con tu plan {currentTier === "pro" ? "Pro" : "Basic"}
-          </h3>
-          {tierCourses.map((course) => (
+      {allCourses.length > 0 ? (
+        <div className="mt-4 space-y-3">
+          {allCourses.map((course) => (
             <Card key={course.id} className="p-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold">{course.title}</h3>
@@ -69,13 +59,11 @@ export default async function DashboardCoursesPage() {
             </Card>
           ))}
         </div>
-      )}
-
-      {enrollments.length === 0 && tierCourses.length === 0 && (
+      ) : (
         <div className="mt-6 text-center text-sm text-slate-400">
           <p>No tienes cursos aun.</p>
-          <Link href="/cursos" className="mt-2 inline-flex text-emerald-300">
-            Explorar cursos →
+          <Link href="/planes" className="mt-2 inline-flex text-emerald-300">
+            Ver planes →
           </Link>
         </div>
       )}

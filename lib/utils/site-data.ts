@@ -1,5 +1,4 @@
 ﻿export const navLinks = [
-  { href: "/servicios", label: "Servicios" },
   {
     label: "Aprender",
     children: [
@@ -10,51 +9,6 @@
   { href: "/becas", label: "Becas" },
   { href: "/sobre-mi", label: "Sobre mi" },
   { href: "/contacto", label: "Contacto" },
-];
-
-export const defaultServices = [
-  {
-    title: "Web Apps Full-Stack",
-    description: "Arquitecturas robustas con Next.js, TypeScript, APIs y despliegue en la nube.",
-    price: "Desde $2,000",
-    icon: "code",
-    slug: "web-apps",
-  },
-  {
-    title: "AI Solutions",
-    description: "Asistentes, agentes y automatizaciones con LLMs y flujos RAG orientados a negocio.",
-    price: "Desde $3,000",
-    icon: "bot",
-    slug: "ai-solutions",
-  },
-  {
-    title: "UI/UX Design",
-    description: "Interfaces premium orientadas a conversion y experiencia de usuario memorable.",
-    price: "Desde $1,500",
-    icon: "sparkles",
-    slug: "ui-ux",
-  },
-  {
-    title: "Dashboards & Analytics",
-    description: "Paneles en tiempo real para producto, ventas y operaciones.",
-    price: "Desde $1,500",
-    icon: "chart",
-    slug: "dashboards",
-  },
-  {
-    title: "APIs & Integraciones",
-    description: "Integracion con MercadoPago, PostgreSQL, CRMs y servicios externos.",
-    price: "Desde $2,000",
-    icon: "plug",
-    slug: "apis",
-  },
-  {
-    title: "Consultoria Tecnica",
-    description: "Acompanamiento senior en arquitectura, performance y seguridad.",
-    price: "$150/hora",
-    icon: "wrench",
-    slug: "consultoria",
-  },
 ];
 
 export const featuredCourses = [

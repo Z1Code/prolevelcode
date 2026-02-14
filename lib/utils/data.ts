@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { CourseCard } from "@/lib/types";
-import { featuredCourses, defaultServices } from "@/lib/utils/site-data";
+import { featuredCourses } from "@/lib/utils/site-data";
 
 export async function getPublishedCourses(): Promise<CourseCard[]> {
   try {
@@ -108,40 +108,6 @@ export async function getCourseBySlug(slug: string) {
       ],
     };
   }
-}
-
-export async function getActiveServices() {
-  try {
-    const services = await prisma.service.findMany({
-      where: { is_active: true },
-      orderBy: { sort_order: "asc" },
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        short_description: true,
-        long_description: true,
-        price_range: true,
-        is_featured: true,
-        is_active: true,
-      },
-    });
-
-    if (services.length > 0) return services;
-  } catch {
-    // fallback
-  }
-
-  return defaultServices.map((service, index) => ({
-    id: `10000000-0000-0000-0000-00000000000${index + 1}`,
-    slug: service.slug,
-    title: service.title,
-    short_description: service.description,
-    long_description: service.description,
-    price_range: service.price,
-    is_featured: index < 2,
-    is_active: true,
-  }));
 }
 
 export async function getFeaturedTestimonials() {

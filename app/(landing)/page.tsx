@@ -1,6 +1,5 @@
 import { HeroSection } from "@/components/landing/hero-section";
 import { ShowcaseSection } from "@/components/landing/showcase-section";
-import { ServicesSection } from "@/components/landing/services-section";
 import { CoursesSection } from "@/components/landing/courses-section";
 import { ProcessSection } from "@/components/landing/process-section";
 import { TestimonialsSection } from "@/components/landing/testimonials-section";
@@ -13,9 +12,8 @@ export default async function HomePage() {
 
   return (
     <main>
-      <HeroSection showServices={flags.showServices} />
+      <HeroSection />
       <ShowcaseSection />
-      {flags.showServices && <ServicesSection />}
       {flags.showCourses && <CoursesSection />}
       {flags.showProcess && <ProcessSection />}
       {flags.showTestimonials && <TestimonialsSection />}

@@ -25,7 +25,7 @@ const liquidBars = [
   { id: 9, name: "dark-iridescent" },
 ];
 
-export function HeroSection({ showServices = false }: { showServices?: boolean }) {
+export function HeroSection() {
   const { t } = useTranslation();
   const [userCount, setUserCount] = useState<number | null>(null);
 
@@ -89,17 +89,15 @@ export function HeroSection({ showServices = false }: { showServices?: boolean }
             transition={{ duration: 0.45, delay: 0.24, ease: "easeOut" }}
           >
             <div className="flex gap-3">
-              {showServices ? (
-                <Link href="/servicios">
-                  <Button size="sm" className="hero-glass-cta">
-                    {t.hero.cta1}
-                  </Button>
-                </Link>
-              ) : null}
-
               <Link href="/cursos">
-                <Button variant="ghost" size="sm" className="hero-glass-cta-outline">
+                <Button size="sm" className="hero-glass-cta">
                   {t.hero.cta2}
+                </Button>
+              </Link>
+
+              <Link href="/planes">
+                <Button variant="ghost" size="sm" className="hero-glass-cta-outline">
+                  {t.hero.ctaPlans ?? "Ver planes"}
                 </Button>
               </Link>
             </div>

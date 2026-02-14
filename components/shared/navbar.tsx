@@ -32,10 +32,8 @@ function getUserLabel(user: NavbarUser) {
 }
 
 export function Navbar({
-  showServices = false,
   currentUser,
 }: {
-  showServices?: boolean;
   currentUser?: NavbarUser | null;
 }) {
   const pathname = usePathname();
@@ -213,13 +211,6 @@ export function Navbar({
               </Link>
             )}
 
-            {showServices && (
-              <Link href="/servicios">
-                <Button size="sm" className="navbar-cta-btn">
-                  {t.nav.hire}
-                </Button>
-              </Link>
-            )}
           </div>
 
           <div className="ml-auto flex items-center gap-2 lg:hidden">
@@ -394,12 +385,7 @@ export function Navbar({
                 ))}
               </nav>
 
-              <div
-                className={cn(
-                  "mt-4 grid gap-2 border-t border-white/10 pt-4",
-                  showServices ? "grid-cols-2" : "grid-cols-1",
-                )}
-              >
+              <div className="mt-4 grid grid-cols-1 gap-2 border-t border-white/10 pt-4">
                 {currentUser ? (
                   <>
                     <Link href="/dashboard" onClick={closeMenu}>
@@ -421,13 +407,6 @@ export function Navbar({
                   </Link>
                 )}
 
-                {showServices && (
-                  <Link href="/servicios" onClick={closeMenu}>
-                    <Button size="sm" className="h-9 w-full">
-                      {t.nav.hire}
-                    </Button>
-                  </Link>
-                )}
               </div>
             </div>
           </motion.div>

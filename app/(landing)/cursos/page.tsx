@@ -1,28 +1,34 @@
 import Link from "next/link";
 import { getPublishedCourses } from "@/lib/utils/data";
 import { prisma } from "@/lib/prisma";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { currencyFormatter } from "@/lib/payments/helpers";
 import { getBunnyThumbnailUrl } from "@/lib/bunny/signed-url";
-import { COURSE_CATEGORIES } from "@/lib/courses/categories";
-import { CategoryFilter } from "@/components/courses/category-filter";
-import { TierBadge } from "@/components/courses/tier-badge";
+import { getSessionUser } from "@/lib/auth/session";
+import { getUserTier } from "@/lib/access/check-access";
+import { CourseTimeline } from "@/components/courses/course-timeline";
 import { CoursesCountdown } from "./courses-countdown";
 
-interface CoursesPageProps {
-  searchParams: Promise<{ category?: string }>;
-}
+export default async function CoursesPage() {
+  const courses = await getPublishedCourses();
 
-export default async function CoursesPage({ searchParams }: CoursesPageProps) {
-  const { category: activeCategory } = await searchParams;
-  let courses = await getPublishedCourses();
+  const basicCourses = courses.filter((c) => (c.tier_access ?? "basic") === "basic");
+  const proCourses = courses.filter((c) => (c.tier_access ?? "basic") === "pro");
 
-  if (activeCategory) {
-    courses = courses.filter((c) => c.category === activeCategory);
+  // Get user + tier
+  const user = await getSessionUser();
+  const userTier = user ? await getUserTier(user.id) : null;
+
+  // Get enrolled course IDs for grandfathered access
+  let enrolledCourseIds = new Set<string>();
+  if (user) {
+    const enrollments = await prisma.enrollment.findMany({
+      where: { user_id: user.id, status: "active" },
+      select: { course_id: true },
+    });
+    enrolledCourseIds = new Set(enrollments.map((e) => e.course_id));
   }
 
-  // Get first free preview lesson per course for thumbnails
+  // Build thumbnail map from preview lessons
   const courseIds = courses.map((c) => c.id).filter(Boolean);
   const previewLessons = courseIds.length
     ? await prisma.lesson.findMany({
@@ -45,6 +51,20 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
     }
   }
 
+  // Map courses to timeline format
+  const mapCourse = (c: (typeof courses)[number]) => ({
+    id: c.id,
+    slug: c.slug,
+    title: c.title,
+    subtitle: c.subtitle ?? null,
+    description: c.description ?? null,
+    thumbnail_url: c.thumbnail_url ?? null,
+    total_lessons: c.total_lessons ?? null,
+    total_duration_minutes: c.total_duration_minutes ?? null,
+    tier_access: c.tier_access ?? "basic",
+    is_coming_soon: c.is_coming_soon ?? false,
+  });
+
   return (
     <main className="container-wide section-spacing liquid-section">
       <h1 className="text-4xl font-bold md:text-6xl">Catalogo de cursos</h1>
@@ -52,54 +72,20 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
         Cursos orientados a resultados con proyectos reales y acceso de por vida.
       </p>
 
+      <div className="mt-6 flex items-center gap-3">
+        <Link href="/planes">
+          <Button size="sm">Ver planes ($29 / $99)</Button>
+        </Link>
+      </div>
+
       <CoursesCountdown>
-        <div className="mt-6">
-          <CategoryFilter categories={COURSE_CATEGORIES} active={activeCategory} />
-        </div>
-
-        <div className="mt-6 flex items-center gap-3">
-          <Link href="/planes">
-            <Button size="sm" variant="ghost">Ver planes ($30 / $99)</Button>
-          </Link>
-        </div>
-
-        <div className="mt-6 space-y-4">
-          {courses.map((course) => {
-            const thumb = course.thumbnail_url || thumbnailMap.get(course.id) || null;
-
-            return (
-              <Card key={course.id} className="p-5">
-                <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-                  {thumb ? (
-                    <img
-                      src={thumb}
-                      alt={course.title}
-                      className="aspect-video w-full rounded-xl border border-white/10 object-cover"
-                    />
-                  ) : (
-                    <div className="aspect-video rounded-xl border border-white/10 bg-gradient-to-br from-blue-500/40 via-slate-950 to-violet-500/25" />
-                  )}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-2xl font-semibold">{course.title}</h2>
-                      <TierBadge tier={(course as { tier_access?: string }).tier_access ?? "basic"} isComingSoon={(course as { is_coming_soon?: boolean }).is_coming_soon ?? false} />
-                    </div>
-                    <p className="mt-2 text-slate-400">{course.subtitle ?? course.description}</p>
-                    <p className="mt-4 text-sm text-slate-300">
-                      {course.total_lessons ?? 0} lecciones - {course.total_duration_minutes ?? 0} min
-                    </p>
-                    <div className="mt-5 flex flex-wrap items-center gap-3">
-                      <span className="liquid-pill text-sm">{currencyFormatter(course.price_cents, course.currency)}</span>
-                      <Link href={`/cursos/${course.slug}`}>
-                        <Button size="sm">Ver curso</Button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+        <CourseTimeline
+          basicCourses={basicCourses.map(mapCourse)}
+          proCourses={proCourses.map(mapCourse)}
+          userTier={userTier}
+          enrolledCourseIds={enrolledCourseIds}
+          thumbnailMap={thumbnailMap}
+        />
       </CoursesCountdown>
     </main>
   );

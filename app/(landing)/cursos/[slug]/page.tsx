@@ -4,15 +4,12 @@ import { getCourseBySlug } from "@/lib/utils/data";
 import { Button } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { currencyFormatter } from "@/lib/payments/helpers";
 import { checkCourseAccess, getUserTier } from "@/lib/access/check-access";
 import { TierBadge } from "@/components/courses/tier-badge";
-import { PaymentMethodSelector } from "@/components/pricing/payment-method-selector";
 import { CoursesCountdown } from "../courses-countdown";
 
 interface CourseDetailPageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ checkout?: string }>;
 }
 
 interface CourseLesson {
@@ -63,9 +60,8 @@ async function getCourseThumbnail(course: {
     : null;
 }
 
-export default async function CourseDetailPage({ params, searchParams }: CourseDetailPageProps) {
+export default async function CourseDetailPage({ params }: CourseDetailPageProps) {
   const { slug } = await params;
-  const { checkout } = await searchParams;
   const course = await getCourseBySlug(slug);
 
   if (!course) {
@@ -91,16 +87,6 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
   return (
     <main className="container-wide section-spacing liquid-section">
       <CoursesCountdown>
-      {checkout === "error" && (
-        <div className="mb-6 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          No se pudo iniciar el pago. Intenta de nuevo mas tarde o contactanos.
-        </div>
-      )}
-      {checkout === "failure" && (
-        <div className="mb-6 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          El pago no se completo. Puedes intentar de nuevo.
-        </div>
-      )}
       <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
         <div>
           <div className="flex items-center gap-3">
@@ -110,10 +96,6 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
           <p className="mt-4 max-w-3xl text-slate-300">{course.long_description ?? course.subtitle ?? course.description}</p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            {course.price_cents != null && (
-              <span className="liquid-pill text-sm">{currencyFormatter(course.price_cents, course.currency)}</span>
-            )}
-
             {isComingSoon ? (
               <span className="text-sm text-amber-300">Este curso estara disponible proximamente</span>
             ) : hasAccess ? (
@@ -122,24 +104,25 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
               </Link>
             ) : user ? (
               <div className="space-y-3">
-                {/* Tier-locked: suggest upgrading */}
-                {courseTierAccess === "pro" && userTier !== "pro" && (
+                {courseTierAccess === "pro" && userTier !== "pro" ? (
                   <div className="rounded-lg border border-violet-400/20 bg-violet-500/5 p-3">
                     <p className="text-sm text-violet-200">
                       Este curso requiere el plan Pro.{" "}
                       <Link href="/planes" className="font-medium underline">Ver planes</Link>
                     </p>
                   </div>
+                ) : (
+                  <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/5 p-3">
+                    <p className="text-sm text-emerald-200">
+                      Accede a este curso con un plan.{" "}
+                      <Link href="/planes" className="font-medium underline">Ver planes</Link>
+                    </p>
+                  </div>
                 )}
-                <PaymentMethodSelector
-                  courseId={course.id ?? ""}
-                  mpAction="/api/checkout/course"
-                  cryptoAction="/api/checkout/crypto/course"
-                />
               </div>
             ) : (
               <Link href={`/login?next=${encodeURIComponent(`/cursos/${slug}`)}`}>
-                <Button>Inicia sesion para comprar</Button>
+                <Button>Inicia sesion para acceder</Button>
               </Link>
             )}
           </div>
