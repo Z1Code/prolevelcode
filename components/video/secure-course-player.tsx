@@ -8,6 +8,7 @@ interface LessonOption {
   id: string;
   title: string;
   courseId: string;
+  durationMinutes?: number | null;
 }
 
 interface TokenPayload {
@@ -98,7 +99,12 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
                   }`}>
                     {i + 1}
                   </span>
-                  <span className="truncate">{lesson.title}</span>
+                  <span className="min-w-0 flex-1 truncate">{lesson.title}</span>
+                  {lesson.durationMinutes != null && lesson.durationMinutes > 0 && (
+                    <span className="shrink-0 rounded bg-white/5 px-1.5 py-0.5 text-[10px] tabular-nums text-slate-500">
+                      {lesson.durationMinutes}m
+                    </span>
+                  )}
                 </button>
               </li>
             );

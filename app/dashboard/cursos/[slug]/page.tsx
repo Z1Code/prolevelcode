@@ -32,13 +32,14 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
   const lessons = await prisma.lesson.findMany({
     where: { course_id: course.id, ...lessonFilter },
     orderBy: { sort_order: "asc" },
-    select: { id: true, title: true, course_id: true },
+    select: { id: true, title: true, course_id: true, duration_minutes: true },
   });
 
   const playerLessons = lessons.map((lesson) => ({
     id: lesson.id,
     title: lesson.title,
     courseId: lesson.course_id,
+    durationMinutes: lesson.duration_minutes,
   }));
 
   return (
