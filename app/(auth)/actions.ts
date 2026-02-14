@@ -149,7 +149,7 @@ export async function magicLinkAction(formData: FormData) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     // Don't reveal if email exists
-    redirect(`/login?message=${encodeURIComponent("Si tu email está registrado, recibirás un magic link")}`);
+    redirect(`/login?message=${encodeURIComponent("Si tu email está registrado, recibirás un magic link")}&next=${encodeURIComponent(next)}`);
   }
 
   const rawToken = generateToken();
@@ -181,7 +181,7 @@ export async function magicLinkAction(formData: FormData) {
     // silent
   }
 
-  redirect(`/login?message=${encodeURIComponent("Si tu email está registrado, recibirás un magic link")}`);
+  redirect(`/login?message=${encodeURIComponent("Si tu email está registrado, recibirás un magic link")}&next=${encodeURIComponent(next)}`);
 }
 
 export async function recoverAction(formData: FormData) {
