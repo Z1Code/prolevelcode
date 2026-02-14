@@ -60,10 +60,6 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
                   <Input name="bunny_video_id" defaultValue={lesson.bunny_video_id ?? ""} className="mt-0.5 h-9 text-xs" placeholder="GUID de Bunny" />
                 </div>
                 <div>
-                  <span className="text-xs text-slate-500">YouTube ID (fallback)</span>
-                  <Input name="youtube_video_id" defaultValue={lesson.youtube_video_id ?? ""} className="mt-0.5 h-9 text-xs" placeholder="Opcional" />
-                </div>
-                <div>
                   <span className="text-xs text-slate-500">Modulo</span>
                   <select
                     name="module_id"

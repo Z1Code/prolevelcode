@@ -76,11 +76,6 @@ export function LessonFormWithUpload({ courseId, modules, action }: LessonFormWi
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-slate-400">YouTube ID (fallback opcional)</span>
-        <Input name="youtube_video_id" placeholder="dQw4w9WgXcQ" />
-      </label>
-
-      <label className="flex flex-col gap-1">
         <span className="text-xs text-slate-400">Duracion (minutos)</span>
         <Input name="duration_minutes" type="number" placeholder="15" />
       </label>
@@ -93,7 +88,7 @@ export function LessonFormWithUpload({ courseId, modules, action }: LessonFormWi
       </div>
 
       <div className="md:col-span-2">
-        <Button type="submit" disabled={!bunnyVideoId && !title}>Agregar leccion</Button>
+        <Button type="submit" disabled={!bunnyVideoId}>Agregar leccion</Button>
       </div>
     </form>
   );

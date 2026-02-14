@@ -154,11 +154,10 @@ export async function createLesson(fd: FormData) {
   const module_id = str(fd, "module_id");
   const title = str(fd, "title");
   const bunny_video_id = str(fd, "bunny_video_id") || null;
-  const youtube_video_id = str(fd, "youtube_video_id") || null;
   const duration_minutes = int(fd, "duration_minutes") || null;
   const is_free_preview = bool(fd, "is_free_preview");
 
-  if (!title || (!bunny_video_id && !youtube_video_id)) {
+  if (!title || !bunny_video_id) {
     revalidatePath(`/admin/cursos/${course_id}/lecciones`);
     return;
   }
@@ -174,7 +173,6 @@ export async function createLesson(fd: FormData) {
       module_id,
       title,
       bunny_video_id,
-      youtube_video_id,
       duration_minutes,
       sort_order: (maxOrder._max.sort_order ?? 0) + 1,
       is_free_preview,
@@ -195,18 +193,17 @@ export async function updateLesson(fd: FormData) {
   const module_id = str(fd, "module_id");
   const title = str(fd, "title");
   const bunny_video_id = str(fd, "bunny_video_id") || null;
-  const youtube_video_id = str(fd, "youtube_video_id") || null;
   const duration_minutes = int(fd, "duration_minutes") || null;
   const is_free_preview = bool(fd, "is_free_preview");
 
-  if (!title || (!bunny_video_id && !youtube_video_id)) {
+  if (!title || !bunny_video_id) {
     revalidatePath(`/admin/cursos/${course_id}/lecciones`);
     return;
   }
 
   await prisma.lesson.update({
     where: { id },
-    data: { module_id, title, bunny_video_id, youtube_video_id, duration_minutes, is_free_preview },
+    data: { module_id, title, bunny_video_id, duration_minutes, is_free_preview },
   });
 
   revalidatePath(`/admin/cursos/${course_id}/lecciones`);
