@@ -42,6 +42,7 @@ export default async function AdminUsersPage() {
               <th className="px-4 py-3">Plan</th>
               <th className="px-4 py-3">Rol</th>
               <th className="px-4 py-3">Activo</th>
+              <th className="px-4 py-3">Registro</th>
               <th className="px-4 py-3">Acciones</th>
             </tr>
           </thead>
@@ -56,6 +57,9 @@ export default async function AdminUsersPage() {
                   <td className="px-4 py-3"><PlanBadge tier={tier} /></td>
                   <td className="px-4 py-3">{user.role}</td>
                   <td className="px-4 py-3">{user.is_active ? "Si" : "No"}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">
+                    {user.created_at.toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Santiago" })}
+                  </td>
                   <td className="px-4 py-3">
                     {!isAdmin && (
                       <DeleteUserButton userId={user.id} userEmail={user.email} />
