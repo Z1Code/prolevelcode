@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { USDT_BEP20_CONTRACT, USDT_SOL_MINT, SOLANA_RPC } from "./config";
+import { USDT_BEP20_CONTRACT, BSC_CHAIN_ID, USDT_SOL_MINT, SOLANA_RPC } from "./config";
 
 /* ─── Shared return type ─── */
 export interface TransferMatch {
@@ -34,7 +34,8 @@ export async function findBscTransfer(
 
   if (!walletAddress || !apiKey) return null;
 
-  const url = new URL("https://api.bscscan.com/api");
+  const url = new URL("https://api.etherscan.io/v2/api");
+  url.searchParams.set("chainid", String(BSC_CHAIN_ID));
   url.searchParams.set("module", "account");
   url.searchParams.set("action", "tokentx");
   url.searchParams.set("contractaddress", USDT_BEP20_CONTRACT);
