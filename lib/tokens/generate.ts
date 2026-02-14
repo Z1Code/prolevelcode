@@ -118,7 +118,7 @@ export function renderSecurePlayerHtml(input: SecurePlayerInput) {
     iframe.setAttribute('loading', 'lazy');
     iframe.setAttribute('allow', 'accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture');
     iframe.setAttribute('allowfullscreen', 'true');
-    iframe.style.cssText = 'width:100%;height:100%;border:0;border-radius:12px';
+    iframe.style.cssText = 'width:100%;height:100%;border:0';
     document.getElementById('vp').appendChild(iframe);`
     : `document.getElementById('vp').innerHTML = '<p style="color:#ef4444;text-align:center;padding-top:40%">Video no disponible</p>';`;
 
@@ -131,23 +131,15 @@ export function renderSecurePlayerHtml(input: SecurePlayerInput) {
   <title>${safeTitle}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#000;color:#fff;font-family:Inter,system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;overflow:hidden}
-    .player{position:relative;width:min(95vw,1100px);aspect-ratio:16/9}
-    #vp{width:100%;height:100%;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
-    iframe{border:0;border-radius:12px}
-    .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.06;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem;z-index:6}
-    .bar{display:flex;gap:16px;font-size:12px;color:#9ca3af;flex-wrap:wrap;justify-content:center}
+    html,body{height:100%;overflow:hidden;background:#000}
+    #vp{position:absolute;inset:0}
+    iframe{border:0;width:100%;height:100%}
+    .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.06;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem;z-index:6;color:#fff;font-family:system-ui,sans-serif}
   </style>
 </head>
 <body>
-  <div class="player">
-    <div id="vp"></div>
-    <div class="watermark">${safeEmail}</div>
-  </div>
-  <div class="bar">
-    <span>${safeTitle}</span>
-    <span>Vistas restantes: ${remaining}</span>
-  </div>
+  <div id="vp"></div>
+  <div class="watermark">${safeEmail}</div>
   <script>
   (function(){
     ${bunnyBlock}
