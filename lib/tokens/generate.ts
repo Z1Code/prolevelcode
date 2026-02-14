@@ -114,7 +114,7 @@ export function renderSecurePlayerHtml(input: SecurePlayerInput) {
 
   const bunnyBlock = bunnyEmbedUrl
     ? `var iframe = document.createElement('iframe');
-    iframe.src = '${escapeHtml(bunnyEmbedUrl)}';
+    iframe.src = '${bunnyEmbedUrl.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}';
     iframe.setAttribute('loading', 'lazy');
     iframe.setAttribute('allow', 'accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture');
     iframe.setAttribute('allowfullscreen', 'true');
