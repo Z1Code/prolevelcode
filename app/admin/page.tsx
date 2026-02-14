@@ -11,7 +11,15 @@ export default async function AdminHomePage() {
       <div className="mt-4 grid gap-4 md:grid-cols-4">
         <Card className="p-4">
           <p className="text-sm text-slate-400">Ingresos mes</p>
-          <p className="mt-2 text-2xl font-semibold">{currencyFormatter(metrics.monthlyRevenueCents)}</p>
+          <p className="mt-2 text-2xl font-semibold">
+            {currencyFormatter(metrics.monthlyRevenueCLP, "CLP")}
+          </p>
+          <p className="mt-1 text-sm text-emerald-400">
+            ≈ {currencyFormatter(Math.round(metrics.monthlyRevenueCLP / metrics.clpToUsdRate * 100), "USD")}
+            {metrics.monthlyRevenueUSD > 0 && (
+              <> + {currencyFormatter(metrics.monthlyRevenueUSD, "USD")}</>
+            )}
+          </p>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-slate-400">Nuevos users</p>
