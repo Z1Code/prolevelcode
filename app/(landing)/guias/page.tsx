@@ -1,5 +1,4 @@
 import { GuideCatalog } from "@/components/guides/guide-catalog";
-import { GuidesCountdown } from "@/components/guides/guides-countdown";
 import { getSessionUser } from "@/lib/auth/session";
 import { getUserTier } from "@/lib/access/check-access";
 import Link from "next/link";
@@ -23,7 +22,6 @@ export default async function GuiasPage() {
 
   return (
     <main className="container-wide section-spacing liquid-section">
-      <GuidesCountdown>
         <div className="mb-12">
           <h1 className="text-4xl font-bold md:text-5xl">
             Guias
@@ -55,7 +53,6 @@ export default async function GuiasPage() {
             Ver cursos
           </Link>
         </div>
-      </GuidesCountdown>
     </main>
   );
 }

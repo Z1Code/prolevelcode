@@ -6,7 +6,6 @@ import { getBunnyThumbnailUrl } from "@/lib/bunny/signed-url";
 import { getSessionUser } from "@/lib/auth/session";
 import { getUserTier } from "@/lib/access/check-access";
 import { CourseTimeline } from "@/components/courses/course-timeline";
-import { CoursesCountdown } from "./courses-countdown";
 
 export default async function CoursesPage() {
   const courses = await getPublishedCourses();
@@ -78,7 +77,6 @@ export default async function CoursesPage() {
         </Link>
       </div>
 
-      <CoursesCountdown>
         <CourseTimeline
           basicCourses={basicCourses.map(mapCourse)}
           proCourses={proCourses.map(mapCourse)}
@@ -86,7 +84,6 @@ export default async function CoursesPage() {
           enrolledCourseIds={enrolledCourseIds}
           thumbnailMap={thumbnailMap}
         />
-      </CoursesCountdown>
     </main>
   );
 }

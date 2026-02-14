@@ -3,8 +3,6 @@ import { loginAction, magicLinkAction } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GoogleLoginButton } from "@/components/shared/google-login-button";
-import { LoginCountdown } from "./login-countdown";
-
 interface LoginPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
@@ -15,10 +13,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const message = typeof params.message === "string" ? params.message : null;
   const error = typeof params.error === "string" ? params.error : null;
 
-  const isAdmin = next.startsWith("/admin");
-
   return (
-    <LoginCountdown skip={isAdmin}>
+    <>
       <h1 className="text-2xl font-semibold">Iniciar sesion</h1>
       <p className="mt-2 text-sm text-slate-400">Accede para comprar y ver tus cursos.</p>
 
@@ -56,6 +52,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Recuperar contrasena
         </Link>
       </p>
-    </LoginCountdown>
+    </>
   );
 }

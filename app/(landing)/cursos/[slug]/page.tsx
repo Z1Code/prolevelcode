@@ -6,7 +6,6 @@ import { getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { checkCourseAccess, getUserTier } from "@/lib/access/check-access";
 import { TierBadge } from "@/components/courses/tier-badge";
-import { CoursesCountdown } from "../courses-countdown";
 
 interface CourseDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -86,7 +85,6 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
 
   return (
     <main className="container-wide section-spacing liquid-section">
-      <CoursesCountdown>
       <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
         <div>
           <div className="flex items-center gap-3">
@@ -165,7 +163,6 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
           ))}
         </div>
       </section>
-      </CoursesCountdown>
     </main>
   );
 }

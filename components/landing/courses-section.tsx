@@ -2,7 +2,6 @@ import Link from "next/link";
 import { featuredCourses } from "@/lib/utils/site-data";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CoursesCountdown } from "@/app/(landing)/cursos/courses-countdown";
 
 export function CoursesSection() {
   return (
@@ -12,7 +11,6 @@ export function CoursesSection() {
         <h2 className="mt-3 text-3xl font-bold md:text-5xl">Aprende a construir el futuro</h2>
         <p className="mt-3 max-w-2xl text-slate-400">Cursos practicos, sin relleno. Del concepto al deploy en cada modulo.</p>
 
-        <CoursesCountdown>
           <div className="mt-10 space-y-4">
             {featuredCourses.map((course) => (
               <Card key={course.slug} className="p-5">
@@ -46,7 +44,6 @@ export function CoursesSection() {
               <span>Codigo fuente incluido</span>
             </Card>
           </div>
-        </CoursesCountdown>
       </div>
     </section>
   );
