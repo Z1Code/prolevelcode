@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { SecureCoursePlayer } from "@/components/video/secure-course-player";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
-import { checkCourseAccess } from "@/lib/access/check-access";
+import { checkCourseAccess, getUserTier } from "@/lib/access/check-access";
 
 interface DashboardCoursePageProps {
   params: Promise<{ slug: string }>;
@@ -26,8 +26,13 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
 
   if (!access.granted) notFound();
 
+  const userTier = await getUserTier(user.id);
+
+  // Basic users only see non-pro lessons; Pro users see all
+  const lessonFilter = userTier === "pro" ? {} : { is_pro_only: false };
+
   const lessons = await prisma.lesson.findMany({
-    where: { course_id: course.id },
+    where: { course_id: course.id, ...lessonFilter },
     orderBy: { sort_order: "asc" },
     select: { id: true, title: true, course_id: true },
   });

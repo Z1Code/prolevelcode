@@ -6,26 +6,30 @@ import { getUserTier } from "@/lib/access/check-access";
 
 export default async function DashboardHomePage() {
   const user = await getSessionUser();
-
-  const enrollments = await prisma.enrollment.findMany({
-    where: { user_id: user?.id ?? "", status: "active" },
-    orderBy: { enrolled_at: "desc" },
-    include: { course: { select: { title: true, slug: true } } },
-  });
-
-  const completedLessons = await prisma.lessonProgress.count({
-    where: { user_id: user?.id ?? "", is_completed: true },
-  });
-
   const currentTier = user ? await getUserTier(user.id) : null;
+
+  // Count courses available based on active tier
+  let courseCount = 0;
+  if (currentTier) {
+    const tierFilter = currentTier === "pro" ? {} : { tier_access: "basic" };
+    courseCount = await prisma.course.count({
+      where: { is_published: true, is_coming_soon: false, ...tierFilter },
+    });
+  }
+
+  const completedLessons = user
+    ? await prisma.lessonProgress.count({
+        where: { user_id: user.id, is_completed: true },
+      })
+    : 0;
 
   return (
     <div>
       <h2 className="text-2xl font-semibold">Resumen</h2>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         <Card className="p-4">
-          <p className="text-sm text-slate-400">Cursos activos</p>
-          <p className="mt-2 text-2xl font-semibold">{enrollments.length}</p>
+          <p className="text-sm text-slate-400">Cursos disponibles</p>
+          <p className="mt-2 text-2xl font-semibold">{courseCount}</p>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-slate-400">Lecciones completadas</p>
@@ -46,14 +50,26 @@ export default async function DashboardHomePage() {
         </Card>
       </div>
 
-      <Card className="mt-6 p-4">
-        <h3 className="font-semibold">Cursos comprados</h3>
-        <ul className="mt-3 space-y-2 text-sm text-slate-300">
-          {enrollments.map((item) => (
-            <li key={item.id}>{item.course.title}</li>
-          ))}
-        </ul>
-      </Card>
+      {!currentTier && (
+        <Card className="mt-6 p-4">
+          <p className="text-sm text-slate-400">Necesitas un plan activo para acceder a los cursos.</p>
+          <Link href="/planes" className="mt-2 inline-flex text-sm text-emerald-300">
+            Ver planes →
+          </Link>
+        </Card>
+      )}
+
+      {currentTier && (
+        <Card className="mt-6 p-4">
+          <h3 className="font-semibold">Tus cursos</h3>
+          <p className="mt-1 text-sm text-slate-400">
+            Tienes acceso a {currentTier === "pro" ? "todos los cursos" : "los cursos Basic"}.
+          </p>
+          <Link href="/dashboard/cursos" className="mt-2 inline-flex text-sm text-emerald-300">
+            Ver mis cursos →
+          </Link>
+        </Card>
+      )}
     </div>
   );
 }
