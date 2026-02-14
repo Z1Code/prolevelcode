@@ -1,11 +1,7 @@
 import { nanoid } from "nanoid";
-import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
-import { signVideoAccess } from "@/lib/tokens/hmac";
 import { checkCourseAccess } from "@/lib/access/check-access";
 import type { VideoTokenResponse } from "@/lib/types";
-
-const CONCURRENT_SESSION_STALE_MS = 2 * 60 * 1000; // 2 minutes
 
 interface GenerateVideoTokenParams {
   userId: string;
@@ -13,55 +9,40 @@ interface GenerateVideoTokenParams {
   courseId: string;
   ipAddress: string;
   userAgent: string;
-  fingerprint?: string;
 }
 
 export async function generateVideoToken(params: GenerateVideoTokenParams): Promise<VideoTokenResponse> {
   const { userId, lessonId, courseId, ipAddress, userAgent } = params;
 
   const access = await checkCourseAccess(userId, courseId);
-
   if (!access.granted) {
     throw new Error("NO_ENROLLMENT");
   }
 
-  // --- Clean stale sessions (opportunistic) ---
-  await prisma.activeVideoSession.deleteMany({
-    where: {
-      user_id: userId,
-      last_heartbeat: { lt: new Date(Date.now() - CONCURRENT_SESSION_STALE_MS) },
-    },
-  });
-
-  // --- Token reuse ---
-  const existingTokens = await prisma.videoToken.findMany({
+  // Reuse existing valid token if available
+  const existing = await prisma.videoToken.findFirst({
     where: {
       user_id: userId,
       lesson_id: lessonId,
       is_revoked: false,
       expires_at: { gt: new Date() },
+      current_views: { lt: 50 },
     },
     orderBy: { created_at: "desc" },
-    take: 3,
   });
 
-  const existing = existingTokens.find((item) => item.current_views < item.max_views);
-
   if (existing) {
-    const sig = signVideoAccess(existing.id, userId, env.tokenDefaultTtl);
     return {
       token: existing.token,
-      videoUrl: `/api/video/${existing.token}?sig=${sig}`,
+      videoUrl: `/api/video/${existing.token}`,
       expiresAt: existing.expires_at.toISOString(),
-      remainingViews: existing.max_views - existing.current_views,
+      remainingViews: 50 - existing.current_views,
     };
   }
 
-  // --- Create new token ---
-  const ttlSeconds = env.tokenDefaultTtl;
-  const maxViews = env.tokenDefaultMaxViews;
+  // Create new token — generous limits
   const token = nanoid(32);
-  const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
   const newToken = await prisma.videoToken.create({
     data: {
@@ -70,31 +51,19 @@ export async function generateVideoToken(params: GenerateVideoTokenParams): Prom
       lesson_id: lessonId,
       course_id: courseId,
       expires_at: expiresAt,
-      max_views: maxViews,
-      ttl_seconds: ttlSeconds,
+      max_views: 50,
+      ttl_seconds: 86400,
       ip_address: ipAddress,
-      allowed_ips: [ipAddress],
+      allowed_ips: [],
       user_agent: userAgent,
     },
   });
-
-  await prisma.tokenUsageLog.create({
-    data: {
-      token_id: newToken.id,
-      user_id: userId,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-      action: "generated",
-    },
-  });
-
-  const sig = signVideoAccess(newToken.id, userId, ttlSeconds);
 
   return {
     token: newToken.token,
-    videoUrl: `/api/video/${newToken.token}?sig=${sig}`,
+    videoUrl: `/api/video/${newToken.token}`,
     expiresAt: newToken.expires_at.toISOString(),
-    remainingViews: newToken.max_views - newToken.current_views,
+    remainingViews: 50,
   };
 }
 
@@ -120,21 +89,6 @@ export async function logTokenUsage(input: {
   });
 }
 
-/**
- * XOR-obfuscate a string with a key, then base64-encode.
- * Not encryption — just enough to keep the YouTube ID out of plain view
- * in page source and DevTools Elements panel.
- */
-function obfuscateId(plain: string, key: string): string {
-  let result = "";
-  for (let i = 0; i < plain.length; i++) {
-    result += String.fromCharCode(
-      plain.charCodeAt(i) ^ key.charCodeAt(i % key.length),
-    );
-  }
-  return Buffer.from(result, "binary").toString("base64");
-}
-
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -149,84 +103,24 @@ interface SecurePlayerInput {
   title: string;
   remaining: number;
   expiresAt: string;
-  tokenId: string;
-  heartbeatUrl: string;
-  // Bunny Stream (preferred)
   bunnyEmbedUrl?: string;
-  // YouTube fallback
-  youtubeId?: string;
 }
 
 export function renderSecurePlayerHtml(input: SecurePlayerInput) {
-  const { userEmail, title, remaining, expiresAt, tokenId, heartbeatUrl, bunnyEmbedUrl, youtubeId } = input;
+  const { userEmail, title, remaining, expiresAt, bunnyEmbedUrl } = input;
 
   const safeTitle = escapeHtml(title);
   const safeEmail = escapeHtml(userEmail);
-  const safeTokenId = tokenId.replace(/[^a-zA-Z0-9_-]/g, "");
-  const safeHeartbeatUrl = heartbeatUrl.replace(/[^a-zA-Z0-9/_-]/g, "");
 
-  const useBunny = !!bunnyEmbedUrl;
-
-  // YouTube-specific: XOR obfuscation of video ID
-  let youtubeBlock = "";
-  if (!useBunny && youtubeId) {
-    const obfKey = "pLc$9xW#";
-    const encodedId = obfuscateId(youtubeId, obfKey);
-    youtubeBlock = `
-    // --- Decode resource identifier at runtime ---
-    var _d = '${encodedId}';
-    var _k = ['pLc$','9xW#'];
-    function _r(e,k){
-      var b=atob(e),o='',j=0;
-      for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(j));j=(j+1)%k.length;}
-      return o;
-    }
-    var _v = _r(_d, _k[0]+_k[1]);
-
-    // --- Load YouTube IFrame API ---
-    var tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-
-    window.onYouTubeIframeAPIReady = function() {
-      player = new YT.Player('vp', {
-        host: 'https://www.youtube-nocookie.com',
-        videoId: _v,
-        playerVars: {
-          autoplay: 0, controls: 1, disablekb: 0, fs: 1,
-          modestbranding: 1, rel: 0, showinfo: 0, iv_load_policy: 3,
-          origin: window.location.origin, enablejsapi: 1, playsinline: 1
-        },
-        events: { onReady: function(){} }
-      });
-    };`;
-  }
-
-  // Bunny-specific: signed iframe embed
-  let bunnyBlock = "";
-  if (useBunny) {
-    const safeBunnyUrl = escapeHtml(bunnyEmbedUrl!);
-    bunnyBlock = `
-    // --- Bunny Stream iframe ---
-    var iframe = document.createElement('iframe');
-    iframe.src = '${safeBunnyUrl}';
+  const bunnyBlock = bunnyEmbedUrl
+    ? `var iframe = document.createElement('iframe');
+    iframe.src = '${escapeHtml(bunnyEmbedUrl)}';
     iframe.setAttribute('loading', 'lazy');
     iframe.setAttribute('allow', 'accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture');
     iframe.setAttribute('allowfullscreen', 'true');
     iframe.style.cssText = 'width:100%;height:100%;border:0;border-radius:12px';
-    document.getElementById('vp').appendChild(iframe);`;
-  }
-
-  // YouTube needs extra blocking overlays
-  const ytOverlays = !useBunny
-    ? `<div class="yt-block-top"></div><div class="yt-block-logo"></div>`
-    : "";
-
-  const ytStyles = !useBunny
-    ? `
-    .yt-block-top{position:absolute;top:0;left:0;right:0;height:80px;z-index:5;cursor:default;border-radius:12px 12px 0 0;background:rgba(0,0,0,.001)}
-    .yt-block-logo{position:absolute;bottom:0;right:0;width:160px;height:56px;z-index:5;cursor:default;border-radius:0 0 12px 0;background:rgba(0,0,0,.001)}`
-    : "";
+    document.getElementById('vp').appendChild(iframe);`
+    : `document.getElementById('vp').innerHTML = '<p style="color:#ef4444;text-align:center;padding-top:40%">Video no disponible</p>';`;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -237,111 +131,26 @@ export function renderSecurePlayerHtml(input: SecurePlayerInput) {
   <title>${safeTitle}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#000;color:#fff;font-family:Inter,system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;overflow:hidden;user-select:none;-webkit-user-select:none}
+    body{background:#000;color:#fff;font-family:Inter,system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;overflow:hidden}
     .player{position:relative;width:min(95vw,1100px);aspect-ratio:16/9}
     #vp{width:100%;height:100%;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
     iframe{border:0;border-radius:12px}
-    .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.08;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem;z-index:6}
-    .click-shield{position:absolute;inset:0;z-index:3;border-radius:12px;background:rgba(0,0,0,.001)}${ytStyles}
+    .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.06;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem;z-index:6}
     .bar{display:flex;gap:16px;font-size:12px;color:#9ca3af;flex-wrap:wrap;justify-content:center}
-    .warn{color:#f97316}
-    .revoked-overlay{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.95);z-index:100}
-    .revoked-overlay h2{color:#ef4444;font-size:20px;text-align:center;max-width:440px;line-height:1.6}
   </style>
 </head>
-<body oncontextmenu="return false">
+<body>
   <div class="player">
     <div id="vp"></div>
-    <div class="click-shield" id="clickShield"></div>
-    ${ytOverlays}
     <div class="watermark">${safeEmail}</div>
   </div>
   <div class="bar">
     <span>${safeTitle}</span>
     <span>Vistas restantes: ${remaining}</span>
-    <span class="warn">Expira: ${new Date(expiresAt).toLocaleString("es-ES")}</span>
   </div>
   <script>
   (function(){
-    var player;
-    ${useBunny ? bunnyBlock : youtubeBlock}
-
-    // --- Anti-screenshot / print / DevTools deterrent ---
-    document.addEventListener('keydown', function(e) {
-      var blur = e.key === 'PrintScreen'
-        || (e.ctrlKey && e.key.toLowerCase() === 'p')
-        || e.key === 'F12'
-        || (e.ctrlKey && e.shiftKey && 'ijk'.indexOf(e.key.toLowerCase()) !== -1)
-        || (e.ctrlKey && e.key.toLowerCase() === 'u');
-      if (blur) {
-        e.preventDefault();
-        document.body.style.filter = 'blur(24px)';
-        setTimeout(function() { document.body.style.filter = ''; }, 2000);
-      }
-    });
-
-    // --- Expiration check ---
-    var expiry = new Date('${expiresAt}').getTime();
-    setInterval(function() {
-      if (Date.now() > expiry) {
-        if (player && player.destroy) player.destroy();
-        document.body.innerHTML = '<div class="revoked-overlay"><h2>Token expirado. Regresa al curso para generar uno nuevo.</h2></div>';
-      }
-    }, 15000);
-
-    // --- Device fingerprint ---
-    function getFingerprint() {
-      var signals = [
-        screen.width, screen.height, screen.colorDepth,
-        navigator.language, navigator.hardwareConcurrency,
-        Intl.DateTimeFormat().resolvedOptions().timeZone,
-        navigator.platform, navigator.userAgent
-      ].join('|');
-      var hash = 0;
-      for (var i = 0; i < signals.length; i++) {
-        hash = ((hash << 5) - hash) + signals.charCodeAt(i);
-        hash |= 0;
-      }
-      return 'fp_' + Math.abs(hash).toString(36);
-    }
-
-    // --- Heartbeat ---
-    var fp = getFingerprint();
-    function sendHeartbeat() {
-      fetch('${safeHeartbeatUrl}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ tokenId: '${safeTokenId}', fingerprint: fp })
-      })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        if (data.active === false) {
-          if (player && player.destroy) player.destroy();
-          document.body.innerHTML = '<div class="revoked-overlay"><h2>Se detect\\u00f3 una sesi\\u00f3n activa en otro dispositivo. Solo se permite una reproducci\\u00f3n simult\\u00e1nea por cuenta.</h2></div>';
-        }
-      })
-      .catch(function() {});
-    }
-
-    sendHeartbeat();
-    setInterval(sendHeartbeat, 30000);
-
-    // --- Click shield: pass left-clicks through, block right-click ---
-    var shield = document.getElementById('clickShield');
-    if (shield) {
-      shield.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-      shield.addEventListener('mousedown', function(e) {
-        if (e.button === 0) {
-          shield.style.pointerEvents = 'none';
-          setTimeout(function() { shield.style.pointerEvents = 'auto'; }, 200);
-        }
-      });
-      shield.addEventListener('touchstart', function() {
-        shield.style.pointerEvents = 'none';
-        setTimeout(function() { shield.style.pointerEvents = 'auto'; }, 400);
-      }, { passive: true });
-    }
+    ${bunnyBlock}
   })();
   </script>
 </body>
