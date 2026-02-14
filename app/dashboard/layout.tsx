@@ -11,7 +11,7 @@ const tierBadge = {
   feature: "inline-flex items-center rounded-full border border-violet-400/30 bg-gradient-to-r from-violet-500/20 via-purple-400/20 to-violet-500/20 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-violet-300 shadow-[0_0_6px_rgba(167,139,250,0.15)]",
 };
 
-const navLink = "flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-all duration-200 hover:bg-white/[0.06]";
+const navLink = "flex items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-all duration-200 hover:bg-white/[0.06]";
 const navIcon = "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-500";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="flex items-center gap-4">
           <Link
             href="/"
-            className="group flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-2 text-xs text-slate-400 transition-all duration-200 hover:border-white/10 hover:bg-white/[0.06] hover:text-white"
+            className="group flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3.5 py-2 text-xs text-slate-400 transition-all duration-200 hover:border-white/10 hover:bg-white/[0.06] hover:text-white"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-x-0.5">
               <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
@@ -37,7 +37,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="flex items-center gap-3">
           <span className="hidden text-xs text-slate-500 sm:block">{user?.email}</span>
           <form action="/api/auth/logout" method="post">
-            <button className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-2 text-xs text-slate-400 transition-all duration-200 hover:border-red-400/20 hover:bg-red-500/5 hover:text-red-300">
+            <button className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-3.5 py-2 text-xs text-slate-400 transition-all duration-200 hover:border-red-400/20 hover:bg-red-500/5 hover:text-red-300">
               Cerrar sesion
             </button>
           </form>

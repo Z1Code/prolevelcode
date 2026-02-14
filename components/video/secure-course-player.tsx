@@ -84,7 +84,7 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
             return (
               <li key={lesson.id}>
                 <button
-                  className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-200 ${
+                  className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-200 ${
                     isActive
                       ? "border border-emerald-400/25 bg-emerald-500/10 text-white shadow-[0_0_12px_rgba(52,211,153,0.06)]"
                       : "border border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-slate-200"
@@ -108,7 +108,7 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
 
       {/* Player area */}
       <div className="space-y-3">
-        <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-black/40 shadow-2xl shadow-black/40">
+        <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-black/40 shadow-2xl shadow-black/40">
           {/* Video container */}
           <div className="relative aspect-video w-full">
             {/* Iframe (loads behind overlay) */}
