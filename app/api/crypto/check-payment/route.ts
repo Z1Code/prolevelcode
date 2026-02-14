@@ -59,9 +59,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ status: "pending" });
     }
 
+    // Prevent false positives: check if this tx_hash was already used by another order
+    const alreadyUsed = await prisma.cryptoPayment.findFirst({
+      where: {
+        tx_hash: match.txHash,
+        id: { not: payment.id },
+      },
+    });
+
+    if (alreadyUsed) {
+      console.warn(
+        `[crypto/check-payment] tx_hash ${match.txHash} already used by order ${alreadyUsed.order_id}, skipping for ${payment.order_id}`,
+      );
+      return NextResponse.json({ status: "pending" });
+    }
+
     // Payment found — fulfill the order
     await prisma.cryptoPayment.update({
-      where: { id: payment.id },
+      where: { id: payment.id, status: "pending" },
       data: {
         status: "completed",
         tx_hash: match.txHash,

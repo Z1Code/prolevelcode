@@ -246,7 +246,7 @@ export async function approveCryptoPayment(fd: FormData) {
   }
 
   await prisma.cryptoPayment.update({
-    where: { id },
+    where: { id, status: "pending" },
     data: {
       status: "completed",
       tx_hash: "manual_admin_approval",
@@ -266,6 +266,19 @@ export async function rejectCryptoPayment(fd: FormData) {
   await prisma.cryptoPayment.update({
     where: { id },
     data: { status: "expired" },
+  });
+
+  revalidatePath("/admin/pagos");
+}
+
+export async function revokeTierPurchase(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  await prisma.tierPurchase.update({
+    where: { id },
+    data: { status: "refunded" },
   });
 
   revalidatePath("/admin/pagos");

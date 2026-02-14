@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { currencyFormatter } from "@/lib/payments/helpers";
 import { prisma } from "@/lib/prisma";
-import { approveCryptoPayment, rejectCryptoPayment } from "../actions";
+import { approveCryptoPayment, rejectCryptoPayment, revokeTierPurchase } from "../actions";
 
 export default async function AdminPaymentsPage() {
   const [cryptoPayments, enrollments, tierPurchases] = await Promise.all([
@@ -256,6 +256,7 @@ export default async function AdminPaymentsPage() {
                   <th className="px-4 py-3">Metodo</th>
                   <th className="px-4 py-3">Estado</th>
                   <th className="px-4 py-3">Fecha</th>
+                  <th className="px-4 py-3">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -279,6 +280,16 @@ export default async function AdminPaymentsPage() {
                         dateStyle: "short",
                         timeStyle: "short",
                       })}
+                    </td>
+                    <td className="px-4 py-3">
+                      {tp.status === "active" && (
+                        <form action={revokeTierPurchase}>
+                          <input type="hidden" name="id" value={tp.id} />
+                          <Button type="submit" variant="danger" size="sm">
+                            Revocar
+                          </Button>
+                        </form>
+                      )}
                     </td>
                   </tr>
                 ))}
