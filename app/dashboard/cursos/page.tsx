@@ -9,31 +9,15 @@ export default async function DashboardCoursesPage() {
   const user = await getSessionUser();
   const currentTier = user ? await getUserTier(user.id) : null;
 
-  // Directly enrolled courses (grandfathered individual purchases)
-  const enrollments = await prisma.enrollment.findMany({
-    where: { user_id: user?.id ?? "", status: "active" },
-    include: { course: { select: { id: true, title: true, slug: true, subtitle: true, tier_access: true } } },
-  });
-
-  const enrolledCourseIds = new Set(enrollments.map((e) => e.course.id));
-
-  // Tier-accessible courses (not already enrolled)
-  let tierCourses: { id: string; title: string; slug: string; subtitle: string | null; tier_access: string }[] = [];
+  let courses: { id: string; title: string; slug: string; subtitle: string | null; tier_access: string }[] = [];
   if (currentTier) {
     const tierFilter = currentTier === "pro" ? {} : { tier_access: "basic" };
-    tierCourses = await prisma.course.findMany({
+    courses = await prisma.course.findMany({
       where: { is_published: true, is_coming_soon: false, ...tierFilter },
       select: { id: true, title: true, slug: true, subtitle: true, tier_access: true },
       orderBy: { title: "asc" },
     });
-    tierCourses = tierCourses.filter((c) => !enrolledCourseIds.has(c.id));
   }
-
-  // Merge all courses into one list
-  const allCourses = [
-    ...enrollments.map((e) => ({ ...e.course, source: "enrolled" as const })),
-    ...tierCourses.map((c) => ({ ...c, source: "tier" as const })),
-  ];
 
   return (
     <div>
@@ -44,9 +28,9 @@ export default async function DashboardCoursesPage() {
         </p>
       )}
 
-      {allCourses.length > 0 ? (
+      {courses.length > 0 ? (
         <div className="mt-4 space-y-3">
-          {allCourses.map((course) => (
+          {courses.map((course) => (
             <Card key={course.id} className="p-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold">{course.title}</h3>
@@ -61,7 +45,7 @@ export default async function DashboardCoursesPage() {
         </div>
       ) : (
         <div className="mt-6 text-center text-sm text-slate-400">
-          <p>No tienes cursos aun.</p>
+          <p>{currentTier ? "No hay cursos disponibles aun." : "Necesitas un plan para acceder a los cursos."}</p>
           <Link href="/planes" className="mt-2 inline-flex text-emerald-300">
             Ver planes →
           </Link>
