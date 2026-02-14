@@ -469,3 +469,19 @@ export async function answerProQuery(fd: FormData) {
 
   revalidatePath("/admin/consultas");
 }
+
+/* ─────────────── USERS ─────────────── */
+
+export async function deleteUser(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  // Prevent deleting admin/superadmin accounts
+  const user = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  if (!user) return;
+  if (user.role === "admin" || user.role === "superadmin") return;
+
+  await prisma.user.delete({ where: { id } });
+  revalidatePath("/admin/usuarios");
+}
