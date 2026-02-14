@@ -1929,11 +1929,7 @@ a {
   }
 
   .liquid-bar-grid {
-    grid-template-columns: repeat(5, 1fr);
-  }
-
-  .liquid-bar:nth-child(n+6) {
-    display: none;
+    grid-template-columns: repeat(9, 1fr);
   }
 
   .liquid-glass {
