@@ -15,8 +15,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const message = typeof params.message === "string" ? params.message : null;
   const error = typeof params.error === "string" ? params.error : null;
 
+  const isAdmin = next.startsWith("/admin");
+
   return (
-    <LoginCountdown>
+    <LoginCountdown skip={isAdmin}>
       <h1 className="text-2xl font-semibold">Iniciar sesion</h1>
       <p className="mt-2 text-sm text-slate-400">Accede para comprar y ver tus cursos.</p>
 

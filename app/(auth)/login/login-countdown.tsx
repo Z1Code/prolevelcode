@@ -38,7 +38,7 @@ function launchTime(zone: string) {
   });
 }
 
-export function LoginCountdown({ children }: { children: React.ReactNode }) {
+export function LoginCountdown({ children, skip }: { children: React.ReactNode; skip?: boolean }) {
   const [timeLeft, setTimeLeft] = useState<ReturnType<typeof getTimeLeft>>(
     getTimeLeft
   );
@@ -54,7 +54,7 @@ export function LoginCountdown({ children }: { children: React.ReactNode }) {
     return () => clearInterval(id);
   }, []);
 
-  if (!timeLeft) return <>{children}</>;
+  if (skip || !timeLeft) return <>{children}</>;
 
   const blocks = [
     { value: timeLeft.days, label: "Dias" },
