@@ -2,11 +2,11 @@ import { prisma } from "@/lib/prisma";
 
 export interface AdminLatestSale {
   id: string;
-  amount_paid_cents: number | null;
+  tier: string;
+  amount_paid_cents: number;
   currency: string;
-  enrolled_at: Date;
+  purchased_at: Date;
   user: { email: string };
-  course: { title: string };
 }
 
 export interface AdminLatestToken {
@@ -20,6 +20,8 @@ export interface AdminLatestToken {
 }
 
 export interface AdminMetricsData {
+  totalClpCents: number;
+  totalUsdCents: number;
   monthlyClpCents: number;
   monthlyUsdCents: number;
   clpPerUsd: number;
@@ -47,24 +49,29 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
     // use fallback
   }
 
-  const [monthlyEnrollments, newUsers, activeCourses, activeTokens, latestSales, latestTokens] = await Promise.all([
-    prisma.enrollment.findMany({
-      where: { enrolled_at: { gte: monthStart } },
+  const [allPurchases, monthlyPurchases, newUsers, activeCourses, activeTokens, latestSales, latestTokens] = await Promise.all([
+    prisma.tierPurchase.findMany({
+      where: { status: "active" },
+      select: { amount_paid_cents: true, currency: true },
+    }),
+    prisma.tierPurchase.findMany({
+      where: { purchased_at: { gte: monthStart }, status: "active" },
       select: { amount_paid_cents: true, currency: true },
     }),
     prisma.user.count({ where: { created_at: { gte: thirtyDaysAgo } } }),
     prisma.course.count({ where: { is_published: true } }),
     prisma.videoToken.count({ where: { is_revoked: false, expires_at: { gt: now } } }),
-    prisma.enrollment.findMany({
-      orderBy: { enrolled_at: "desc" },
+    prisma.tierPurchase.findMany({
+      where: { status: "active" },
+      orderBy: { purchased_at: "desc" },
       take: 8,
       select: {
         id: true,
+        tier: true,
         amount_paid_cents: true,
         currency: true,
-        enrolled_at: true,
+        purchased_at: true,
         user: { select: { email: true } },
-        course: { select: { title: true } },
       },
     }),
     prisma.videoToken.findMany({
@@ -83,11 +90,24 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
     }),
   ]);
 
+  const isUsdLike = (c: string) => c === "USD" || c === "USDT";
+
+  let totalClpCents = 0;
+  let totalUsdCents = 0;
+  for (const item of allPurchases) {
+    const cents = item.amount_paid_cents ?? 0;
+    if (isUsdLike(item.currency)) {
+      totalUsdCents += cents;
+    } else {
+      totalClpCents += cents;
+    }
+  }
+
   let monthlyClpCents = 0;
   let monthlyUsdCents = 0;
-  for (const item of monthlyEnrollments) {
+  for (const item of monthlyPurchases) {
     const cents = item.amount_paid_cents ?? 0;
-    if (item.currency === "USD") {
+    if (isUsdLike(item.currency)) {
       monthlyUsdCents += cents;
     } else {
       monthlyClpCents += cents;
@@ -95,6 +115,8 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
   }
 
   return {
+    totalClpCents,
+    totalUsdCents,
     monthlyClpCents,
     monthlyUsdCents,
     clpPerUsd: clpToUsdRate,
