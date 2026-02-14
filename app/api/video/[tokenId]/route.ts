@@ -65,17 +65,7 @@ export async function GET(request: Request, context: RouteContext) {
   return new NextResponse(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "X-Frame-Options": "SAMEORIGIN",
       "Cache-Control": "no-store",
-      "Content-Security-Policy": [
-        "default-src 'self'",
-        "frame-src https://iframe.mediadelivery.net",
-        "script-src 'unsafe-inline'",
-        "style-src 'unsafe-inline'",
-        "img-src 'self' data: https://*.b-cdn.net",
-        "connect-src 'self'",
-        "frame-ancestors 'self'",
-      ].join("; "),
     },
   });
 }
