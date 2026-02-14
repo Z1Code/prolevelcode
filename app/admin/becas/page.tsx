@@ -70,7 +70,7 @@ export default async function AdminBecasPage() {
                       &quot;{app.reason}&quot;
                     </p>
                     <p className="mt-1 text-[10px] text-slate-500">
-                      {app.created_at.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
+                      {app.created_at.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short", timeZone: "America/Santiago" })}
                     </p>
                   </div>
                 </div>
@@ -133,7 +133,7 @@ export default async function AdminBecasPage() {
                     <td className="px-3 py-2 font-mono">{s.scholarship_code}</td>
                     <td className="px-3 py-2">{s.grantor.email}</td>
                     <td className="px-3 py-2 text-slate-500">
-                      {s.pool_available_at.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
+                      {s.pool_available_at.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short", timeZone: "America/Santiago" })}
                     </td>
                   </tr>
                 ))}
@@ -174,7 +174,7 @@ export default async function AdminBecasPage() {
                     </span>
                   </td>
                   <td className="px-3 py-2 text-slate-500">
-                    {s.granted_at.toLocaleString("es-CL", { dateStyle: "short" })}
+                    {s.granted_at.toLocaleString("es-CL", { dateStyle: "short", timeZone: "America/Santiago" })}
                   </td>
                 </tr>
               ))}
@@ -213,7 +213,7 @@ export default async function AdminBecasPage() {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-slate-500">
-                        {a.reviewed_at?.toLocaleString("es-CL", { dateStyle: "short" }) ?? "—"}
+                        {a.reviewed_at?.toLocaleString("es-CL", { dateStyle: "short", timeZone: "America/Santiago" }) ?? "—"}
                       </td>
                     </tr>
                   ))}

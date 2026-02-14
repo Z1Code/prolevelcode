@@ -44,7 +44,7 @@ export default async function AdminConsultasPage() {
                     </p>
                     <p className="mt-2 whitespace-pre-wrap text-sm text-slate-200">{q.question}</p>
                     <p className="mt-1 text-[10px] text-slate-500">
-                      {q.created_at.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
+                      {q.created_at.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short", timeZone: "America/Santiago" })}
                     </p>
                   </div>
                 </div>
@@ -81,7 +81,7 @@ export default async function AdminConsultasPage() {
                   {q.user.email}
                   {q.user.full_name && <span className="text-slate-500"> ({q.user.full_name})</span>}
                   <span className="ml-2 text-slate-600">
-                    {q.created_at.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
+                    {q.created_at.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short", timeZone: "America/Santiago" })}
                   </span>
                 </p>
                 <p className="mt-2 text-sm text-slate-300">{q.question}</p>
@@ -89,7 +89,7 @@ export default async function AdminConsultasPage() {
                   <p className="whitespace-pre-wrap text-sm text-slate-200">{q.answer}</p>
                   {q.answered_at && (
                     <p className="mt-1 text-[10px] text-slate-500">
-                      Respondida: {q.answered_at.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
+                      Respondida: {q.answered_at.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short", timeZone: "America/Santiago" })}
                     </p>
                   )}
                 </div>

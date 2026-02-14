@@ -19,6 +19,9 @@ interface OrderInfo {
   solanaAddress: string;
   binanceId: string;
   expiresAt: string;
+  type: string;
+  targetId: string;
+  createdAt: string;
 }
 
 /* ─── component ─── */
@@ -35,6 +38,8 @@ export default function CryptoPayPage() {
   const [method, setMethod] = useState<PayMethod>("onchain");
   const [net, setNet] = useState<OnchainNet>("bsc");
   const [expandedGuide, setExpandedGuide] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [waitingLong, setWaitingLong] = useState(false);
 
   // ── fetch order ──
   useEffect(() => {
@@ -73,6 +78,45 @@ export default function CryptoPayPage() {
     return () => clearInterval(t);
   }, [order?.expiresAt]);
 
+  // ── detect long wait (20min on-chain, 60min manual) ──
+  useEffect(() => {
+    if (status !== "pending" || !order?.createdAt) return;
+    const checkLongWait = () => {
+      const elapsed = Date.now() - new Date(order.createdAt).getTime();
+      const isManual = method === "qr" || method === "binanceid";
+      const threshold = isManual ? 60 * 60 * 1000 : 20 * 60 * 1000;
+      if (elapsed >= threshold) setWaitingLong(true);
+    };
+    checkLongWait();
+    const t = setInterval(checkLongWait, 30_000);
+    return () => clearInterval(t);
+  }, [status, order?.createdAt, method]);
+
+  async function handleRetry() {
+    if (!order) return;
+    setRetrying(true);
+    try {
+      const endpoint = order.type === "tier"
+        ? "/api/checkout/crypto/tier"
+        : "/api/checkout/crypto/course";
+      const body = order.type === "tier"
+        ? { tier: order.targetId }
+        : { courseId: order.targetId };
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("Error al crear nueva orden");
+      const { url } = await res.json();
+      router.push(url);
+    } catch {
+      alert("Error al reintentar. Intenta de nuevo.");
+      setRetrying(false);
+    }
+  }
+
   const copy = useCallback((text: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopied(label);
@@ -110,8 +154,17 @@ export default function CryptoPayPage() {
     <Shell>
       <Card className="max-w-md p-6 text-center">
         <p className="text-amber-400">Esta orden ha expirado.</p>
-        <p className="mt-2 text-sm text-slate-400">Crea una nueva orden desde la pagina del curso o plan.</p>
-        <a href="/cursos" className="mt-4 inline-block text-sm text-slate-400 hover:text-white">Volver a cursos</a>
+        <p className="mt-2 text-sm text-slate-400">Puedes generar una nueva orden con un clic.</p>
+        <div className="mt-4 flex flex-col items-center gap-3">
+          <button
+            onClick={handleRetry}
+            disabled={retrying}
+            className="rounded-xl bg-emerald-500/15 px-6 py-2.5 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/25 disabled:opacity-50"
+          >
+            {retrying ? "Creando nueva orden..." : "Reintentar pago"}
+          </button>
+          <a href="/cursos" className="text-xs text-slate-500 hover:text-white transition">Volver a cursos</a>
+        </div>
       </Card>
     </Shell>
   );
@@ -315,6 +368,27 @@ export default function CryptoPayPage() {
             <GuideAccordion id="bid" expanded={expandedGuide} onToggle={toggleGuide} title="Como enviar con Binance ID (paso a paso)">
               <GuideSteps steps={binanceIdSteps(order)} />
             </GuideAccordion>
+          </Card>
+        )}
+
+        {/* ── Long wait: retry option ── */}
+        {waitingLong && (
+          <Card className="border-amber-500/20 bg-amber-500/5 p-4">
+            <p className="text-sm font-medium text-amber-300">
+              {method === "onchain"
+                ? "Han pasado mas de 20 minutos sin detectar tu pago."
+                : "Han pasado mas de 60 minutos sin validacion manual."}
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Si ya enviaste el pago, contactanos con tu numero de orden. Si no, puedes generar una nueva orden.
+            </p>
+            <button
+              onClick={handleRetry}
+              disabled={retrying}
+              className="mt-3 rounded-lg bg-amber-500/15 px-4 py-2 text-xs font-semibold text-amber-200 transition hover:bg-amber-500/25 disabled:opacity-50"
+            >
+              {retrying ? "Creando nueva orden..." : "Generar nueva orden"}
+            </button>
           </Card>
         )}
 

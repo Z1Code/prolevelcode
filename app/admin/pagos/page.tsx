@@ -120,11 +120,13 @@ export default async function AdminPaymentsPage() {
                       {p.created_at.toLocaleString("es-CL", {
                         dateStyle: "short",
                         timeStyle: "short",
+                        timeZone: "America/Santiago",
                       })}
                       {" · Expira: "}
                       {p.expires_at.toLocaleString("es-CL", {
                         dateStyle: "short",
                         timeStyle: "short",
+                        timeZone: "America/Santiago",
                       })}
                     </p>
                   </div>
@@ -186,6 +188,7 @@ export default async function AdminPaymentsPage() {
                       {p.completed_at?.toLocaleString("es-CL", {
                         dateStyle: "short",
                         timeStyle: "short",
+                        timeZone: "America/Santiago",
                       }) ?? "-"}
                     </td>
                   </tr>
@@ -279,6 +282,7 @@ export default async function AdminPaymentsPage() {
                       {tp.purchased_at.toLocaleString("es-CL", {
                         dateStyle: "short",
                         timeStyle: "short",
+                        timeZone: "America/Santiago",
                       })}
                     </td>
                     <td className="px-4 py-3">
@@ -337,6 +341,7 @@ export default async function AdminPaymentsPage() {
                       {e.enrolled_at.toLocaleString("es-CL", {
                         dateStyle: "short",
                         timeStyle: "short",
+                        timeZone: "America/Santiago",
                       })}
                     </td>
                   </tr>

@@ -44,6 +44,32 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  // Notify admin about new payment attempt
+  try {
+    const { getResendClient } = await import("@/lib/email/resend");
+    const { env: appEnv } = await import("@/lib/env");
+    const adminEmails = appEnv.adminEmails;
+    if (adminEmails.length > 0) {
+      const resend = getResendClient();
+      await resend.emails.send({
+        from: "ProLevelCode <no-reply@prolevelcode.com>",
+        to: adminEmails,
+        subject: `Nuevo intento de pago crypto - ${tierConfig.name} (${amountUsdt} USDT)`,
+        html: `
+          <h2>Nuevo intento de pago crypto</h2>
+          <p><strong>Usuario:</strong> ${context.user.email}</p>
+          <p><strong>Plan:</strong> ${parsed.data.tier.toUpperCase()}</p>
+          <p><strong>Monto:</strong> ${amountUsdt} USDT</p>
+          <p><strong>Orden:</strong> ${orderId}</p>
+          <p><strong>Expira:</strong> ${expiresAt.toLocaleString("es-CL")}</p>
+          <p><a href="${appEnv.appUrl}/admin/pagos" style="background:#6366f1;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Ver en admin</a></p>
+        `,
+      });
+    }
+  } catch {
+    // email failure shouldn't block checkout
+  }
+
   const baseUrl = request.nextUrl.origin;
   return NextResponse.json({
     url: `${baseUrl}/crypto/pay?order=${orderId}`,

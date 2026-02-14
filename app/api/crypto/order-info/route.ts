@@ -32,5 +32,8 @@ export async function GET(request: NextRequest) {
     binanceId: BINANCE_ID,
     expiresAt: payment.expires_at.toISOString(),
     status: payment.status,
+    type: payment.type,
+    targetId: payment.target_id,
+    createdAt: payment.created_at.toISOString(),
   });
 }
