@@ -151,11 +151,11 @@ export async function reorderModule(fd: FormData) {
 export async function createLesson(fd: FormData) {
   await requireRole(["admin", "superadmin"]);
   const course_id = str(fd, "course_id");
-  const module_id = str(fd, "module_id");
   const title = str(fd, "title");
   const bunny_video_id = str(fd, "bunny_video_id") || null;
   const duration_minutes = int(fd, "duration_minutes") || null;
   const is_free_preview = bool(fd, "is_free_preview");
+  const is_pro_only = bool(fd, "is_pro_only");
 
   if (!title || !bunny_video_id) {
     revalidatePath(`/admin/cursos/${course_id}/lecciones`);
@@ -170,16 +170,15 @@ export async function createLesson(fd: FormData) {
   await prisma.lesson.create({
     data: {
       course_id,
-      module_id,
       title,
       bunny_video_id,
       duration_minutes,
       sort_order: (maxOrder._max.sort_order ?? 0) + 1,
       is_free_preview,
+      is_pro_only,
     },
   });
 
-  // Update course total_lessons count
   const count = await prisma.lesson.count({ where: { course_id } });
   await prisma.course.update({ where: { id: course_id }, data: { total_lessons: count } });
 
@@ -190,11 +189,11 @@ export async function updateLesson(fd: FormData) {
   await requireRole(["admin", "superadmin"]);
   const id = str(fd, "id");
   const course_id = str(fd, "course_id");
-  const module_id = str(fd, "module_id");
   const title = str(fd, "title");
   const bunny_video_id = str(fd, "bunny_video_id") || null;
   const duration_minutes = int(fd, "duration_minutes") || null;
   const is_free_preview = bool(fd, "is_free_preview");
+  const is_pro_only = bool(fd, "is_pro_only");
 
   if (!title || !bunny_video_id) {
     revalidatePath(`/admin/cursos/${course_id}/lecciones`);
@@ -203,8 +202,53 @@ export async function updateLesson(fd: FormData) {
 
   await prisma.lesson.update({
     where: { id },
-    data: { module_id, title, bunny_video_id, duration_minutes, is_free_preview },
+    data: { title, bunny_video_id, duration_minutes, is_free_preview, is_pro_only },
   });
+
+  revalidatePath(`/admin/cursos/${course_id}/lecciones`);
+}
+
+export async function createLessonsBulk(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const course_id = str(fd, "course_id");
+  const count = int(fd, "count");
+
+  if (!course_id || count < 1) {
+    revalidatePath(`/admin/cursos/${course_id}/lecciones`);
+    return;
+  }
+
+  const maxOrder = await prisma.lesson.aggregate({
+    where: { course_id },
+    _max: { sort_order: true },
+  });
+  let nextOrder = (maxOrder._max.sort_order ?? 0) + 1;
+
+  const lessons: {
+    course_id: string;
+    title: string;
+    bunny_video_id: string;
+    sort_order: number;
+    is_pro_only: boolean;
+  }[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const title = str(fd, `title_${i}`);
+    const bunny_video_id = str(fd, `bunny_video_id_${i}`);
+    const is_pro_only = fd.get(`is_pro_only_${i}`) === "on";
+    if (!title || !bunny_video_id) continue;
+    lessons.push({ course_id, title, bunny_video_id, sort_order: nextOrder++, is_pro_only });
+  }
+
+  if (lessons.length === 0) {
+    revalidatePath(`/admin/cursos/${course_id}/lecciones`);
+    return;
+  }
+
+  await prisma.lesson.createMany({ data: lessons });
+
+  const totalCount = await prisma.lesson.count({ where: { course_id } });
+  await prisma.course.update({ where: { id: course_id }, data: { total_lessons: totalCount } });
 
   revalidatePath(`/admin/cursos/${course_id}/lecciones`);
 }

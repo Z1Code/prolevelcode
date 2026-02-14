@@ -170,7 +170,7 @@ model Module {
 
 model Lesson {
   id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  module_id           String           @db.Uuid
+  module_id           String?          @db.Uuid
   course_id           String           @db.Uuid
   title               String
   description         String?
@@ -180,10 +180,11 @@ model Lesson {
   duration_minutes    Int?
   sort_order          Int
   is_free_preview     Boolean          @default(false)
+  is_pro_only         Boolean          @default(false)
   resources           Json?
   created_at          DateTime         @default(now()) @db.Timestamptz(6)
 
-  module           Module           @relation(fields: [module_id], references: [id], onDelete: Cascade)
+  module           Module?          @relation(fields: [module_id], references: [id], onDelete: SetNull)
   course           Course           @relation(fields: [course_id], references: [id], onDelete: Cascade)
   lessonProgress   LessonProgress[]
   videoTokens      VideoToken[]

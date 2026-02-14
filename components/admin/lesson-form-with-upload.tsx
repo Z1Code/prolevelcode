@@ -5,19 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BunnyUploader } from "./bunny-uploader";
 
-interface Module {
-  id: string;
-  title: string;
-  sort_order: number;
-}
-
 interface LessonFormWithUploadProps {
   courseId: string;
-  modules: Module[];
-  action: (fd: FormData) => void; // server action
+  action: (fd: FormData) => void;
 }
 
-export function LessonFormWithUpload({ courseId, modules, action }: LessonFormWithUploadProps) {
+export function LessonFormWithUpload({ courseId, action }: LessonFormWithUploadProps) {
   const [bunnyVideoId, setBunnyVideoId] = useState("");
   const [title, setTitle] = useState("");
 
@@ -38,17 +31,8 @@ export function LessonFormWithUpload({ courseId, modules, action }: LessonFormWi
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-slate-400">Modulo</span>
-        <select
-          name="module_id"
-          className="liquid-field h-11 w-full rounded-xl px-4 text-sm text-white outline-none"
-          required
-        >
-          <option value="">Seleccionar modulo</option>
-          {modules.map((m) => (
-            <option key={m.id} value={m.id}>#{m.sort_order} {m.title}</option>
-          ))}
-        </select>
+        <span className="text-xs text-slate-400">Duracion (minutos)</span>
+        <Input name="duration_minutes" type="number" placeholder="15" />
       </label>
 
       <div className="md:col-span-2">
@@ -75,15 +59,14 @@ export function LessonFormWithUpload({ courseId, modules, action }: LessonFormWi
         )}
       </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-slate-400">Duracion (minutos)</span>
-        <Input name="duration_minutes" type="number" placeholder="15" />
-      </label>
-
-      <div className="flex items-end">
+      <div className="flex items-center gap-4 md:col-span-2">
         <label className="flex items-center gap-2 text-sm text-slate-300">
           <input type="checkbox" name="is_free_preview" className="h-4 w-4 accent-emerald-400" />
           Preview gratuito
+        </label>
+        <label className="flex items-center gap-2 text-sm text-slate-300">
+          <input type="checkbox" name="is_pro_only" className="h-4 w-4 accent-violet-400" />
+          Solo Pro
         </label>
       </div>
 
