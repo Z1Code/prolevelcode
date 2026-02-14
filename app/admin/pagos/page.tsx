@@ -180,15 +180,7 @@ export default async function AdminPaymentsPage() {
                       {p.amount_usdt} USDT
                     </td>
                     <td className="px-4 py-3">
-                      {p.tx_hash === "manual_admin_approval" ? (
-                        <span className="rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-300">
-                          Manual
-                        </span>
-                      ) : (
-                        <span className="font-mono text-[10px] text-slate-500">
-                          {p.tx_hash?.slice(0, 16)}...
-                        </span>
-                      )}
+                      <TxHashLink hash={p.tx_hash} />
                     </td>
                     <td className="px-4 py-3 text-slate-500">
                       {p.completed_at?.toLocaleString("es-CL", {
@@ -399,5 +391,40 @@ function ProviderBadge({ provider }: { provider: string }) {
     <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${match.colors}`}>
       {match.label}
     </span>
+  );
+}
+
+function TxHashLink({ hash }: { hash: string | null }) {
+  if (!hash) return <span className="text-slate-500">-</span>;
+
+  if (hash === "manual_admin_approval") {
+    return (
+      <span className="rounded-full bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-300">
+        Manual
+      </span>
+    );
+  }
+
+  // BSC hashes start with 0x, Solana signatures are base58 without prefix
+  const isBsc = hash.startsWith("0x");
+  const explorerUrl = isBsc
+    ? `https://bscscan.com/tx/${hash}`
+    : `https://solscan.io/tx/${hash}`;
+  const label = isBsc ? "BSC" : "SOL";
+
+  return (
+    <a
+      href={explorerUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group inline-flex items-center gap-1.5"
+    >
+      <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${isBsc ? "bg-yellow-500/15 text-yellow-300" : "bg-violet-500/15 text-violet-300"}`}>
+        {label}
+      </span>
+      <span className="font-mono text-[10px] text-slate-400 underline decoration-slate-600 underline-offset-2 transition group-hover:text-white group-hover:decoration-white">
+        {hash.slice(0, 16)}...
+      </span>
+    </a>
   );
 }
