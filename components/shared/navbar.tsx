@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils/cn";
 
 const navItems = [
   { href: "/becas", key: "scholarships" as const },
-  { href: "/sobre-mi", key: "about" as const },
+  { href: "https://7uanf.com/", key: "about" as const, external: true },
   { href: "/contacto", key: "contact" as const },
 ];
 
@@ -167,16 +167,28 @@ export function Navbar({
               </button>
             </div>
 
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn("navbar-link", isActiveLink(item.href) && "navbar-link-active")}
-                aria-current={isActiveLink(item.href) ? "page" : undefined}
-              >
-                {t.nav[item.key]}
-              </Link>
-            ))}
+            {navItems.map((item) =>
+              "external" in item && item.external ? (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="navbar-link"
+                >
+                  {t.nav[item.key]}
+                </a>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn("navbar-link", isActiveLink(item.href) && "navbar-link-active")}
+                  aria-current={isActiveLink(item.href) ? "page" : undefined}
+                >
+                  {t.nav[item.key]}
+                </Link>
+              ),
+            )}
           </nav>
 
           <div className="hidden flex-shrink-0 items-center gap-2 lg:flex">
@@ -372,17 +384,30 @@ export function Navbar({
                   )}
                 </AnimatePresence>
 
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={closeMenu}
-                    className={cn("navbar-mobile-link", isActiveLink(item.href) && "navbar-mobile-link-active")}
-                    aria-current={isActiveLink(item.href) ? "page" : undefined}
-                  >
-                    {t.nav[item.key]}
-                  </Link>
-                ))}
+                {navItems.map((item) =>
+                  "external" in item && item.external ? (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={closeMenu}
+                      className="navbar-mobile-link"
+                    >
+                      {t.nav[item.key]}
+                    </a>
+                  ) : (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={closeMenu}
+                      className={cn("navbar-mobile-link", isActiveLink(item.href) && "navbar-mobile-link-active")}
+                      aria-current={isActiveLink(item.href) ? "page" : undefined}
+                    >
+                      {t.nav[item.key]}
+                    </Link>
+                  ),
+                )}
               </nav>
 
               <div className="mt-4 grid grid-cols-1 gap-2 border-t border-white/10 pt-4">
