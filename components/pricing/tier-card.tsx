@@ -12,9 +12,9 @@ interface TierCardProps {
   features: string[];
   isCurrentPlan?: boolean;
   highlighted?: boolean;
-  onCheckoutMp?: string; // form action URL for MercadoPago
-  onCheckoutCrypto?: string; // API route for crypto checkout
-  onCheckoutPaypal?: string; // URL base for PayPal payment page
+  onCheckoutMp?: string;
+  onCheckoutCrypto?: string;
+  onCheckoutPaypal?: string;
   tier: "basic" | "pro";
   isLoggedIn: boolean;
 }
@@ -35,8 +35,10 @@ export function TierCard({
   const router = useRouter();
   const [loading, setLoading] = useState<"mp" | "crypto" | "paypal" | null>(null);
 
+  const isDisabled = loading !== null;
+
   async function handleCryptoCheckout() {
-    if (!onCheckoutCrypto || loading) return;
+    if (!onCheckoutCrypto || isDisabled) return;
     setLoading("crypto");
     try {
       const res = await fetch(onCheckoutCrypto, {
@@ -45,12 +47,10 @@ export function TierCard({
         credentials: "include",
         body: JSON.stringify({ tier }),
       });
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Error al crear orden");
       }
-
       const { url } = await res.json();
       router.push(url);
     } catch (err) {
@@ -60,14 +60,9 @@ export function TierCard({
   }
 
   function handlePaypalClick(e: React.MouseEvent) {
-    if (loading) {
-      e.preventDefault();
-      return;
-    }
+    if (isDisabled) { e.preventDefault(); return; }
     setLoading("paypal");
   }
-
-  const isDisabled = loading !== null;
 
   return (
     <Card className={`p-6 ${highlighted ? "ring-2 ring-violet-500/40" : ""}`}>
@@ -97,26 +92,22 @@ export function TierCard({
       {!isCurrentPlan && isLoggedIn && (
         <div className="mt-6 flex flex-col gap-2">
           {onCheckoutMp && (
-            <form
-              action={onCheckoutMp}
-              method="post"
-              onSubmit={() => setLoading("mp")}
-            >
+            <form action={onCheckoutMp} method="post" onSubmit={() => setLoading("mp")}>
               <input type="hidden" name="tier" value={tier} />
-              <Button type="submit" className="pay-btn w-full" disabled={isDisabled}>
+              <button type="submit" disabled={isDisabled} className="pay-btn pay-btn-mp">
                 <span className="pay-btn-shimmer" />
-                {loading === "mp" ? "Redirigiendo..." : "Pagar con MercadoPago"}
-              </Button>
+                <span className="pay-btn-label">
+                  {loading === "mp" ? "Redirigiendo..." : "Pagar con MercadoPago"}
+                </span>
+              </button>
             </form>
           )}
           {onCheckoutCrypto && (
-            <button
-              onClick={handleCryptoCheckout}
-              disabled={isDisabled}
-              className="pay-btn pay-btn-crypto"
-            >
+            <button onClick={handleCryptoCheckout} disabled={isDisabled} className="pay-btn pay-btn-crypto">
               <span className="pay-btn-shimmer" />
-              {loading === "crypto" ? "Creando orden..." : "Pagar con Crypto (USDT)"}
+              <span className="pay-btn-label">
+                {loading === "crypto" ? "Creando orden..." : "Pagar con Crypto (USDT)"}
+              </span>
             </button>
           )}
           {onCheckoutPaypal && (
@@ -125,12 +116,11 @@ export function TierCard({
               onClick={handlePaypalClick}
               className={isDisabled ? "pointer-events-none" : ""}
             >
-              <button
-                disabled={isDisabled}
-                className="pay-btn pay-btn-paypal w-full"
-              >
+              <button disabled={isDisabled} className="pay-btn pay-btn-paypal w-full">
                 <span className="pay-btn-shimmer" />
-                {loading === "paypal" ? "Redirigiendo..." : "Pagar con PayPal"}
+                <span className="pay-btn-label">
+                  {loading === "paypal" ? "Redirigiendo..." : "Pagar con PayPal"}
+                </span>
               </button>
             </a>
           )}
