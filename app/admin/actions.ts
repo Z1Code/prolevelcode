@@ -583,6 +583,130 @@ export async function adminRejectApplication(fd: FormData) {
   revalidatePath("/admin/becas");
 }
 
+/* ─────────────── SCHOLARSHIP EMAIL BLAST ─────────────── */
+
+export async function sendScholarshipWelcomeEmails() {
+  await requireRole(["admin", "superadmin"]);
+
+  const { getResendClient } = await import("@/lib/email/resend");
+  const { env } = await import("@/lib/env");
+  const resend = getResendClient();
+
+  // Find all active scholarship recipients with email
+  const activeScholarships = await prisma.scholarship.findMany({
+    where: {
+      status: "active",
+      recipient_user_id: { not: null },
+    },
+    select: {
+      recipient_email: true,
+      scholarship_code: true,
+      recipient: { select: { email: true, full_name: true } },
+    },
+  });
+
+  // Also find users who got Basic via admin_grant (beca directa)
+  const adminGranted = await prisma.tierPurchase.findMany({
+    where: {
+      payment_provider: "admin_grant",
+      status: "active",
+      payment_reference: { contains: "Beca" },
+    },
+    select: {
+      user: { select: { email: true, full_name: true } },
+    },
+  });
+
+  // Collect unique emails
+  const emailSet = new Map<string, string>();
+  for (const s of activeScholarships) {
+    const email = s.recipient?.email ?? s.recipient_email;
+    const name = s.recipient?.full_name ?? null;
+    if (email) emailSet.set(email, name ?? "");
+  }
+  for (const g of adminGranted) {
+    if (g.user.email) emailSet.set(g.user.email, g.user.full_name ?? "");
+  }
+
+  const loginUrl = `${env.appUrl}/login`;
+  const dashboardUrl = `${env.appUrl}/dashboard/cursos`;
+  let sent = 0;
+
+  for (const [email, name] of emailSet) {
+    const greeting = name ? `Hola ${name.split(" ")[0]}` : "Hola";
+
+    try {
+      await resend.emails.send({
+        from: "ProLevelCode <no-reply@prolevelcode.dev>",
+        to: email,
+        subject: "Tu beca en ProLevelCode esta lista — activa tu cuenta",
+        html: `
+          <div style="font-family:'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#e2e8f0;">
+            <div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:16px;padding:40px 32px;border:1px solid rgba(148,163,184,0.15);">
+
+              <h1 style="font-size:24px;font-weight:700;color:#fff;margin:0 0 8px;">
+                ${greeting}, felicidades 🎉
+              </h1>
+
+              <p style="font-size:15px;color:#94a3b8;margin:0 0 24px;line-height:1.6;">
+                Has recibido una <strong style="color:#34d399;">beca gratuita</strong> en ProLevelCode
+                que te da acceso a nuestros cursos Basic.
+              </p>
+
+              <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:20px;margin-bottom:24px;">
+                <p style="font-size:14px;color:#d1d5db;margin:0;line-height:1.7;">
+                  Esta es una oportunidad real para aprender programacion, desarrollo web
+                  y tecnologia de forma practica. Cada leccion esta pensada para que avances
+                  paso a paso, a tu ritmo.
+                </p>
+              </div>
+
+              <p style="font-size:14px;color:#94a3b8;margin:0 0 24px;line-height:1.6;">
+                Creemos que el conocimiento transforma vidas. Aprovecha esta beca al maximo,
+                dedica tiempo a cada leccion, practica los ejercicios y no dudes en comentar
+                tus dudas dentro de la plataforma.
+              </p>
+
+              <div style="text-align:center;margin:32px 0;">
+                <a href="${loginUrl}" style="display:inline-block;background:linear-gradient(120deg,#00ff88,#2dd4bf,#3b82f6);color:#04180f;font-weight:700;font-size:15px;padding:14px 36px;border-radius:50px;text-decoration:none;">
+                  Activar mi cuenta
+                </a>
+              </div>
+
+              <p style="font-size:13px;color:#64748b;margin:0 0 8px;line-height:1.6;">
+                Una vez dentro, ve directamente a
+                <a href="${dashboardUrl}" style="color:#6366f1;text-decoration:underline;">Mis Cursos</a>
+                y comienza a aprender.
+              </p>
+
+              <div style="border-top:1px solid rgba(148,163,184,0.12);margin-top:28px;padding-top:20px;">
+                <p style="font-size:13px;color:#64748b;margin:0;line-height:1.6;">
+                  💬 <strong style="color:#94a3b8;">Una ultima cosa:</strong> si conoces a alguien
+                  que tambien quiera aprender — un companero de clase, un amigo, un familiar —
+                  cuentale sobre ProLevelCode. Cuantos mas seamos, mejor aprendemos juntos.
+                </p>
+              </div>
+
+              <p style="font-size:12px;color:#475569;margin:28px 0 0;text-align:center;">
+                — El equipo de ProLevelCode
+              </p>
+            </div>
+          </div>
+        `,
+      });
+      sent++;
+    } catch {
+      // Continue with next email if one fails
+    }
+
+    // Small delay between emails to avoid rate limits
+    await new Promise((r) => setTimeout(r, 300));
+  }
+
+  revalidatePath("/admin/becas");
+  return sent;
+}
+
 /* ─────────────── PRO QUERIES ─────────────── */
 
 export async function answerProQuery(fd: FormData) {

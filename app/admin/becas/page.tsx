@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { adminAssignScholarship, adminRejectApplication, adminGrantScholarshipDirect } from "../actions";
+import { SendWelcomeButton } from "./send-welcome-button";
 
 export default async function AdminBecasPage() {
   // Pending applications
@@ -41,7 +42,10 @@ export default async function AdminBecasPage() {
 
   return (
     <div className="page-enter space-y-6">
-      <h2 className="text-2xl font-semibold">Becas</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold">Becas</h2>
+        <SendWelcomeButton />
+      </div>
 
       {/* ── Pending applications + available scholarships to assign ── */}
       <Card className="p-4">
