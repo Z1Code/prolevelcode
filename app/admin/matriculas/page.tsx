@@ -31,14 +31,14 @@ export default async function AdminEnrollmentsPage({ searchParams }: Props) {
   };
 
   return (
-    <div>
+    <div className="page-enter">
       <h2 className="text-2xl font-semibold">Matriculas</h2>
 
       {/* Enroll form */}
       <Card className="mt-4 p-4">
         <h3 className="font-semibold">Matricular usuario</h3>
         {error && (
-          <p className="mt-2 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
+          <p className="mt-2 alert-enter rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
             {errorMessages[error] ?? error}
           </p>
         )}

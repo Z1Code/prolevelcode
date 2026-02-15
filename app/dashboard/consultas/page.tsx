@@ -17,7 +17,7 @@ export default async function ConsultasPage({ searchParams }: ConsultasPageProps
 
   if (currentTier !== "pro") {
     return (
-      <div>
+      <div className="page-enter">
         <h2 className="text-2xl font-semibold">Consultas</h2>
         <Card className="mt-4 p-5">
           <p className="text-sm text-slate-400">
@@ -47,20 +47,20 @@ export default async function ConsultasPage({ searchParams }: ConsultasPageProps
   };
 
   return (
-    <div>
+    <div className="page-enter">
       <h2 className="text-2xl font-semibold">Consultas al instructor</h2>
       <p className="mt-1 text-sm text-slate-400">
         Haz preguntas directas y concisas. Mientras mas especifica sea tu consulta, mejor sera la respuesta.
       </p>
 
       {error && (
-        <div className="mt-4 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="mt-4 alert-enter rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {errorMessages[error] ?? "Ocurrio un error"}
         </div>
       )}
 
       {success === "enviada" && (
-        <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="mt-4 alert-enter rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           Consulta enviada. Recibiras una respuesta pronto.
         </div>
       )}
@@ -95,16 +95,16 @@ export default async function ConsultasPage({ searchParams }: ConsultasPageProps
       </Card>
 
       {queries.length > 0 && (
-        <div className="mt-6 space-y-4">
+        <div className="mt-6 stagger-enter space-y-4">
           <h3 className="font-semibold">Mis consultas</h3>
           {queries.map((q) => (
-            <Card key={q.id} className="p-4">
+            <Card key={q.id} className="p-4 hover-lift">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm text-slate-200">{q.question}</p>
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                   q.status === "answered"
                     ? "bg-emerald-500/15 text-emerald-300"
-                    : "bg-amber-500/15 text-amber-300"
+                    : "bg-amber-500/15 text-amber-300 badge-pending"
                 }`}>
                   {q.status === "answered" ? "Respondida" : "Pendiente"}
                 </span>

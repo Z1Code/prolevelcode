@@ -9,7 +9,7 @@ export default async function AdminCoursesPage() {
   });
 
   return (
-    <div>
+    <div className="page-enter">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Cursos</h2>
         <Link className="liquid-surface-soft px-3 py-2 text-sm" href="/admin/cursos/new">Nuevo curso</Link>

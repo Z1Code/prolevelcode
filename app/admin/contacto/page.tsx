@@ -9,11 +9,11 @@ export default async function AdminContactPage() {
   });
 
   return (
-    <div>
+    <div className="page-enter">
       <h2 className="text-2xl font-semibold">Mensajes de contacto</h2>
-      <div className="mt-4 space-y-3">
+      <div className="mt-4 stagger-enter space-y-3">
         {messages.map((message) => (
-          <Card key={message.id} className="p-4">
+          <Card key={message.id} className="p-4 hover-lift">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="font-semibold">
                 {message.name} - {message.email}

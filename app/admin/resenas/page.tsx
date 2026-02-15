@@ -26,20 +26,20 @@ export default async function AdminResenasPage() {
     : "—";
 
   return (
-    <div>
+    <div className="page-enter">
       <h2 className="text-xl font-semibold">Resenas</h2>
 
       {/* Summary cards */}
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <div className="liquid-surface p-4">
+      <div className="mt-4 stagger-enter grid gap-4 sm:grid-cols-3">
+        <div className="liquid-surface hover-lift p-4">
           <p className="text-2xl font-bold">{totalReviews}</p>
           <p className="text-xs text-slate-500">Total resenas</p>
         </div>
-        <div className="liquid-surface p-4">
+        <div className="liquid-surface hover-lift p-4">
           <p className="text-2xl font-bold">{courseReviews.length}</p>
           <p className="text-xs text-slate-500">Resenas de cursos</p>
         </div>
-        <div className="liquid-surface p-4">
+        <div className="liquid-surface hover-lift p-4">
           <p className="text-2xl font-bold">{avgCourseRating}</p>
           <p className="text-xs text-slate-500">Promedio cursos</p>
         </div>
@@ -51,7 +51,7 @@ export default async function AdminResenasPage() {
         <p className="mt-2 text-sm text-slate-500">Sin resenas de cursos aun.</p>
       ) : (
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="liquid-table w-full text-left text-sm">
             <thead>
               <tr className="border-b border-white/10 text-xs text-slate-500">
                 <th className="pb-2 pr-4">Usuario</th>
@@ -111,7 +111,7 @@ export default async function AdminResenasPage() {
           <p className="mt-2 text-sm text-slate-500">Sin resenas de lecciones aun.</p>
         ) : (
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="liquid-table w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-xs text-slate-500">
                   <th className="pb-2 pr-4">Usuario</th>

@@ -26,7 +26,7 @@ export default async function AdminUsersPage() {
   ]);
 
   return (
-    <div>
+    <div className="page-enter">
       <div className="flex items-center gap-3">
         <h2 className="text-2xl font-semibold">Usuarios</h2>
         <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-sm font-medium text-slate-300">

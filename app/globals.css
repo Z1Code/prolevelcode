@@ -2541,3 +2541,143 @@ a {
     0 28px 54px rgba(0, 0, 0, 0.4),
     0 1px 0 rgba(255, 255, 255, 0.08) inset;
 }
+
+/* ── Global button micro-interactions ── */
+.btn-press {
+  transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 0.2s ease,
+              filter 0.2s ease;
+}
+
+.btn-press:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 255, 136, 0.1);
+  filter: brightness(1.08);
+}
+
+.btn-press:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.98);
+  box-shadow: none;
+  filter: brightness(0.95);
+}
+
+/* Ghost/danger button variant press */
+.btn-press-subtle:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.04);
+}
+
+.btn-press-subtle:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.98);
+}
+
+/* ── Nav link active indicator ── */
+.nav-link-active {
+  position: relative;
+}
+
+.nav-link-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #00ff88, #2dd4bf);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.nav-link-active:hover::before,
+.nav-link-active[data-active="true"]::before {
+  opacity: 1;
+}
+
+/* ── Table row hover ── */
+.liquid-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.liquid-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* ── Status badge pulse for pending items ── */
+@keyframes subtlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.badge-pending {
+  animation: subtlePulse 2.5s ease-in-out infinite;
+}
+
+/* ── Alert/notification entrance ── */
+@keyframes alertSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.alert-enter {
+  animation: alertSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ── Focus glow for inputs globally ── */
+.liquid-field:focus-visible,
+textarea:focus-visible {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* ── Details/summary smooth ── */
+details summary {
+  transition: color 0.2s ease;
+}
+
+details[open] summary {
+  color: white;
+}
+
+/* ── Page entrance (for server components without framer) ── */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.page-enter {
+  animation: pageEnter 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Stagger children with CSS (no JS needed) */
+.stagger-enter > * {
+  animation: pageEnter 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.stagger-enter > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-enter > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger-enter > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-enter > *:nth-child(4) { animation-delay: 0.20s; }
+.stagger-enter > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-enter > *:nth-child(6) { animation-delay: 0.30s; }
+.stagger-enter > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-enter > *:nth-child(8) { animation-delay: 0.40s; }
+.stagger-enter > *:nth-child(9) { animation-delay: 0.45s; }
+.stagger-enter > *:nth-child(10) { animation-delay: 0.50s; }
+.stagger-enter > *:nth-child(n+11) { animation-delay: 0.55s; }

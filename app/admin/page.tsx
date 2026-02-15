@@ -6,10 +6,10 @@ export default async function AdminHomePage() {
   const metrics = await getAdminMetrics();
 
   return (
-    <div>
+    <div className="page-enter">
       <h2 className="text-2xl font-semibold">Dashboard</h2>
-      <div className="mt-4 grid gap-4 md:grid-cols-5">
-        <Card className="p-4">
+      <div className="mt-4 stagger-enter grid gap-4 md:grid-cols-5">
+        <Card className="p-4 hover-lift">
           <p className="text-sm text-slate-400">Ingresos totales</p>
           {(() => {
             const totalUsd = metrics.totalUsdCents + Math.round(metrics.totalClpCents / metrics.clpPerUsd);
@@ -26,7 +26,7 @@ export default async function AdminHomePage() {
             );
           })()}
         </Card>
-        <Card className="p-4">
+        <Card className="p-4 hover-lift">
           <p className="text-sm text-slate-400">Ingresos mes</p>
           {(() => {
             const monthUsd = metrics.monthlyUsdCents + Math.round(metrics.monthlyClpCents / metrics.clpPerUsd);
@@ -43,22 +43,22 @@ export default async function AdminHomePage() {
             );
           })()}
         </Card>
-        <Card className="p-4">
+        <Card className="p-4 hover-lift">
           <p className="text-sm text-slate-400">Nuevos users</p>
           <p className="mt-2 text-2xl font-semibold">{metrics.newUsers}</p>
         </Card>
-        <Card className="p-4">
+        <Card className="p-4 hover-lift">
           <p className="text-sm text-slate-400">Cursos activos</p>
           <p className="mt-2 text-2xl font-semibold">{metrics.activeCourses}</p>
         </Card>
-        <Card className="p-4">
+        <Card className="p-4 hover-lift">
           <p className="text-sm text-slate-400">Tokens activos</p>
           <p className="mt-2 text-2xl font-semibold">{metrics.activeTokens}</p>
         </Card>
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Card className="p-4">
+        <Card className="p-4 hover-lift">
           <h3 className="font-semibold">Ultimas ventas</h3>
           <div className="mt-3 overflow-x-auto">
             <table className="liquid-table w-full text-left text-sm">
@@ -95,7 +95,7 @@ export default async function AdminHomePage() {
           </div>
         </Card>
 
-        <Card className="p-4">
+        <Card className="p-4 hover-lift">
           <h3 className="font-semibold">Tokens activos</h3>
           <div className="mt-3 overflow-x-auto">
             <table className="liquid-table w-full text-left text-sm">

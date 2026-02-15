@@ -16,7 +16,7 @@ export default async function AdminConsultasPage() {
   const answered = queries.filter((q) => q.status === "answered");
 
   return (
-    <div className="space-y-6">
+    <div className="page-enter space-y-6">
       <h2 className="text-2xl font-semibold">Consultas Pro</h2>
 
       {/* ── Pending queries ── */}

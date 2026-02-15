@@ -21,7 +21,7 @@ export default async function BecaPage({ searchParams }: BecaPageProps) {
 
   if (currentTier !== "pro") {
     return (
-      <div>
+      <div className="page-enter">
         <h2 className="text-2xl font-semibold">Becas</h2>
         <Card className="mt-4 p-5">
           <p className="text-sm text-slate-400">
@@ -67,7 +67,7 @@ export default async function BecaPage({ searchParams }: BecaPageProps) {
   };
 
   return (
-    <div>
+    <div className="page-enter">
       <h2 className="text-2xl font-semibold">Mis becas</h2>
       <p className="mt-1 text-sm text-slate-400">
         {isEarlyPro
@@ -82,12 +82,12 @@ export default async function BecaPage({ searchParams }: BecaPageProps) {
       )}
 
       {error && (
-        <div className="mt-4 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="mt-4 alert-enter rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {errorMessages[error] ?? "Ocurrio un error"}
         </div>
       )}
       {success === "asignada" && (
-        <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="mt-4 alert-enter rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           Beca asignada exitosamente. Se envio un email al destinatario.
         </div>
       )}

@@ -8,11 +8,11 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "border border-emerald-100/30 bg-[linear-gradient(120deg,#00ff88,#2dd4bf_45%,#3b82f6)] text-[#04180f] hover:-translate-y-0.5",
+          "btn-press border border-emerald-100/30 bg-[linear-gradient(120deg,#00ff88,#2dd4bf_45%,#3b82f6)] text-[#04180f]",
         ghost:
-          "border border-slate-200/25 bg-[linear-gradient(145deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] text-slate-100 backdrop-blur-xl hover:border-slate-100/45 hover:bg-white/[0.12]",
+          "btn-press-subtle border border-slate-200/25 bg-[linear-gradient(145deg,rgba(255,255,255,0.1),rgba(255,255,255,0.03))] text-slate-100 backdrop-blur-xl hover:border-slate-100/45 hover:bg-white/[0.12]",
         danger:
-          "border border-red-300/35 bg-[linear-gradient(130deg,rgba(239,68,68,0.24),rgba(127,29,29,0.32))] text-red-100 hover:border-red-200/40 hover:bg-[linear-gradient(130deg,rgba(239,68,68,0.28),rgba(153,27,27,0.36))]",
+          "btn-press-subtle border border-red-300/35 bg-[linear-gradient(130deg,rgba(239,68,68,0.24),rgba(127,29,29,0.32))] text-red-100 hover:border-red-200/40 hover:bg-[linear-gradient(130deg,rgba(239,68,68,0.28),rgba(153,27,27,0.36))]",
       },
       size: {
         sm: "h-9 px-4",
@@ -34,5 +34,3 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 export function Button({ className, variant, size, ...props }: ButtonProps) {
   return <button className={cn(buttonVariants({ variant, size, className }))} {...props} />;
 }
-
-

@@ -64,11 +64,11 @@ export default async function AdminPaymentsPage() {
   const cryptoCompletedUsdt = completed.reduce((sum, p) => sum + parseFloat(p.amount_usdt), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="page-enter space-y-6">
       <h2 className="text-2xl font-semibold">Pagos</h2>
 
       {/* ── Summary cards ── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="stagger-enter grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="p-4">
           <p className="text-xs text-slate-400">PayPal pendientes</p>
           <p className="mt-1 text-2xl font-semibold text-amber-300">{paypalPending.length}</p>

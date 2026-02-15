@@ -50,14 +50,14 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
   const showBonus = checkout === "success" && earlyProOrder !== null;
 
   return (
-    <div>
+    <div className="page-enter">
       {checkout === "success" && (
-        <div className="mb-4 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="mb-4 alert-enter rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           Plan activado exitosamente.
         </div>
       )}
       {already === "true" && (
-        <div className="mb-4 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <div className="mb-4 alert-enter rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           Ya tienes este plan o uno superior activo.
         </div>
       )}
@@ -91,7 +91,7 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
 
       <h2 className="text-2xl font-semibold">Mi plan</h2>
 
-      <Card className="mt-4 p-5">
+      <Card className="mt-4 hover-lift p-5">
         <div className="flex items-center gap-3">
           <p className="text-lg font-semibold">
             {currentTier === "pro" ? "Pro" : currentTier === "basic" ? "Basic" : "Sin plan"}

@@ -17,7 +17,7 @@ export default async function AdminTokensPage() {
   });
 
   return (
-    <div>
+    <div className="page-enter">
       <h2 className="text-2xl font-semibold">Monitor de tokens</h2>
       <Card className="mt-4 overflow-x-auto p-0">
         <table className="liquid-table w-full text-left text-sm">

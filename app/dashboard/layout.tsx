@@ -11,8 +11,7 @@ const tierBadge = {
   feature: "inline-flex items-center rounded-full border border-violet-400/30 bg-gradient-to-r from-violet-500/20 via-purple-400/20 to-violet-500/20 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-violet-300 shadow-[0_0_6px_rgba(167,139,250,0.15)]",
 };
 
-const navLink = "flex items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-all duration-200 hover:bg-white/[0.06]";
-const navIcon = "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-500";
+const navIcon = "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-500 transition-colors duration-200 group-hover:text-slate-300";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getSessionUser();
@@ -21,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="container-wide py-8">
       {/* Top bar */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between page-enter">
         <div className="flex items-center gap-4">
           <Link
             href="/"
@@ -46,7 +45,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
         {/* Sidebar */}
-        <aside className="liquid-surface p-4">
+        <aside className="liquid-surface p-4 page-enter" style={{ animationDelay: "0.1s" }}>
           <div className="mb-4 border-b border-white/[0.06] pb-4">
             <p className="truncate text-xs text-slate-500">{user?.email}</p>
             {currentTier && (
@@ -57,8 +56,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </div>
             )}
           </div>
-          <nav className="space-y-1">
-            <Link className={navLink} href="/dashboard">
+          <nav className="stagger-enter space-y-1">
+            <Link className="nav-link-active group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-all duration-200 hover:bg-white/[0.06] hover:text-white" href="/dashboard">
               <div className="flex items-center gap-3">
                 <span className={navIcon}>
                   <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" /></svg>
@@ -66,7 +65,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 Resumen
               </div>
             </Link>
-            <Link className={navLink} href="/dashboard/cursos">
+            <Link className="nav-link-active group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-all duration-200 hover:bg-white/[0.06] hover:text-white" href="/dashboard/cursos">
               <div className="flex items-center gap-3">
                 <span className={navIcon}>
                   <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>
@@ -74,7 +73,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 Mis cursos
               </div>
             </Link>
-            <Link className={navLink} href="/dashboard/plan">
+            <Link className="nav-link-active group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-all duration-200 hover:bg-white/[0.06] hover:text-white" href="/dashboard/plan">
               <div className="flex items-center gap-3">
                 <span className={navIcon}>
                   <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm4.707 3.707a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L8.414 9H10a3 3 0 013 3v1a1 1 0 102 0v-1a5 5 0 00-5-5H8.414l1.293-1.293z" clipRule="evenodd" /></svg>
@@ -85,7 +84,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 {currentTier === "pro" ? "PRO" : currentTier === "basic" ? "BASIC" : "SIN PLAN"}
               </span>
             </Link>
-            <Link className={navLink} href="/dashboard/consultas">
+            <Link className="nav-link-active group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-all duration-200 hover:bg-white/[0.06] hover:text-white" href="/dashboard/consultas">
               <div className="flex items-center gap-3">
                 <span className={navIcon}>
                   <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zm-4 0H9v2h2V9z" clipRule="evenodd" /></svg>
@@ -96,7 +95,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </Link>
 
             <div className="!mt-3 border-t border-white/[0.06] pt-3">
-              <Link className={navLink} href="/cursos">
+              <Link className="nav-link-active group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-all duration-200 hover:bg-white/[0.06] hover:text-white" href="/cursos">
                 <div className="flex items-center gap-3">
                   <span className={navIcon}>
                     <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" /></svg>
@@ -104,7 +103,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                   Explorar cursos
                 </div>
               </Link>
-              <Link className={navLink} href="/dashboard/perfil">
+              <Link className="nav-link-active group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-all duration-200 hover:bg-white/[0.06] hover:text-white" href="/dashboard/perfil">
                 <div className="flex items-center gap-3">
                   <span className={navIcon}>
                     <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>

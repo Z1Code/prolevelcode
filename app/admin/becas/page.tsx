@@ -40,7 +40,7 @@ export default async function AdminBecasPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="page-enter space-y-6">
       <h2 className="text-2xl font-semibold">Becas</h2>
 
       {/* ── Pending applications + available scholarships to assign ── */}
