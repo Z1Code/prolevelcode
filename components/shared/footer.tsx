@@ -36,11 +36,6 @@ export function Footer() {
                   GitHub / Z1Code
                 </a>
               </li>
-              <li>
-                <a href="https://discord.gg/RHGdMW6B" target="_blank" rel="noreferrer" className="liquid-link">
-                  Discord
-                </a>
-              </li>
             </ul>
           </div>
         </div>
