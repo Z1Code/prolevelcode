@@ -74,6 +74,8 @@ model User {
   paypalPayments         PaypalPayment[]
   proQueries             ProQuery[]
   scholarshipApplications ScholarshipApplication[]
+  lessonReviews          LessonReview[]
+  courseReviews          CourseReview[]
 
   @@map("users")
 }
@@ -151,6 +153,8 @@ model Course {
   enrollments            Enrollment[]
   lessonProgress         LessonProgress[]
   videoTokens            VideoToken[]
+  lessonReviews          LessonReview[]
+  courseReviews          CourseReview[]
 
   @@map("courses")
 }
@@ -189,6 +193,7 @@ model Lesson {
   course           Course           @relation(fields: [course_id], references: [id], onDelete: Cascade)
   lessonProgress   LessonProgress[]
   videoTokens      VideoToken[]
+  lessonReviews    LessonReview[]
 
   @@map("lessons")
 }
@@ -550,4 +555,38 @@ model ProQuery {
   @@index([user_id])
   @@index([status, created_at])
   @@map("pro_queries")
+}
+
+model LessonReview {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  lesson_id  String   @db.Uuid
+  course_id  String   @db.Uuid
+  rating     Int      // 1-5
+  comment    String?  @db.VarChar(280)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, lesson_id])
+  @@map("lesson_reviews")
+}
+
+model CourseReview {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String   @db.Uuid
+  course_id   String   @db.Uuid
+  rating      Int      // 1-5
+  comment     String   @db.VarChar(500)
+  is_featured Boolean  @default(false)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, course_id])
+  @@map("course_reviews")
 }

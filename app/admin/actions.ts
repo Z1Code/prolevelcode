@@ -561,6 +561,55 @@ export async function answerProQuery(fd: FormData) {
   revalidatePath("/admin/consultas");
 }
 
+/* ─────────────── REVIEWS ─────────────── */
+
+export async function publishAsTestimonial(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const reviewId = str(fd, "review_id");
+  if (!reviewId) return;
+
+  const review = await prisma.courseReview.findUnique({
+    where: { id: reviewId },
+    include: {
+      user: { select: { full_name: true } },
+      course: { select: { title: true } },
+    },
+  });
+
+  if (!review) {
+    revalidatePath("/admin/resenas");
+    return;
+  }
+
+  await prisma.testimonial.create({
+    data: {
+      author_name: review.user.full_name || "Estudiante",
+      content: review.comment,
+      rating: review.rating,
+      service_or_course: review.course.title,
+      is_published: true,
+      is_featured: false,
+    },
+  });
+
+  revalidatePath("/admin/resenas");
+}
+
+export async function deleteReview(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const reviewId = str(fd, "review_id");
+  const type = str(fd, "type");
+  if (!reviewId) return;
+
+  if (type === "lesson") {
+    await prisma.lessonReview.delete({ where: { id: reviewId } });
+  } else {
+    await prisma.courseReview.delete({ where: { id: reviewId } });
+  }
+
+  revalidatePath("/admin/resenas");
+}
+
 /* ─────────────── USERS ─────────────── */
 
 export async function deleteUser(fd: FormData) {

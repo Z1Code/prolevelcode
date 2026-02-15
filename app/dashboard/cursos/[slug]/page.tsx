@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SecureCoursePlayer } from "@/components/video/secure-course-player";
+import { CourseReviewSection } from "@/components/video/course-review-section";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { checkCourseAccess, getUserTier } from "@/lib/access/check-access";
@@ -35,6 +36,28 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
     select: { id: true, title: true, course_id: true, duration_minutes: true },
   });
 
+  // Fetch completed lesson IDs
+  const completedProgress = await prisma.lessonProgress.findMany({
+    where: { user_id: user.id, course_id: course.id, is_completed: true },
+    select: { lesson_id: true },
+  });
+  const completedLessonIds = completedProgress.map((p) => p.lesson_id);
+
+  // Compute completion percentage
+  const totalLessons = lessons.length;
+  const completedCount = completedLessonIds.length;
+  const completionPct = totalLessons > 0 ? (completedCount / totalLessons) * 100 : 0;
+
+  // Fetch existing course review if eligible
+  let existingReview: { rating: number; comment: string } | null = null;
+  if (completionPct >= 70) {
+    const review = await prisma.courseReview.findUnique({
+      where: { user_id_course_id: { user_id: user.id, course_id: course.id } },
+      select: { rating: true, comment: true },
+    });
+    existingReview = review;
+  }
+
   const playerLessons = lessons.map((lesson) => ({
     id: lesson.id,
     title: lesson.title,
@@ -54,10 +77,44 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
         Mis cursos
       </Link>
       <h2 className="text-xl font-semibold tracking-tight">{course.title}</h2>
-      <p className="mt-1 text-sm text-slate-500">Selecciona una leccion y presiona play para reproducir.</p>
+      <p className="mt-1 text-sm text-slate-500">
+        Selecciona una leccion y presiona play para reproducir.
+        {(() => {
+          const totalMinutes = lessons.reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0);
+          if (totalMinutes === 0) return null;
+          const hours = Math.floor(totalMinutes / 60);
+          const mins = totalMinutes % 60;
+          const durationStr = hours > 0 ? `${hours}h ${mins > 0 ? ` ${mins}min` : ""}` : `${mins}min`;
+          return <> — Duracion total: {durationStr}</>;
+        })()}
+      </p>
+
+      {/* Progress bar */}
+      {totalLessons > 0 && (
+        <div className="mt-3">
+          <div className="flex items-center justify-between text-[11px] text-slate-500">
+            <span>{completedCount}/{totalLessons} lecciones completadas</span>
+            <span>{Math.round(completionPct)}%</span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/5">
+            <div
+              className="h-full rounded-full bg-emerald-500/60 transition-all"
+              style={{ width: `${completionPct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="mt-5">
-        <SecureCoursePlayer lessons={playerLessons} />
+        <SecureCoursePlayer lessons={playerLessons} completedLessonIds={completedLessonIds} />
       </div>
+
+      {/* Course review section — shown when >= 70% complete */}
+      {completionPct >= 70 && (
+        <div className="mt-6">
+          <CourseReviewSection courseId={course.id} existingReview={existingReview} />
+        </div>
+      )}
     </div>
   );
 }

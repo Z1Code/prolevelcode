@@ -93,6 +93,32 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
           </div>
           <p className="mt-4 max-w-3xl text-slate-300">{course.long_description ?? course.subtitle ?? course.description}</p>
 
+          {(() => {
+            const allLessons = modules.flatMap((m) => m.lessons ?? []);
+            const totalMinutes = allLessons.reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0);
+            const totalLessons = allLessons.length;
+            if (totalLessons === 0) return null;
+            const hours = Math.floor(totalMinutes / 60);
+            const mins = totalMinutes % 60;
+            const durationStr = hours > 0 ? `${hours}h ${mins > 0 ? `${mins}min` : ""}` : `${mins}min`;
+            return (
+              <div className="mt-3 flex items-center gap-4 text-sm text-slate-400">
+                <span className="flex items-center gap-1.5">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-slate-500">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" />
+                  </svg>
+                  {totalMinutes > 0 ? durationStr : "Duracion por definir"}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-slate-500">
+                    <path d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z" />
+                  </svg>
+                  {totalLessons} {totalLessons === 1 ? "leccion" : "lecciones"}
+                </span>
+              </div>
+            );
+          })()}
+
           <div className="mt-8 flex flex-wrap items-center gap-3">
             {isComingSoon ? (
               <span className="text-sm text-amber-300">Este curso estara disponible proximamente</span>
