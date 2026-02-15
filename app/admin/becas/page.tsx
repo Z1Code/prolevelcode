@@ -89,7 +89,7 @@ export default async function AdminBecasPage() {
                     ))}
                     <form action={adminGrantScholarshipDirect}>
                       <input type="hidden" name="id" value={app.id} />
-                      <Button type="submit" size="sm">Aceptar (Pro gratis)</Button>
+                      <Button type="submit" size="sm">Aceptar (Basic gratis)</Button>
                     </form>
                     <form action={adminRejectApplication}>
                       <input type="hidden" name="id" value={app.id} />
@@ -100,7 +100,7 @@ export default async function AdminBecasPage() {
                   <div className="mt-3 flex gap-2">
                     <form action={adminGrantScholarshipDirect}>
                       <input type="hidden" name="id" value={app.id} />
-                      <Button type="submit" size="sm">Aceptar (Pro gratis)</Button>
+                      <Button type="submit" size="sm">Aceptar (Basic gratis)</Button>
                     </form>
                     <form action={adminRejectApplication}>
                       <input type="hidden" name="id" value={app.id} />

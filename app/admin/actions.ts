@@ -538,9 +538,9 @@ export async function adminGrantScholarshipDirect(fd: FormData) {
   });
   if (!app || app.status !== "pending") return;
 
-  // Check if user already has active Pro
+  // Check if user already has active Basic or higher
   const existing = await prisma.tierPurchase.findFirst({
-    where: { user_id: app.user_id, tier: "pro", status: "active" },
+    where: { user_id: app.user_id, tier: { in: ["basic", "pro"] }, status: "active" },
   });
 
   await prisma.$transaction([
@@ -549,14 +549,14 @@ export async function adminGrantScholarshipDirect(fd: FormData) {
       where: { id },
       data: { status: "approved", reviewed_at: new Date() },
     }),
-    // Grant Pro tier at $0 (admin grant — not counted as revenue)
+    // Grant Basic tier at $0 (admin grant — not counted as revenue)
     ...(existing
       ? []
       : [
           prisma.tierPurchase.create({
             data: {
               user_id: app.user_id,
-              tier: "pro",
+              tier: "basic",
               status: "active",
               payment_provider: "admin_grant",
               payment_reference: "Beca aprobada por admin",
