@@ -33,11 +33,11 @@ export function TierCard({
   isLoggedIn,
 }: TierCardProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<"mp" | "crypto" | "paypal" | null>(null);
 
   async function handleCryptoCheckout() {
-    if (!onCheckoutCrypto) return;
-    setLoading(true);
+    if (!onCheckoutCrypto || loading) return;
+    setLoading("crypto");
     try {
       const res = await fetch(onCheckoutCrypto, {
         method: "POST",
@@ -55,9 +55,19 @@ export function TierCard({
       router.push(url);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error al crear orden crypto");
-      setLoading(false);
+      setLoading(null);
     }
   }
+
+  function handlePaypalClick(e: React.MouseEvent) {
+    if (loading) {
+      e.preventDefault();
+      return;
+    }
+    setLoading("paypal");
+  }
+
+  const isDisabled = loading !== null;
 
   return (
     <Card className={`p-6 ${highlighted ? "ring-2 ring-violet-500/40" : ""}`}>
@@ -87,28 +97,41 @@ export function TierCard({
       {!isCurrentPlan && isLoggedIn && (
         <div className="mt-6 flex flex-col gap-2">
           {onCheckoutMp && (
-            <form action={onCheckoutMp} method="post">
+            <form
+              action={onCheckoutMp}
+              method="post"
+              onSubmit={() => setLoading("mp")}
+            >
               <input type="hidden" name="tier" value={tier} />
-              <Button type="submit" className="w-full">
-                Pagar con MercadoPago
+              <Button type="submit" className="pay-btn w-full" disabled={isDisabled}>
+                <span className="pay-btn-shimmer" />
+                {loading === "mp" ? "Redirigiendo..." : "Pagar con MercadoPago"}
               </Button>
             </form>
           )}
           {onCheckoutCrypto && (
-            <Button
-              variant="ghost"
-              className="w-full"
+            <button
               onClick={handleCryptoCheckout}
-              disabled={loading}
+              disabled={isDisabled}
+              className="pay-btn pay-btn-crypto"
             >
-              {loading ? "Creando orden..." : "Pagar con Crypto (USDT)"}
-            </Button>
+              <span className="pay-btn-shimmer" />
+              {loading === "crypto" ? "Creando orden..." : "Pagar con Crypto (USDT)"}
+            </button>
           )}
           {onCheckoutPaypal && (
-            <a href={`${onCheckoutPaypal}?tier=${tier}`} className="w-full">
-              <Button variant="ghost" className="w-full">
-                Pagar con PayPal
-              </Button>
+            <a
+              href={`${onCheckoutPaypal}?tier=${tier}`}
+              onClick={handlePaypalClick}
+              className={isDisabled ? "pointer-events-none" : ""}
+            >
+              <button
+                disabled={isDisabled}
+                className="pay-btn pay-btn-paypal w-full"
+              >
+                <span className="pay-btn-shimmer" />
+                {loading === "paypal" ? "Redirigiendo..." : "Pagar con PayPal"}
+              </button>
             </a>
           )}
         </div>
