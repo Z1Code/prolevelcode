@@ -76,6 +76,7 @@ model User {
   scholarshipApplications ScholarshipApplication[]
   lessonReviews          LessonReview[]
   courseReviews          CourseReview[]
+  lessonComments         LessonComment[]
 
   @@map("users")
 }
@@ -155,6 +156,7 @@ model Course {
   videoTokens            VideoToken[]
   lessonReviews          LessonReview[]
   courseReviews          CourseReview[]
+  lessonComments         LessonComment[]
 
   @@map("courses")
 }
@@ -194,6 +196,7 @@ model Lesson {
   lessonProgress   LessonProgress[]
   videoTokens      VideoToken[]
   lessonReviews    LessonReview[]
+  lessonComments   LessonComment[]
 
   @@map("lessons")
 }
@@ -589,4 +592,20 @@ model CourseReview {
 
   @@unique([user_id, course_id])
   @@map("course_reviews")
+}
+
+model LessonComment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  lesson_id  String   @db.Uuid
+  course_id  String   @db.Uuid
+  content    String   @db.VarChar(500)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@index([lesson_id, created_at])
+  @@map("lesson_comments")
 }

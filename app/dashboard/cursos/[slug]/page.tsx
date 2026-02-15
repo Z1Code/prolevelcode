@@ -5,6 +5,7 @@ import { CourseReviewSection } from "@/components/video/course-review-section";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { checkCourseAccess, getUserTier } from "@/lib/access/check-access";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 interface DashboardCoursePageProps {
   params: Promise<{ slug: string }>;
@@ -66,7 +67,7 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
   }));
 
   return (
-    <div>
+    <DashboardShell>
       <Link
         href="/dashboard/cursos"
         className="group mb-4 inline-flex items-center gap-1.5 text-xs text-slate-500 transition-colors hover:text-slate-300"
@@ -98,7 +99,7 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
           </div>
           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/5">
             <div
-              className="h-full rounded-full bg-emerald-500/60 transition-all"
+              className="progress-shimmer h-full rounded-full bg-emerald-500/60 transition-all duration-700 ease-out"
               style={{ width: `${completionPct}%` }}
             />
           </div>
@@ -115,6 +116,6 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
           <CourseReviewSection courseId={course.id} existingReview={existingReview} />
         </div>
       )}
-    </div>
+    </DashboardShell>
   );
 }

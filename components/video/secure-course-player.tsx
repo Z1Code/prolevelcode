@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getDeviceFingerprint } from "@/lib/tokens/fingerprint";
 import { LessonReviewModal } from "./lesson-review-modal";
+import { LessonCommentSection } from "./lesson-comment-section";
 
 interface LessonOption {
   id: string;
@@ -23,6 +24,19 @@ interface SecureCoursePlayerProps {
   lessons: LessonOption[];
   completedLessonIds: string[];
 }
+
+const lessonVariants = {
+  hidden: { opacity: 0, x: -12 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: i * 0.05,
+      duration: 0.35,
+      ease: [0.25, 0.46, 0.45, 0.94] as const,
+    },
+  }),
+};
 
 export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCoursePlayerProps) {
   const [selectedLessonId, setSelectedLessonId] = useState(lessons[0]?.id ?? "");
@@ -72,7 +86,6 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
 
     setTokenData(payload);
     setLoading(false);
-    // Fade out overlay after a brief moment
     setTimeout(() => setShowOverlay(false), 300);
   }
 
@@ -116,7 +129,13 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
               const isActive = selectedLessonId === lesson.id;
               const isCompleted = completed.has(lesson.id);
               return (
-                <li key={lesson.id}>
+                <motion.li
+                  key={lesson.id}
+                  custom={i}
+                  initial="hidden"
+                  animate="visible"
+                  variants={lessonVariants}
+                >
                   <button
                     className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-200 ${
                       isActive
@@ -125,7 +144,7 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
                     }`}
                     onClick={() => selectLesson(lesson.id)}
                   >
-                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold transition-colors ${
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold transition-colors duration-200 ${
                       isCompleted
                         ? "bg-emerald-400/20 text-emerald-300"
                         : isActive
@@ -133,9 +152,16 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
                           : "bg-white/5 text-slate-500 group-hover:text-slate-400"
                     }`}>
                       {isCompleted ? (
-                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                        <motion.svg
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          className="h-3.5 w-3.5"
+                          initial={{ scale: 0, rotate: -45 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                        >
                           <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                        </svg>
+                        </motion.svg>
                       ) : (
                         i + 1
                       )}
@@ -147,7 +173,7 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
                       </span>
                     )}
                   </button>
-                </li>
+                </motion.li>
               );
             })}
           </ul>
@@ -155,7 +181,12 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
 
         {/* Player area */}
         <div className="space-y-3">
-          <div className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-black/40 shadow-2xl shadow-black/40">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-black/40 shadow-2xl shadow-black/40"
+          >
             {/* Video container */}
             <div className="relative aspect-video w-full">
               {/* Iframe (loads behind overlay) */}
@@ -177,43 +208,75 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
                     transition={{ duration: 0.6, ease: "easeInOut" }}
                     className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gradient-to-b from-black/70 via-black/50 to-black/70"
                   >
-                    {/* Decorative rings */}
+                    {/* Animated decorative rings */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="h-40 w-40 rounded-full border border-white/[0.04]" />
-                      <div className="absolute h-56 w-56 rounded-full border border-white/[0.02]" />
+                      <motion.div
+                        className="h-40 w-40 rounded-full border border-white/[0.04]"
+                        animate={{ scale: [1, 1.08, 1], opacity: [0.4, 0.2, 0.4] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                      <motion.div
+                        className="absolute h-56 w-56 rounded-full border border-white/[0.02]"
+                        animate={{ scale: [1, 1.05, 1], opacity: [0.25, 0.1, 0.25] }}
+                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                      />
+                      <motion.div
+                        className="absolute h-28 w-28 rounded-full border border-emerald-400/[0.06]"
+                        animate={{ scale: [1, 1.12, 1], opacity: [0.3, 0.05, 0.3] }}
+                        transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                      />
                     </div>
 
                     {/* Lesson title */}
-                    <p className="relative mb-6 max-w-md text-center text-sm font-medium text-slate-300">
-                      {currentLesson?.title ?? "Selecciona una leccion"}
-                    </p>
-
-                    {/* Play button */}
-                    <button
-                      onClick={handlePlay}
-                      disabled={loading || !currentLesson}
-                      className="group relative flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/5 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-emerald-400/30 hover:bg-emerald-500/10 hover:shadow-[0_0_30px_rgba(52,211,153,0.12)] active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
+                    <motion.p
+                      key={currentLesson?.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.1 }}
+                      className="relative mb-6 max-w-md text-center text-sm font-medium text-slate-300"
                     >
-                      {loading ? (
-                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-emerald-400" />
-                      ) : (
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="ml-1 h-8 w-8 text-white/80 transition-colors group-hover:text-emerald-300"
-                        >
-                          <path d="M8 5.14v14l11-7-11-7z" />
-                        </svg>
-                      )}
-                    </button>
+                      {currentLesson?.title ?? "Selecciona una leccion"}
+                    </motion.p>
+
+                    {/* Play button with pulse rings */}
+                    <div className="relative">
+                      {/* Pulse ring 1 */}
+                      <div
+                        className="absolute inset-0 rounded-full border border-emerald-400/20"
+                        style={{ animation: "pulseRing 3s ease-out infinite" }}
+                      />
+                      {/* Pulse ring 2 */}
+                      <div
+                        className="absolute inset-0 rounded-full border border-emerald-400/10"
+                        style={{ animation: "pulseRingSlow 3s ease-out infinite 1.5s" }}
+                      />
+                      <button
+                        onClick={handlePlay}
+                        disabled={loading || !currentLesson}
+                        className="group relative flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/5 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-emerald-400/30 hover:bg-emerald-500/10 hover:shadow-[0_0_30px_rgba(52,211,153,0.12)] active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
+                      >
+                        {loading ? (
+                          <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-emerald-400" />
+                        ) : (
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className="ml-1 h-8 w-8 text-white/80 transition-colors group-hover:text-emerald-300"
+                          >
+                            <path d="M8 5.14v14l11-7-11-7z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
 
                     {/* Error */}
                     <AnimatePresence>
                       {error && (
                         <motion.p
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
+                          initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ type: "spring", damping: 20, stiffness: 300 }}
                           className="mt-4 rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-1.5 text-xs text-red-300"
                         >
                           {error}
@@ -224,7 +287,7 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
                 )}
               </AnimatePresence>
             </div>
-          </div>
+          </motion.div>
 
           {/* Info bar with complete button */}
           <AnimatePresence>
@@ -232,33 +295,48 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
+                transition={{ duration: 0.4, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className="flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-slate-500"
               >
                 <span>{currentLesson?.title}</span>
                 <div className="flex items-center gap-3">
                   <span>Vistas restantes: {tokenData.remainingViews}</span>
                   {currentLesson && !completed.has(currentLesson.id) && (
-                    <button
+                    <motion.button
                       onClick={handleComplete}
                       disabled={completing}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
                       className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-medium text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-40"
                     >
                       {completing ? "Marcando..." : "Marcar como completada"}
-                    </button>
+                    </motion.button>
                   )}
                   {currentLesson && completed.has(currentLesson.id) && (
-                    <span className="flex items-center gap-1 text-emerald-400">
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      className="flex items-center gap-1 text-emerald-400"
+                    >
                       <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
                         <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
                       </svg>
                       Completada
-                    </span>
+                    </motion.span>
                   )}
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Comments section */}
+          {currentLesson && (
+            <LessonCommentSection
+              lessonId={currentLesson.id}
+              courseId={currentLesson.courseId}
+            />
+          )}
         </div>
       </div>
 
