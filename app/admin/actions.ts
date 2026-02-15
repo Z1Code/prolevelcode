@@ -527,6 +527,49 @@ export async function adminAssignScholarship(fd: FormData) {
   revalidatePath("/admin/becas");
 }
 
+export async function adminGrantScholarshipDirect(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  const app = await prisma.scholarshipApplication.findUnique({
+    where: { id },
+    select: { user_id: true, status: true },
+  });
+  if (!app || app.status !== "pending") return;
+
+  // Check if user already has active Pro
+  const existing = await prisma.tierPurchase.findFirst({
+    where: { user_id: app.user_id, tier: "pro", status: "active" },
+  });
+
+  await prisma.$transaction([
+    // Mark application as approved
+    prisma.scholarshipApplication.update({
+      where: { id },
+      data: { status: "approved", reviewed_at: new Date() },
+    }),
+    // Grant Pro tier at $0 (admin grant — not counted as revenue)
+    ...(existing
+      ? []
+      : [
+          prisma.tierPurchase.create({
+            data: {
+              user_id: app.user_id,
+              tier: "pro",
+              status: "active",
+              payment_provider: "admin_grant",
+              payment_reference: "Beca aprobada por admin",
+              amount_paid_cents: 0,
+              currency: "USD",
+            },
+          }),
+        ]),
+  ]);
+
+  revalidatePath("/admin/becas");
+}
+
 export async function adminRejectApplication(fd: FormData) {
   await requireRole(["admin", "superadmin"]);
   const id = str(fd, "id");

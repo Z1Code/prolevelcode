@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
-import { adminAssignScholarship, adminRejectApplication } from "../actions";
+import { adminAssignScholarship, adminRejectApplication, adminGrantScholarshipDirect } from "../actions";
 
 export default async function AdminBecasPage() {
   // Pending applications
@@ -87,6 +87,10 @@ export default async function AdminBecasPage() {
                         </Button>
                       </form>
                     ))}
+                    <form action={adminGrantScholarshipDirect}>
+                      <input type="hidden" name="id" value={app.id} />
+                      <Button type="submit" size="sm">Aceptar (Pro gratis)</Button>
+                    </form>
                     <form action={adminRejectApplication}>
                       <input type="hidden" name="id" value={app.id} />
                       <Button type="submit" variant="danger" size="sm">Rechazar</Button>
@@ -94,7 +98,10 @@ export default async function AdminBecasPage() {
                   </div>
                 ) : (
                   <div className="mt-3 flex gap-2">
-                    <p className="text-xs text-slate-500">No hay becas en el pool para asignar.</p>
+                    <form action={adminGrantScholarshipDirect}>
+                      <input type="hidden" name="id" value={app.id} />
+                      <Button type="submit" size="sm">Aceptar (Pro gratis)</Button>
+                    </form>
                     <form action={adminRejectApplication}>
                       <input type="hidden" name="id" value={app.id} />
                       <Button type="submit" variant="danger" size="sm">Rechazar</Button>
