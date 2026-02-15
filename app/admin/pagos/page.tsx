@@ -38,7 +38,7 @@ export default async function AdminPaymentsPage() {
         amount_paid_cents: true,
         currency: true,
         purchased_at: true,
-        user: { select: { email: true } },
+        user: { select: { email: true, full_name: true } },
       },
     }),
   ]);
@@ -174,7 +174,10 @@ export default async function AdminPaymentsPage() {
               <tbody>
                 {completed.map((p) => (
                   <tr key={p.id}>
-                    <td className="px-4 py-3">{p.user.email}</td>
+                    <td className="px-4 py-3">
+                      {p.user.email}
+                      {p.user.full_name && <p className="text-[10px] text-slate-500">{p.user.full_name}</p>}
+                    </td>
                     <td className="px-4 py-3">
                       <TypeBadge type={p.type} targetId={p.target_id} />
                     </td>
@@ -265,7 +268,10 @@ export default async function AdminPaymentsPage() {
               <tbody>
                 {tierPurchases.map((tp) => (
                   <tr key={tp.id}>
-                    <td className="px-4 py-3">{tp.user.email}</td>
+                    <td className="px-4 py-3">
+                      {tp.user.email}
+                      {tp.user.full_name && <p className="text-[10px] text-slate-500">{tp.user.full_name}</p>}
+                    </td>
                     <td className="px-4 py-3">
                       <TierBadge tier={tp.tier} />
                     </td>

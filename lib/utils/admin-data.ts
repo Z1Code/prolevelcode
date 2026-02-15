@@ -49,20 +49,24 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
     // use fallback
   }
 
+  // Emails to exclude from revenue metrics (unprocessed payments)
+  const excludedEmails = ["geordonez77@gmail.com"];
+  const purchaseWhere = { status: "active" as const, user: { email: { notIn: excludedEmails } } };
+
   const [allPurchases, monthlyPurchases, newUsers, activeCourses, activeTokens, latestSales, latestTokens] = await Promise.all([
     prisma.tierPurchase.findMany({
-      where: { status: "active" },
+      where: purchaseWhere,
       select: { amount_paid_cents: true, currency: true },
     }),
     prisma.tierPurchase.findMany({
-      where: { purchased_at: { gte: monthStart }, status: "active" },
+      where: { ...purchaseWhere, purchased_at: { gte: monthStart } },
       select: { amount_paid_cents: true, currency: true },
     }),
     prisma.user.count({ where: { created_at: { gte: thirtyDaysAgo } } }),
     prisma.course.count({ where: { is_published: true } }),
     prisma.videoToken.count({ where: { is_revoked: false, expires_at: { gt: now } } }),
     prisma.tierPurchase.findMany({
-      where: { status: "active" },
+      where: purchaseWhere,
       orderBy: { purchased_at: "desc" },
       take: 8,
       select: {

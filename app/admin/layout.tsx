@@ -12,7 +12,6 @@ const adminLinks = [
   { href: "/admin/pagos", label: "Pagos" },
   { href: "/admin/becas", label: "Becas" },
   { href: "/admin/consultas", label: "Consultas Pro" },
-  { href: "/admin/contacto", label: "Contacto" },
   { href: "/admin/configuracion", label: "Configuracion" },
   { href: "/", label: "← Inicio" },
 ];
