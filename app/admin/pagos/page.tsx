@@ -2,11 +2,18 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { currencyFormatter } from "@/lib/payments/helpers";
 import { prisma } from "@/lib/prisma";
-import { approveCryptoPayment, rejectCryptoPayment, revokeTierPurchase } from "../actions";
+import { approveCryptoPayment, rejectCryptoPayment, approvePaypalPayment, rejectPaypalPayment, revokeTierPurchase } from "../actions";
 
 export default async function AdminPaymentsPage() {
-  const [cryptoPayments, enrollments, tierPurchases] = await Promise.all([
+  const [cryptoPayments, paypalPayments, enrollments, tierPurchases] = await Promise.all([
     prisma.cryptoPayment.findMany({
+      orderBy: [{ status: "asc" }, { created_at: "desc" }],
+      take: 100,
+      include: {
+        user: { select: { email: true, full_name: true } },
+      },
+    }),
+    prisma.paypalPayment.findMany({
       orderBy: [{ status: "asc" }, { created_at: "desc" }],
       take: 100,
       include: {
@@ -43,6 +50,10 @@ export default async function AdminPaymentsPage() {
     }),
   ]);
 
+  const paypalPending = paypalPayments.filter((p) => p.status === "pending");
+  const paypalApproved = paypalPayments.filter((p) => p.status === "approved");
+  const paypalRejected = paypalPayments.filter((p) => p.status === "rejected");
+
   const pending = cryptoPayments.filter((p) => p.status === "pending");
   const completed = cryptoPayments.filter((p) => p.status === "completed");
   const expired = cryptoPayments.filter((p) => p.status === "expired");
@@ -57,7 +68,11 @@ export default async function AdminPaymentsPage() {
       <h2 className="text-2xl font-semibold">Pagos</h2>
 
       {/* ── Summary cards ── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Card className="p-4">
+          <p className="text-xs text-slate-400">PayPal pendientes</p>
+          <p className="mt-1 text-2xl font-semibold text-amber-300">{paypalPending.length}</p>
+        </Card>
         <Card className="p-4">
           <p className="text-xs text-slate-400">Crypto pendientes</p>
           <p className="mt-1 text-2xl font-semibold text-amber-300">{pending.length}</p>
@@ -82,6 +97,157 @@ export default async function AdminPaymentsPage() {
           )}
         </Card>
       </div>
+
+      {/* ── Pending PayPal (action required) ── */}
+      <Card className="p-4">
+        <div className="flex items-center gap-3">
+          <h3 className="font-semibold">Pagos PayPal pendientes</h3>
+          {paypalPending.length > 0 && (
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-300">
+              {paypalPending.length}
+            </span>
+          )}
+        </div>
+
+        {paypalPending.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">No hay pagos PayPal pendientes.</p>
+        ) : (
+          <div className="mt-3 space-y-3">
+            {paypalPending.map((p) => (
+              <div key={p.id} className="rounded-xl border border-amber-500/15 bg-amber-500/5 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-sm font-bold text-emerald-300">
+                        ${(p.amount_usd_cents / 100).toFixed(0)} USD
+                      </span>
+                      <TierBadge tier={p.tier} />
+                      <ProviderBadge provider="paypal" />
+                    </div>
+                    <p className="text-xs text-slate-300">{p.user.email}</p>
+                    {p.user.full_name && (
+                      <p className="text-[10px] text-slate-500">{p.user.full_name}</p>
+                    )}
+                    <p className="text-[10px] text-slate-500">
+                      Creado:{" "}
+                      {p.created_at.toLocaleString("es-CL", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                        timeZone: "America/Santiago",
+                      })}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <form action={approvePaypalPayment}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <Button type="submit" size="sm">
+                        Aprobar
+                      </Button>
+                    </form>
+                    <form action={rejectPaypalPayment}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <Button type="submit" variant="danger" size="sm">
+                        Rechazar
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Screenshot preview */}
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-xs text-slate-400 hover:text-white transition">
+                    Ver comprobante
+                  </summary>
+                  <div className="mt-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.screenshot_b64}
+                      alt="Comprobante PayPal"
+                      className="max-w-sm rounded-lg border border-slate-700"
+                    />
+                  </div>
+                </details>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* ── Approved PayPal ── */}
+      {paypalApproved.length > 0 && (
+        <Card className="overflow-hidden p-0">
+          <div className="px-4 pt-4 pb-2">
+            <h3 className="font-semibold">Pagos PayPal aprobados ({paypalApproved.length})</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="liquid-table w-full text-left text-xs">
+              <thead className="text-slate-400">
+                <tr>
+                  <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Plan</th>
+                  <th className="px-4 py-3">Monto</th>
+                  <th className="px-4 py-3">Aprobado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paypalApproved.map((p) => (
+                  <tr key={p.id}>
+                    <td className="px-4 py-3">
+                      {p.user.email}
+                      {p.user.full_name && <p className="text-[10px] text-slate-500">{p.user.full_name}</p>}
+                    </td>
+                    <td className="px-4 py-3"><TierBadge tier={p.tier} /></td>
+                    <td className="px-4 py-3 font-mono text-emerald-300">${(p.amount_usd_cents / 100).toFixed(0)} USD</td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {p.approved_at?.toLocaleString("es-CL", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                        timeZone: "America/Santiago",
+                      }) ?? "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* ── Rejected PayPal ── */}
+      {paypalRejected.length > 0 && (
+        <Card className="overflow-hidden p-0">
+          <details>
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-400 transition hover:text-white">
+              Pagos PayPal rechazados ({paypalRejected.length})
+            </summary>
+            <div className="overflow-x-auto">
+              <table className="liquid-table w-full text-left text-xs">
+                <thead className="text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Plan</th>
+                    <th className="px-4 py-3">Monto</th>
+                    <th className="px-4 py-3">Creado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paypalRejected.map((p) => (
+                    <tr key={p.id} className="text-slate-500">
+                      <td className="px-4 py-3">{p.user.email}</td>
+                      <td className="px-4 py-3"><TierBadge tier={p.tier} /></td>
+                      <td className="px-4 py-3 font-mono">${(p.amount_usd_cents / 100).toFixed(0)} USD</td>
+                      <td className="px-4 py-3">
+                        {p.created_at.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </Card>
+      )}
 
       {/* ── Pending crypto (action required) ── */}
       <Card className="p-4">
@@ -406,6 +572,7 @@ function ProviderBadge({ provider }: { provider: string }) {
     mercadopago: { label: "MercadoPago", colors: "bg-sky-500/15 text-sky-300" },
     crypto: { label: "Crypto", colors: "bg-amber-500/15 text-amber-300" },
     binance: { label: "Binance", colors: "bg-yellow-500/15 text-yellow-300" },
+    paypal: { label: "PayPal", colors: "bg-blue-500/15 text-blue-300" },
     admin_grant: { label: "Admin", colors: "bg-violet-500/15 text-violet-300" },
   };
   const match = labels[provider] ?? { label: provider, colors: "bg-slate-500/15 text-slate-400" };

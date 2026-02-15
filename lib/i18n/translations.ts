@@ -30,6 +30,16 @@ export const translations = {
       line1Accent: "web/móvil",
       line2: "a nivel profesional.",
     },
+    footer: {
+      tagline: "Desarrollo web e IA para productos que realmente escalan.",
+      navigation: "Navegacion",
+      contact: "Contacto",
+      aboutMe: "Sobre mi",
+      legalSocial: "Legal & Social",
+      privacy: "Privacidad",
+      terms: "Terminos",
+      copyright: "Copyright 2026 ProLevelCode | Velocity Software",
+    },
   },
   en: {
     nav: {
@@ -61,6 +71,16 @@ export const translations = {
       line1Prefix: "Build",
       line1Accent: "web/mobile",
       line2: "at a professional level.",
+    },
+    footer: {
+      tagline: "Web development & AI for products that truly scale.",
+      navigation: "Navigation",
+      contact: "Contact",
+      aboutMe: "About me",
+      legalSocial: "Legal & Social",
+      privacy: "Privacy",
+      terms: "Terms",
+      copyright: "Copyright 2026 ProLevelCode | Velocity Software",
     },
   },
 } as const;

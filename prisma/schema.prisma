@@ -71,6 +71,7 @@ model User {
   scholarshipsGranted    Scholarship[] @relation("ScholarshipsGranted")
   scholarshipsReceived   Scholarship[] @relation("ScholarshipsReceived")
   cryptoPayments         CryptoPayment[]
+  paypalPayments         PaypalPayment[]
   proQueries             ProQuery[]
   scholarshipApplications ScholarshipApplication[]
 
@@ -515,6 +516,24 @@ model CryptoPayment {
   @@index([user_id])
   @@index([status, expires_at])
   @@map("crypto_payments")
+}
+
+model PaypalPayment {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String    @db.Uuid
+  tier            String    // "basic" | "pro"
+  amount_usd_cents Int      // amount in USD cents (2900 = $29)
+  status          String    @default("pending") // pending | approved | rejected
+  screenshot_b64  String    @db.Text // base64 data URL of payment screenshot
+  approved_at     DateTime? @db.Timestamptz(6)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([status, created_at])
+  @@map("paypal_payments")
 }
 
 model ProQuery {

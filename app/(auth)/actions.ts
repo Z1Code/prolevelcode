@@ -44,8 +44,13 @@ export async function loginAction(formData: FormData) {
   });
 
   await bootstrapAdminRoleByEmail(user);
+
+  // Re-fetch to get updated role after bootstrap
+  const freshUser = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true } });
+  const destination = freshUser?.role === "superadmin" || freshUser?.role === "admin" ? "/admin" : next;
+
   await createSession(user.id, user.email);
-  redirect(next);
+  redirect(destination);
 }
 
 export async function registerAction(formData: FormData) {

@@ -14,6 +14,7 @@ interface TierCardProps {
   highlighted?: boolean;
   onCheckoutMp?: string; // form action URL for MercadoPago
   onCheckoutCrypto?: string; // API route for crypto checkout
+  onCheckoutPaypal?: string; // URL base for PayPal payment page
   tier: "basic" | "pro";
   isLoggedIn: boolean;
 }
@@ -27,6 +28,7 @@ export function TierCard({
   highlighted,
   onCheckoutMp,
   onCheckoutCrypto,
+  onCheckoutPaypal,
   tier,
   isLoggedIn,
 }: TierCardProps) {
@@ -101,6 +103,13 @@ export function TierCard({
             >
               {loading ? "Creando orden..." : "Pagar con Crypto (USDT)"}
             </Button>
+          )}
+          {onCheckoutPaypal && (
+            <a href={`${onCheckoutPaypal}?tier=${tier}`} className="w-full">
+              <Button variant="ghost" className="w-full">
+                Pagar con PayPal
+              </Button>
+            </a>
           )}
         </div>
       )}

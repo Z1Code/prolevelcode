@@ -117,8 +117,20 @@ export default function CryptoPayPage() {
     }
   }
 
-  const copy = useCallback((text: string, label: string) => {
-    navigator.clipboard.writeText(text);
+  const copy = useCallback(async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback for insecure contexts or permission denied
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
     setCopied(label);
     setTimeout(() => setCopied(null), 2000);
   }, []);

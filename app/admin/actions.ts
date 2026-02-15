@@ -306,6 +306,97 @@ export async function rejectCryptoPayment(fd: FormData) {
   revalidatePath("/admin/pagos");
 }
 
+/* ─────────────── PAYPAL PAYMENTS ─────────────── */
+
+export async function approvePaypalPayment(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  const now = new Date();
+
+  // Atomically claim the payment (prevents double approval)
+  let payment;
+  try {
+    payment = await prisma.paypalPayment.update({
+      where: { id, status: "pending" },
+      data: { status: "approved", approved_at: now },
+      include: { user: { select: { email: true, full_name: true } } },
+    });
+  } catch {
+    // Record not found or not pending — already approved/rejected
+    revalidatePath("/admin/pagos");
+    return;
+  }
+
+  // Check user doesn't already have an active tier
+  const existingActive = await prisma.tierPurchase.findFirst({
+    where: { user_id: payment.user_id, status: "active" },
+  });
+  if (existingActive) {
+    revalidatePath("/admin/pagos");
+    return;
+  }
+
+  // Create TierPurchase
+  const tierPurchase = await prisma.tierPurchase.create({
+    data: {
+      user_id: payment.user_id,
+      tier: payment.tier,
+      status: "active",
+      payment_provider: "paypal",
+      payment_reference: payment.id,
+      amount_paid_cents: payment.amount_usd_cents,
+      currency: "USD",
+    },
+  });
+
+  // Auto-create scholarship slot for Pro purchases
+  if (payment.tier === "pro") {
+    try {
+      const { createScholarshipForProPurchase } = await import("@/lib/scholarships/helpers");
+      await createScholarshipForProPurchase(payment.user_id, tierPurchase.id);
+    } catch {
+      // Don't block approval if scholarship creation fails
+    }
+  }
+
+  // Send confirmation email to user
+  try {
+    const { getResendClient } = await import("@/lib/email/resend");
+    const resend = getResendClient();
+    const tierLabel = payment.tier === "pro" ? "Pro" : "Basic";
+    await resend.emails.send({
+      from: "ProLevelCode <no-reply@prolevelcode.dev>",
+      to: payment.user.email,
+      subject: `Tu plan ${tierLabel} fue activado`,
+      html: `
+        <h2>Tu plan ${tierLabel} esta activo</h2>
+        <p>Hola${payment.user.full_name ? ` ${payment.user.full_name}` : ""},</p>
+        <p>Tu pago PayPal fue verificado y tu plan <strong>${tierLabel}</strong> ya esta disponible.</p>
+        <p><a href="${process.env.NEXT_PUBLIC_APP_URL || "https://prolevelcode.dev"}/cursos">Ir a mis cursos</a></p>
+      `,
+    });
+  } catch {
+    // silent
+  }
+
+  revalidatePath("/admin/pagos");
+}
+
+export async function rejectPaypalPayment(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  await prisma.paypalPayment.update({
+    where: { id },
+    data: { status: "rejected" },
+  });
+
+  revalidatePath("/admin/pagos");
+}
+
 export async function revokeTierPurchase(fd: FormData) {
   await requireRole(["admin", "superadmin"]);
   const id = str(fd, "id");

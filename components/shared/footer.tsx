@@ -1,6 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n/language-provider";
 
 export function Footer() {
+  const { t } = useTranslation();
+
   return (
     <footer className="footer-section px-4 pb-6 pt-14">
       <div className="container-wide footer-shell px-6 py-10 md:px-8">
@@ -10,22 +15,22 @@ export function Footer() {
         <div className="relative z-[1] grid gap-10 md:grid-cols-3">
           <div>
             <h3 className="mb-3 font-semibold text-slate-100">ProLevelCode</h3>
-            <p className="text-sm text-slate-300">Desarrollo web e IA para productos que realmente escalan.</p>
+            <p className="text-sm text-slate-300">{t.footer.tagline}</p>
           </div>
 
           <div>
-            <h4 className="mb-3 text-sm font-semibold text-slate-200">Navegacion</h4>
+            <h4 className="mb-3 text-sm font-semibold text-slate-200">{t.footer.navigation}</h4>
             <ul className="space-y-2 text-sm text-slate-300">
-              <li><Link href="/contacto" className="liquid-link">Contacto</Link></li>
-              <li><Link href="/sobre-mi" className="liquid-link">Sobre mi</Link></li>
+              <li><Link href="/contacto" className="liquid-link">{t.footer.contact}</Link></li>
+              <li><Link href="/sobre-mi" className="liquid-link">{t.footer.aboutMe}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="mb-3 text-sm font-semibold text-slate-200">Legal & Social</h4>
+            <h4 className="mb-3 text-sm font-semibold text-slate-200">{t.footer.legalSocial}</h4>
             <ul className="space-y-2 text-sm text-slate-300">
-              <li><Link href="/privacidad" className="liquid-link">Privacidad</Link></li>
-              <li><Link href="/terminos" className="liquid-link">Terminos</Link></li>
+              <li><Link href="/privacidad" className="liquid-link">{t.footer.privacy}</Link></li>
+              <li><Link href="/terminos" className="liquid-link">{t.footer.terms}</Link></li>
               <li>
                 <a href="https://x.com/7uanf" target="_blank" rel="noreferrer" className="liquid-link">
                   X / @7uanf
@@ -41,7 +46,7 @@ export function Footer() {
         </div>
 
         <div className="relative z-[1] mt-10 border-t border-white/10 pt-6">
-          <p className="text-xs text-slate-400">Copyright 2026 ProLevelCode | Velocity Software</p>
+          <p className="text-xs text-slate-400">{t.footer.copyright}</p>
         </div>
       </div>
     </footer>

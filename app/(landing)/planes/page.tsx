@@ -65,6 +65,7 @@ export default async function PlanesPage({ searchParams }: PlanesPageProps) {
           isLoggedIn={!!user}
           onCheckoutMp="/api/checkout/tier"
           onCheckoutCrypto="/api/checkout/crypto/tier"
+          onCheckoutPaypal="/paypal/pay"
         />
         <TierCard
           name={TIERS.pro.name}
@@ -77,6 +78,7 @@ export default async function PlanesPage({ searchParams }: PlanesPageProps) {
           isLoggedIn={!!user}
           onCheckoutMp="/api/checkout/tier"
           onCheckoutCrypto="/api/checkout/crypto/tier"
+          onCheckoutPaypal="/paypal/pay"
         />
       </div>
 
