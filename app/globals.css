@@ -2696,3 +2696,10 @@ details[open] summary {
 .stagger-enter > *:nth-child(9) { animation-delay: 0.45s; }
 .stagger-enter > *:nth-child(10) { animation-delay: 0.50s; }
 .stagger-enter > *:nth-child(n+11) { animation-delay: 0.55s; }
+
+/* ── Privacy toggle ── */
+.privacy-on .pv {
+  filter: blur(5px);
+  user-select: none;
+  pointer-events: none;
+}
