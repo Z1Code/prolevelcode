@@ -67,7 +67,7 @@ export default async function AdminBecasPage() {
                         <span className="pv">{app.user.email}</span>
                         {app.user.full_name && <span className="pv text-slate-500"> ({app.user.full_name})</span>}
                       </p>
-                      <p className="pv mt-2 rounded-lg bg-white/5 p-3 text-sm italic text-slate-200">
+                      <p className="mt-2 rounded-lg bg-white/5 p-3 text-sm italic text-slate-200">
                         &quot;{app.reason}&quot;
                       </p>
                       <p className="mt-1 text-[10px] text-slate-500">
