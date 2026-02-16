@@ -2,9 +2,14 @@ import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminTokensPage() {
+  // Test accounts excluded from all metrics
+  const excludedEmails = ["velocit7@gmail.com"];
+  const excludeUser = { user: { email: { notIn: excludedEmails } } };
+
   const [tokens, lessonStats, userStats, recentActivity] = await Promise.all([
     // All tokens for the table
     prisma.videoToken.findMany({
+      where: excludeUser,
       orderBy: { created_at: "desc" },
       take: 100,
       select: {
@@ -22,18 +27,20 @@ export default async function AdminTokensPage() {
       },
     }),
 
-    // Most watched lessons (aggregate views per lesson)
+    // Most watched lessons (aggregate views per lesson, excluding test accounts)
     prisma.videoToken.groupBy({
       by: ["lesson_id"],
+      where: excludeUser,
       _sum: { current_views: true },
       _count: { id: true },
       orderBy: { _sum: { current_views: "desc" } },
       take: 10,
     }),
 
-    // Top viewers (aggregate views per user)
+    // Top viewers (aggregate views per user, excluding test accounts)
     prisma.videoToken.groupBy({
       by: ["user_id"],
+      where: excludeUser,
       _sum: { current_views: true },
       _count: { id: true },
       orderBy: { _sum: { current_views: "desc" } },
@@ -45,6 +52,7 @@ export default async function AdminTokensPage() {
       where: {
         last_used_at: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
         is_revoked: false,
+        ...excludeUser,
       },
       orderBy: { last_used_at: "desc" },
       take: 10,

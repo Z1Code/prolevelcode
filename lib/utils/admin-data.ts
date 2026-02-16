@@ -50,7 +50,7 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
   }
 
   // Emails to exclude from revenue metrics (unprocessed payments)
-  const excludedEmails = ["geordonez77@gmail.com"];
+  const excludedEmails = ["geordonez77@gmail.com", "velocit7@gmail.com"];
   const purchaseWhere = { status: "active" as const, user: { email: { notIn: excludedEmails } } };
 
   const [allPurchases, monthlyPurchases, newUsers, activeCourses, activeTokens, latestSales, latestTokens] = await Promise.all([
@@ -79,7 +79,7 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
       },
     }),
     prisma.videoToken.findMany({
-      where: { is_revoked: false, expires_at: { gt: now } },
+      where: { is_revoked: false, expires_at: { gt: now }, user: { email: { notIn: excludedEmails } } },
       orderBy: { created_at: "desc" },
       take: 8,
       select: {
