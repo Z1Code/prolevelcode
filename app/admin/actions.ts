@@ -748,16 +748,20 @@ export async function publishAsTestimonial(fd: FormData) {
     return;
   }
 
-  await prisma.testimonial.create({
-    data: {
-      author_name: review.user.full_name || "Estudiante",
-      content: review.comment,
-      rating: review.rating,
-      service_or_course: review.course.title,
-      is_published: true,
-      is_featured: false,
-    },
-  });
+  try {
+    await prisma.testimonial.create({
+      data: {
+        author_name: review.user.full_name || "Estudiante",
+        content: review.comment,
+        rating: review.rating,
+        service_or_course: review.course.title,
+        is_published: true,
+        is_featured: false,
+      },
+    });
+  } catch (err) {
+    console.error("[publishAsTestimonial] failed:", err);
+  }
 
   revalidatePath("/admin/resenas");
 }

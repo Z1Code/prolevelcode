@@ -21,7 +21,7 @@ export default async function AdminTokensPage() {
       ? { user_id: { notIn: excludedUserIds } }
       : {};
 
-  const [tokens, lessonStats, userStats, recentActivity] = await Promise.all([
+  const [tokens, lessonStats, userStats, recentActivity, commentStats, recentComments, totalComments] = await Promise.all([
     // All tokens for the table
     prisma.videoToken.findMany({
       where: excludeUser,
@@ -80,6 +80,33 @@ export default async function AdminTokensPage() {
         course: { select: { title: true } },
       },
     }),
+
+    // Top commenters (groupBy user_id, excluding test accounts)
+    prisma.lessonComment.groupBy({
+      by: ["user_id"],
+      where: excludeUserId,
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+      take: 8,
+    }),
+
+    // Recent comments
+    prisma.lessonComment.findMany({
+      where: excludeUser,
+      orderBy: { created_at: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        content: true,
+        created_at: true,
+        user: { select: { email: true, full_name: true } },
+        lesson: { select: { title: true } },
+        course: { select: { title: true } },
+      },
+    }),
+
+    // Total comment count
+    prisma.lessonComment.count({ where: excludeUserId }),
   ]);
 
   // Hydrate lesson stats with lesson titles
@@ -97,6 +124,15 @@ export default async function AdminTokensPage() {
     select: { id: true, email: true, full_name: true },
   });
   const userMap = new Map(users.map((u) => [u.id, u]));
+
+  // Hydrate commenter stats with user info
+  const commenterIds = commentStats.map((s) => s.user_id);
+  const commenters = await prisma.user.findMany({
+    where: { id: { in: commenterIds } },
+    select: { id: true, email: true, full_name: true },
+  });
+  const commenterMap = new Map(commenters.map((u) => [u.id, u]));
+  const maxCommenterCount = commentStats[0]?._count.id ?? 1;
 
   // Computed metrics
   const totalTokens = tokens.length;
@@ -275,6 +311,119 @@ export default async function AdminTokensPage() {
           </div>
         </Card>
       )}
+
+      {/* ── Comments section ── */}
+      <h2 className="text-2xl font-semibold">Comentarios</h2>
+
+      <div className="stagger-enter grid gap-4 sm:grid-cols-3">
+        <Card className="hover-lift p-4">
+          <p className="text-xs text-slate-400">Total comentarios</p>
+          <p className="mt-1 text-2xl font-semibold text-sky-300">{totalComments}</p>
+        </Card>
+        <Card className="hover-lift p-4">
+          <p className="text-xs text-slate-400">Comentaristas unicos</p>
+          <p className="mt-1 text-2xl font-semibold text-sky-300">{commentStats.length}</p>
+        </Card>
+        <Card className="hover-lift p-4">
+          <p className="text-xs text-slate-400">Promedio por usuario</p>
+          <p className="mt-1 text-2xl font-semibold text-sky-300">
+            {commentStats.length > 0 ? (totalComments / commentStats.length).toFixed(1) : "0"}
+          </p>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* ── Top commenters ── */}
+        <Card className="p-5">
+          <h3 className="flex items-center gap-2 font-semibold">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-sky-400">
+              <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zm-4 0H9v2h2V9z" clipRule="evenodd" />
+            </svg>
+            Usuarios que mas comentan
+          </h3>
+          {commentStats.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500">Sin comentarios aun.</p>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {commentStats.map((stat, i) => {
+                const user = commenterMap.get(stat.user_id);
+                const count = stat._count.id;
+                const pct = Math.max(4, (count / maxCommenterCount) * 100);
+                return (
+                  <div key={stat.user_id} className="group">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                          i === 0 ? "bg-sky-500/20 text-sky-300" :
+                          i === 1 ? "bg-slate-300/15 text-slate-300" :
+                          i === 2 ? "bg-orange-500/15 text-orange-400" :
+                          "bg-white/5 text-slate-500"
+                        }`}>
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-slate-200 transition-colors group-hover:text-white">
+                            {user?.full_name || user?.email?.split("@")[0] || "—"}
+                          </p>
+                          <p className="truncate text-[10px] text-slate-500">{user?.email ?? "—"}</p>
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-xs font-semibold text-sky-300">
+                        {count} comentario{count !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                      <div
+                        className="bar-grow h-full rounded-full"
+                        style={{
+                          width: `${pct}%`,
+                          background: `linear-gradient(90deg, rgba(14,165,233,0.6), rgba(56,189,248,0.9))`,
+                          animationDelay: `${i * 0.1}s`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+
+        {/* ── Recent comments ── */}
+        <Card className="p-5">
+          <h3 className="flex items-center gap-2 font-semibold">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-sky-400">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+            </svg>
+            Comentarios recientes
+          </h3>
+          {recentComments.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500">Sin comentarios aun.</p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {recentComments.map((c) => (
+                <div key={c.id} className="flex items-start gap-3 rounded-lg bg-white/[0.03] px-3 py-2.5 transition-colors hover:bg-white/[0.06]">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-500/10 text-[10px] font-bold text-sky-300">
+                    {(c.user.full_name?.[0] || c.user.email[0]).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-slate-200">
+                        {c.user.full_name || c.user.email.split("@")[0]}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-slate-600">{timeAgo(c.created_at)}</span>
+                    </div>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-slate-400">{c.content}</p>
+                    <p className="mt-0.5 text-[10px] text-slate-600">
+                      {c.lesson.title} · {c.course.title}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
 
       {/* ── Full token table ── */}
       <Card className="overflow-hidden p-0">
