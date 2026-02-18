@@ -2,9 +2,24 @@ import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminTokensPage() {
-  // Test accounts excluded from all metrics
+  // Test accounts excluded from all metrics.
+  // Prisma groupBy does NOT support relation filters in `where` -- only scalar
+  // fields of the model itself are allowed. We resolve the excluded user IDs
+  // first, then filter by the scalar user_id field in both groupBy calls.
   const excludedEmails = ["velocit7@gmail.com"];
+  const excludedUsers = await prisma.user.findMany({
+    where: { email: { in: excludedEmails } },
+    select: { id: true },
+  });
+  const excludedUserIds = excludedUsers.map((u) => u.id);
+
+  // Relation filter -- valid for findMany
   const excludeUser = { user: { email: { notIn: excludedEmails } } };
+  // Scalar filter -- the only form groupBy accepts
+  const excludeUserId =
+    excludedUserIds.length > 0
+      ? { user_id: { notIn: excludedUserIds } }
+      : {};
 
   const [tokens, lessonStats, userStats, recentActivity] = await Promise.all([
     // All tokens for the table
@@ -30,7 +45,7 @@ export default async function AdminTokensPage() {
     // Most watched lessons (aggregate views per lesson, excluding test accounts)
     prisma.videoToken.groupBy({
       by: ["lesson_id"],
-      where: excludeUser,
+      where: excludeUserId,
       _sum: { current_views: true },
       _count: { id: true },
       orderBy: { _sum: { current_views: "desc" } },
@@ -40,7 +55,7 @@ export default async function AdminTokensPage() {
     // Top viewers (aggregate views per user, excluding test accounts)
     prisma.videoToken.groupBy({
       by: ["user_id"],
-      where: excludeUser,
+      where: excludeUserId,
       _sum: { current_views: true },
       _count: { id: true },
       orderBy: { _sum: { current_views: "desc" } },
@@ -90,7 +105,6 @@ export default async function AdminTokensPage() {
   const uniqueViewers = new Set(tokens.map((t) => t.user.email)).size;
   const maxLessonViews = lessonStats[0]?._sum.current_views ?? 1;
   const maxUserViews = userStats[0]?._sum.current_views ?? 1;
-
   return (
     <div className="page-enter space-y-6">
       <h2 className="text-2xl font-semibold">Monitor de tokens</h2>
