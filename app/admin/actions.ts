@@ -58,7 +58,7 @@ export async function openCurriculumModule(fd: FormData) {
         price_cents: 0,
         currency: "USD",
         is_published: false,
-        is_coming_soon: true,
+        is_coming_soon: false,
       },
       select: { id: true },
     });
@@ -66,6 +66,28 @@ export async function openCurriculumModule(fd: FormData) {
   }
 
   redirect(`/admin/cursos/${course.id}/lecciones`);
+}
+
+export async function toggleCoursePublished(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  const course = await prisma.course.findUnique({
+    where: { id },
+    select: { is_published: true },
+  });
+  if (!course) return;
+
+  await prisma.course.update({
+    where: { id },
+    data: { is_published: !course.is_published, is_coming_soon: false },
+  });
+
+  revalidatePath(`/admin/cursos/${id}`);
+  revalidatePath(`/admin/cursos/${id}/lecciones`);
+  revalidatePath("/admin/cursos");
+  revalidatePath("/dashboard/cursos");
 }
 
 /* ─────────────── COURSES ─────────────── */

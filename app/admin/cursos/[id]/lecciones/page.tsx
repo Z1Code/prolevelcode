@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { createLesson, updateLesson, deleteLesson } from "../../../actions";
+import { createLesson, updateLesson, deleteLesson, toggleCoursePublished } from "../../../actions";
 import { LessonFormWithUpload } from "@/components/admin/lesson-form-with-upload";
 import { BulkVideoUploader } from "@/components/admin/bulk-video-uploader";
 
@@ -17,7 +17,7 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
 
   const course = await prisma.course.findUnique({
     where: { id },
-    select: { id: true, title: true },
+    select: { id: true, title: true, is_published: true, tier_access: true },
   });
 
   if (!course) notFound();
@@ -31,8 +31,24 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <Link href={`/admin/cursos/${id}`} className="text-xs text-slate-400 hover:text-slate-200">← Volver al curso</Link>
+          <Link href="/admin/cursos" className="text-xs text-slate-400 hover:text-slate-200">← Volver a cursos</Link>
           <h2 className="text-2xl font-semibold">Lecciones: {course.title}</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Tier: <span className={course.tier_access === "pro" ? "text-amber-300" : "text-slate-300"}>{course.tier_access.toUpperCase()}</span>
+            {" · "}
+            {course.is_published ? <span className="text-emerald-300">Publicado</span> : <span className="text-amber-300">Borrador</span>}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <form action={toggleCoursePublished}>
+            <input type="hidden" name="id" value={id} />
+            <Button type="submit" variant={course.is_published ? "ghost" : "primary"} size="sm">
+              {course.is_published ? "Despublicar" : "Publicar"}
+            </Button>
+          </form>
+          <Link href={`/admin/cursos/${id}/editar`} className="liquid-surface-soft px-3 py-2 text-xs">
+            Editar
+          </Link>
         </div>
       </div>
 
