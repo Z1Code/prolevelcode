@@ -2703,3 +2703,83 @@ details[open] summary {
   user-select: none;
   pointer-events: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Testimonial & Process Glass Cards — navbar-inspired
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* --- Shared card glass base --- */
+.testimonial-glass,
+.process-glass {
+  background: linear-gradient(
+    135deg,
+    rgba(18, 22, 35, 0.55) 0%,
+    rgba(12, 16, 28, 0.50) 50%,
+    rgba(18, 22, 35, 0.55) 100%
+  );
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(16px) saturate(150%) contrast(0.96);
+  -webkit-backdrop-filter: blur(16px) saturate(150%) contrast(0.96);
+  transition: box-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+.testimonial-glass:hover,
+.process-glass:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20);
+}
+
+/* --- Shimmer sweep --- */
+.testimonial-shimmer,
+.process-shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.05) 45%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.05) 55%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: glassShimmer 8s ease-in-out infinite;
+  opacity: 0.7;
+}
+
+/* --- Chromatic refraction edge --- */
+.testimonial-refraction,
+.process-refraction {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(0, 255, 136, 0.18),
+      rgba(51, 102, 255, 0.14) 33%,
+      rgba(136, 85, 255, 0.14) 66%,
+      rgba(0, 255, 136, 0.18)
+    ) border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.25;
+  transition: opacity 0.4s ease;
+}
+
+.group:hover .testimonial-refraction,
+.group:hover .process-refraction {
+  opacity: 0.40;
+}
+
+/* --- Gradient text shimmer keyframe --- */
+@keyframes shimmerGradient {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
