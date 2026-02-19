@@ -29,6 +29,45 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+/* ─────────────── CURRICULUM CARD → LESSONS ─────────────── */
+
+export async function openCurriculumModule(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const moduleKey = str(fd, "module_key");
+  const defaultSlug = str(fd, "default_slug");
+  const title = str(fd, "title");
+  const tier = str(fd, "tier") || "basic";
+
+  if (!moduleKey || !defaultSlug || !title) {
+    redirect("/admin/cursos");
+  }
+
+  // Check if course already exists by slug
+  let course = await prisma.course.findUnique({
+    where: { slug: defaultSlug },
+    select: { id: true },
+  });
+
+  // Auto-create if it doesn't exist
+  if (!course) {
+    course = await prisma.course.create({
+      data: {
+        title,
+        slug: defaultSlug,
+        tier_access: tier,
+        price_cents: 0,
+        currency: "USD",
+        is_published: false,
+        is_coming_soon: true,
+      },
+      select: { id: true },
+    });
+    revalidatePath("/admin/cursos");
+  }
+
+  redirect(`/admin/cursos/${course.id}/lecciones`);
+}
+
 /* ─────────────── COURSES ─────────────── */
 
 export async function createCourse(fd: FormData) {
