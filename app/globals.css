@@ -2396,12 +2396,12 @@ a {
     transparent 60%
   );
   transform: translateX(-120%);
-  animation: payBtnSweep 5s ease-in-out infinite;
+  animation: payBtnSweep 2.4s ease-in-out 1s forwards;
 }
 
 @keyframes payBtnSweep {
-  0%, 100% { transform: translateX(-120%); }
-  50%      { transform: translateX(120%); }
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
 }
 
 /* ── MercadoPago: site-accent teal/emerald ── */

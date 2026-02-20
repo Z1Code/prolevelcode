@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = "luisjmolina29@gmail.com";
+  const email = "aaronmanez@gmail.com";
 
   // Upsert user
   const user = await prisma.user.upsert({
@@ -35,8 +35,8 @@ async function main() {
       tier: "basic",
       status: "active",
       payment_provider: "admin_grant",
-      payment_reference: "Beca básica pagada — admin grant",
-      amount_paid_cents: 2900, // $29 USD — counts as paid
+      payment_reference: "Beca básica sin cobro — admin grant",
+      amount_paid_cents: 0, // sin cobro
       currency: "USD",
     },
   });

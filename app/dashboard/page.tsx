@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { getUserTier } from "@/lib/access/check-access";
 import { DashboardShell, StaggerGrid, StaggerCard } from "@/components/dashboard/dashboard-shell";
+import { TestimonialPrompt } from "@/components/dashboard/testimonial-prompt";
 
 export default async function DashboardHomePage() {
   const user = await getSessionUser();
@@ -22,6 +23,16 @@ export default async function DashboardHomePage() {
         where: { user_id: user.id, is_completed: true },
       })
     : 0;
+
+  // Check if user should see testimonial prompt
+  let shouldPromptTestimonial = false;
+  if (user && currentTier) {
+    const [existingTestimonial, userData] = await Promise.all([
+      prisma.testimonial.findFirst({ where: { user_id: user.id }, select: { id: true } }),
+      prisma.user.findUnique({ where: { id: user.id }, select: { testimonial_dismissed_at: true } }),
+    ]);
+    shouldPromptTestimonial = !existingTestimonial && !userData?.testimonial_dismissed_at;
+  }
 
   const stats = [
     {
@@ -61,6 +72,7 @@ export default async function DashboardHomePage() {
 
   return (
     <DashboardShell>
+      <TestimonialPrompt open={shouldPromptTestimonial} />
       <div className="mb-1">
         <h2 className="text-xl font-semibold tracking-tight">Resumen</h2>
         <p className="mt-1 text-sm text-slate-500">Bienvenido de vuelta{user?.email ? `, ${user.email.split("@")[0]}` : ""}.</p>

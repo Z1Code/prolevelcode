@@ -113,7 +113,7 @@ export default async function AdminTokensPage() {
   const lessonIds = lessonStats.map((s) => s.lesson_id);
   const lessons = await prisma.lesson.findMany({
     where: { id: { in: lessonIds } },
-    select: { id: true, title: true, course: { select: { title: true } } },
+    select: { id: true, title: true, course: { select: { title: true, tier_access: true } } },
   });
   const lessonMap = new Map(lessons.map((l) => [l.id, l]));
 
@@ -182,6 +182,7 @@ export default async function AdminTokensPage() {
                 const lesson = lessonMap.get(stat.lesson_id);
                 const views = stat._sum.current_views ?? 0;
                 const pct = Math.max(4, (views / maxLessonViews) * 100);
+                const isPro = lesson?.course.tier_access === "pro";
                 return (
                   <div key={stat.lesson_id} className="group">
                     <div className="mb-1 flex items-center justify-between gap-2">
@@ -191,10 +192,11 @@ export default async function AdminTokensPage() {
                         </p>
                         <p className="truncate text-[10px] text-slate-500">
                           {lesson?.course.title ?? "—"}
+                          {isPro && <span className="ml-1 text-amber-400/70">PRO</span>}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        <span className="text-xs font-semibold text-violet-300">{views}</span>
+                        <span className={`text-xs font-semibold ${isPro ? "text-amber-300" : "text-violet-300"}`}>{views}</span>
                         <span className="text-[10px] text-slate-600">
                           {stat._count.id} token{stat._count.id !== 1 ? "s" : ""}
                         </span>
@@ -205,7 +207,9 @@ export default async function AdminTokensPage() {
                         className="bar-grow h-full rounded-full"
                         style={{
                           width: `${pct}%`,
-                          background: `linear-gradient(90deg, rgba(139,92,246,0.7), rgba(167,139,250,0.9))`,
+                          background: isPro
+                            ? `linear-gradient(90deg, rgba(245,158,11,0.6), rgba(251,191,36,0.9))`
+                            : `linear-gradient(90deg, rgba(139,92,246,0.7), rgba(167,139,250,0.9))`,
                           animationDelay: `${i * 0.1}s`,
                         }}
                       />

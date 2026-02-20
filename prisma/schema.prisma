@@ -77,6 +77,8 @@ model User {
   lessonReviews          LessonReview[]
   courseReviews          CourseReview[]
   lessonComments         LessonComment[]
+  testimonials           Testimonial[]
+  testimonial_dismissed_at DateTime?    @db.Timestamptz(6)
 
   @@map("users")
 }
@@ -345,6 +347,7 @@ model ContactMessage {
 
 model Testimonial {
   id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String?  @db.Uuid
   author_name       String
   author_role       String?
   author_avatar_url String?
@@ -355,6 +358,8 @@ model Testimonial {
   is_published      Boolean  @default(true)
   sort_order        Int?
   created_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  user              User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
 
   @@map("testimonials")
 }
