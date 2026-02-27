@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { checkCourseAccess, getUserTier } from "@/lib/access/check-access";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { CourseResources } from "@/components/courses/course-resources";
+import { ALL_MODULES } from "@/lib/courses/curriculum";
 
 interface DashboardCoursePageProps {
   params: Promise<{ slug: string }>;
@@ -105,6 +107,13 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
           </div>
         </div>
       )}
+
+      {/* Course resources (from curriculum config) */}
+      {(() => {
+        const mod = ALL_MODULES.find((m) => m.defaultSlug === slug);
+        if (!mod?.resources?.length) return null;
+        return <CourseResources resources={mod.resources} />;
+      })()}
 
       <div className="mt-5">
         <SecureCoursePlayer lessons={playerLessons} completedLessonIds={completedLessonIds} />

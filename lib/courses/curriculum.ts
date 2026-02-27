@@ -4,6 +4,13 @@
  * `defaultSlug` is used to auto-create the course in the DB if it doesn't exist yet.
  */
 
+export interface CurriculumResource {
+  label: string;
+  url: string;
+  /** Hint shown below the link */
+  hint?: string;
+}
+
 export interface CurriculumModuleData {
   /** Unique key for this module (used as React key and for matching DB courses) */
   key: string;
@@ -13,7 +20,9 @@ export interface CurriculumModuleData {
   defaultSlug: string;
   tier: "basic" | "pro";
   /** Icon identifier — rendered by the UI layer */
-  icon: "academic" | "lock" | "code" | "badge" | "star" | "fire" | "cube" | "code-pro" | "badge-pro";
+  icon: "academic" | "lock" | "code" | "badge" | "star" | "fire" | "cube" | "code-pro" | "badge-pro" | "terminal";
+  /** Optional resources shown on the course page */
+  resources?: CurriculumResource[];
 }
 
 export const BASIC_MODULES: CurriculumModuleData[] = [
@@ -91,6 +100,21 @@ export const PRO_MODULES: CurriculumModuleData[] = [
     defaultSlug: "pro-pasos-finales",
     tier: "pro",
     icon: "badge-pro",
+  },
+  {
+    key: "pro-setup-claude",
+    title: "Setup Claude",
+    description: "Configura y domina Claude Code como tu copiloto de desarrollo con IA",
+    defaultSlug: "setup-claude",
+    tier: "pro",
+    icon: "terminal",
+    resources: [
+      {
+        label: "The Complete Guide to Building Skills for Claude",
+        url: "https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf",
+        hint: "Copia este enlace y pégalo en Claude Code para que lo incorpore a tu flujo de trabajo",
+      },
+    ],
   },
 ];
 
