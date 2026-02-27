@@ -70,6 +70,21 @@ export const PRO_MODULES: CurriculumModuleData[] = [
     icon: "star",
   },
   {
+    key: "pro-setup-claude",
+    title: "Setup Claude",
+    description: "Configura y domina Claude Code como tu copiloto de desarrollo con IA",
+    defaultSlug: "setup-claude",
+    tier: "pro",
+    icon: "terminal",
+    resources: [
+      {
+        label: "The Complete Guide to Building Skills for Claude",
+        url: "https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf",
+        hint: "Copia este enlace y pégalo en Claude Code para que lo incorpore a tu flujo de trabajo",
+      },
+    ],
+  },
+  {
     key: "pro-avanzado",
     title: "Avanzado",
     description: "Técnicas avanzadas, rendimiento y escalabilidad en producción",
@@ -100,21 +115,6 @@ export const PRO_MODULES: CurriculumModuleData[] = [
     defaultSlug: "pro-pasos-finales",
     tier: "pro",
     icon: "badge-pro",
-  },
-  {
-    key: "pro-setup-claude",
-    title: "Setup Claude",
-    description: "Configura y domina Claude Code como tu copiloto de desarrollo con IA",
-    defaultSlug: "setup-claude",
-    tier: "pro",
-    icon: "terminal",
-    resources: [
-      {
-        label: "The Complete Guide to Building Skills for Claude",
-        url: "https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf",
-        hint: "Copia este enlace y pégalo en Claude Code para que lo incorpore a tu flujo de trabajo",
-      },
-    ],
   },
 ];
 
