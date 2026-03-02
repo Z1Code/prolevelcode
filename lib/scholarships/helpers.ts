@@ -55,6 +55,9 @@ export async function isEarlyProScholarship(tierPurchaseId: string): Promise<boo
  * auto-assign to oldest pending applications. Returns count assigned.
  */
 export async function processScholarshipPool(): Promise<number> {
+  // PAUSED: auto-assignment disabled — admin will assign manually
+  return 0;
+
   const now = new Date();
 
   // Find scholarships that should be in the pool
@@ -118,8 +121,8 @@ export async function processScholarshipPool(): Promise<number> {
       if (grantor?.email) {
         const resend = getResendClient();
         await resend.emails.send({
-          from: "ProLevelCode <no-reply@prolevelcode.dev>",
-          to: grantor.email,
+          from: "ProLevelCode <no-reply@prolevelcode.com>",
+          to: grantor!.email,
           subject: `Tu beca ${scholarship.scholarship_code} fue asignada`,
           html: `
             <h2>Tu beca fue asignada automaticamente</h2>

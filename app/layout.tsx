@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Manrope } from "next/font/google";
 import { LanguageProvider } from "@/lib/i18n/language-provider";
+import { GoogleAnalytics } from "@/lib/google-analytics";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${spaceGrotesk.variable} ${manrope.variable} liquid-theme antialiased`}>
+        <GoogleAnalytics />
         <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>

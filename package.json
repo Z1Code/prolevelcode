@@ -16,6 +16,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@google-analytics/data": "^5.2.1",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.16.2",
     "bcryptjs": "^2.4.3",
@@ -31,7 +32,9 @@
     "qrcode.react": "^4.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-ga4": "^2.1.0",
     "react-hook-form": "^7.71.1",
+    "react-simple-maps": "^3.0.0",
     "resend": "^6.9.1",
     "tailwind-merge": "^3.4.0",
     "tus-js-client": "^4.3.1",
@@ -48,6 +51,7 @@
     "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-simple-maps": "^3.0.6",
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
