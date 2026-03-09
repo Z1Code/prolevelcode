@@ -23,7 +23,9 @@ export async function loginAction(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent("Email y contraseña son requeridos")}&next=${encodeURIComponent(next)}`);
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
 
   if (!user || !user.password_hash) {
     redirect(`/login?error=${encodeURIComponent("Credenciales incorrectas")}&next=${encodeURIComponent(next)}`);
@@ -67,7 +69,9 @@ export async function registerAction(formData: FormData) {
     redirect(`/registro?error=${encodeURIComponent("La contraseña debe tener al menos 8 caracteres")}${scholarshipToken ? `&scholarship=${scholarshipToken}` : ""}`);
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
   if (existing) {
     redirect(`/registro?error=${encodeURIComponent("Ya existe una cuenta con este email")}${scholarshipToken ? `&scholarship=${scholarshipToken}` : ""}`);
   }
@@ -151,7 +155,9 @@ export async function magicLinkAction(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent("Email es requerido")}&next=${encodeURIComponent(next)}`);
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
   if (!user) {
     // Don't reveal if email exists
     redirect(`/login?message=${encodeURIComponent("Si tu email está registrado, recibirás un magic link")}&next=${encodeURIComponent(next)}`);
@@ -196,7 +202,9 @@ export async function recoverAction(formData: FormData) {
     redirect(`/recuperar?error=${encodeURIComponent("Email es requerido")}`);
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
 
   // Always show success to prevent email enumeration
   if (!user) {

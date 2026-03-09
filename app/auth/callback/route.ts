@@ -58,8 +58,8 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      let user = await prisma.user.findUnique({
-        where: { email: userInfo.email.toLowerCase() },
+      let user = await prisma.user.findFirst({
+        where: { email: { equals: userInfo.email.toLowerCase(), mode: "insensitive" } },
       });
 
       if (!user) {
