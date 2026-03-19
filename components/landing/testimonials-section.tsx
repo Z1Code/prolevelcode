@@ -27,25 +27,19 @@ const titleLine = {
 };
 
 export function TestimonialsSection() {
-  const [items, setItems] = useState<Testimonial[] | null>(null);
+  const fallback = staticTestimonials.map((t) => ({ ...t, rating: null }));
+  const [items, setItems] = useState<Testimonial[]>(fallback);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     fetch("/api/testimonials")
       .then((r) => r.json())
       .then((data: Testimonial[]) => {
-        if (data.length > 0) {
-          setItems(data);
-        } else {
-          setItems(staticTestimonials.map((t) => ({ ...t, rating: null })));
-        }
+        if (Array.isArray(data) && data.length > 0) setItems(data);
       })
-      .catch(() => {
-        setItems(staticTestimonials.map((t) => ({ ...t, rating: null })));
-      });
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }, []);
-
-  // Don't render until data is ready — prevents flash
-  if (!items) return null;
 
   return (
     <section className="section-spacing liquid-section">
@@ -124,18 +118,6 @@ export function TestimonialsSection() {
           ))}
         </motion.div>
 
-        {/* Subtle note when few testimonials */}
-        {items.length <= 2 && (
-          <motion.p
-            className="mt-6 text-center text-xs text-slate-600"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.5 }}
-          >
-            Mas testimonios pronto — nuestros estudiantes estan terminando sus primeros cursos
-          </motion.p>
-        )}
       </div>
     </section>
   );
