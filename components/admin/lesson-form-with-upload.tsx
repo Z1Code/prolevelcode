@@ -32,13 +32,14 @@ export function LessonFormWithUpload({ courseId, tierAccess, action }: LessonFor
         />
       </label>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-slate-400">
-          Duracion (minutos)
-          {duration && <span className="ml-1.5 text-emerald-400/70">— auto-detectado</span>}
-        </span>
-        <Input name="duration_minutes" type="number" placeholder="Se detecta al subir video" value={duration} onChange={(e) => setDuration(e.target.value)} />
-      </label>
+      <div className="flex flex-col justify-end gap-1">
+        <input type="hidden" name="duration_minutes" value={duration} />
+        {duration ? (
+          <span className="text-xs text-emerald-400/70">{duration} min — auto-detectado</span>
+        ) : (
+          <span className="text-xs text-slate-500">Duracion se detecta al subir video</span>
+        )}
+      </div>
 
       <div className="md:col-span-2">
         <span className="text-xs text-slate-400">Video</span>
