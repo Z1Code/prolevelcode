@@ -87,8 +87,19 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
           if (totalMinutes === 0) return null;
           const hours = Math.floor(totalMinutes / 60);
           const mins = totalMinutes % 60;
-          const durationStr = hours > 0 ? `${hours}h ${mins > 0 ? ` ${mins}min` : ""}` : `${mins}min`;
-          return <> — Duracion total: {durationStr}</>;
+          const durationStr = hours > 0 ? `${hours}h${mins > 0 ? ` ${mins}min` : ""}` : `${mins}min`;
+          // Estimated completion: video time + ~1.5x for practice/setup
+          const estMinutes = Math.round(totalMinutes * 2.5);
+          const estHours = Math.floor(estMinutes / 60);
+          const estMins = estMinutes % 60;
+          const estStr = estHours > 0 ? `${estHours}h${estMins > 0 ? ` ${estMins}min` : ""}` : `${estMins}min`;
+          return (
+            <>
+              {" — "}{durationStr} de video
+              <span className="text-slate-600">{" · "}</span>
+              ~{estStr} para completar
+            </>
+          );
         })()}
       </p>
 

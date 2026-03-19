@@ -20,7 +20,7 @@ export interface CurriculumModuleData {
   defaultSlug: string;
   tier: "basic" | "pro";
   /** Icon identifier — rendered by the UI layer */
-  icon: "academic" | "lock" | "code" | "badge" | "star" | "fire" | "cube" | "code-pro" | "badge-pro" | "terminal" | "gamepad" | "sword" | "map";
+  icon: "academic" | "lock" | "code" | "badge" | "star" | "fire" | "cube" | "code-pro" | "badge-pro" | "terminal" | "gamepad" | "sword" | "map" | "megaphone" | "sparkles";
   /** Optional resources shown on the course page */
   resources?: CurriculumResource[];
 }
@@ -129,4 +129,26 @@ export const GAMEDEV_MODULES: CurriculumModuleData[] = [
   },
 ];
 
-export const ALL_MODULES = [...BASIC_MODULES, ...PRO_MODULES, ...GAMEDEV_MODULES];
+export const MARKETING_MODULES: CurriculumModuleData[] = [
+  {
+    key: "marketing-digital",
+    title: "Marketing Digital para Devs",
+    description: "SEO técnico, growth hacking, funnels de conversión y estrategias para lanzar tu producto",
+    defaultSlug: "marketing-digital-devs",
+    tier: "pro",
+    icon: "megaphone",
+  },
+];
+
+export const AGENTIC_MODULES: CurriculumModuleData[] = [
+  {
+    key: "agentic-ia",
+    title: "Agentes IA Autónomos",
+    description: "Construye agentes inteligentes con tool-calling, RAG, memory y workflows de producción",
+    defaultSlug: "agentes-ia-autonomos",
+    tier: "pro",
+    icon: "sparkles",
+  },
+];
+
+export const ALL_MODULES = [...BASIC_MODULES, ...PRO_MODULES, ...GAMEDEV_MODULES, ...MARKETING_MODULES, ...AGENTIC_MODULES];

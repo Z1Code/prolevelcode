@@ -16,6 +16,8 @@ export const COURSE_CATEGORIES: CourseCategory[] = [
   { slug: "crypto_trading", name: "Crypto Trading", tier: "pro", status: "coming_soon" },
   { slug: "crypto_defi", name: "Crypto DeFi", tier: "pro", status: "coming_soon" },
   { slug: "gamedev", name: "Creación de Videojuegos", tier: "pro", status: "active" },
+  { slug: "marketing", name: "Marketing Digital", tier: "pro", status: "active" },
+  { slug: "agentic_ia", name: "Agentic IA", tier: "pro", status: "coming_soon" },
 ];
 
 export function getCategoryBySlug(slug: string) {

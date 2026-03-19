@@ -67,6 +67,16 @@ const icons: Record<CurriculumModuleData["icon"], ReactNode> = {
       <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM14 5.586v12.828l2.293-2.293A1 1 0 0017 16V6a1 1 0 00-.293-.707L14 2.586v3z" clipRule="evenodd" />
     </svg>
   ),
+  megaphone: (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+      <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v6.114A4.369 4.369 0 005 11c-1.68 0-3 .895-3 2s1.32 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.68 0-3 .895-3 2s1.32 2 3 2 3-.895 3-2V3z" />
+    </svg>
+  ),
+  sparkles: (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+      <path d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zm7-10a1 1 0 01.967.744L14.146 7.2 17.5 7.512a1 1 0 01.572 1.753l-2.578 2.158.86 3.573a1 1 0 01-1.495 1.085L12 14.235 9.141 16.08a1 1 0 01-1.495-1.085l.86-3.573-2.578-2.158a1 1 0 01.572-1.753l3.354-.312 1.179-3.455A1 1 0 0112 2z" />
+    </svg>
+  ),
 };
 
 export function CurriculumIcon({ icon }: { icon: CurriculumModuleData["icon"] }) {

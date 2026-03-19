@@ -70,17 +70,16 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
                   <Input name="bunny_video_id" defaultValue={lesson.bunny_video_id ?? ""} className="mt-0.5 h-9 text-xs" placeholder="GUID de Bunny" />
                 </div>
                 <div>
-                  <span className="text-xs text-slate-500">Min</span>
-                  <Input name="duration_minutes" type="number" defaultValue={lesson.duration_minutes ?? ""} className="mt-0.5 h-9 w-20 text-xs" />
+                  <span className="text-xs text-slate-500">
+                    Min {lesson.duration_minutes ? <span className="text-emerald-400/60">({lesson.duration_minutes})</span> : <span className="text-amber-400/50">sin dato</span>}
+                  </span>
+                  <Input name="duration_minutes" type="number" defaultValue={lesson.duration_minutes ?? ""} className="mt-0.5 h-9 w-20 text-xs" placeholder="—" />
                 </div>
+                {course.tier_access === "pro" && <input type="hidden" name="is_pro_only" value="on" />}
                 <div className="flex items-center gap-3 md:col-span-3">
                   <label className="flex items-center gap-1.5 text-xs text-slate-300">
                     <input type="checkbox" name="is_free_preview" defaultChecked={lesson.is_free_preview} className="h-3.5 w-3.5 accent-emerald-400" />
                     Preview gratuito
-                  </label>
-                  <label className="flex items-center gap-1.5 text-xs text-slate-300">
-                    <input type="checkbox" name="is_pro_only" defaultChecked={lesson.is_pro_only} className="h-3.5 w-3.5 accent-violet-400" />
-                    Solo Pro
                   </label>
                   <span className="text-xs text-slate-500">#{lesson.sort_order}</span>
                   <div className="ml-auto flex gap-2">
@@ -105,14 +104,14 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
           Arrastra multiples videos para crear lecciones en lote.
         </p>
         <div className="mt-3">
-          <BulkVideoUploader courseId={id} />
+          <BulkVideoUploader courseId={id} tierAccess={course.tier_access} />
         </div>
       </Card>
 
       {/* Add single lesson with Bunny upload */}
       <Card className="mt-4 p-4">
         <h3 className="font-semibold">Agregar leccion individual</h3>
-        <LessonFormWithUpload courseId={id} action={createLesson} />
+        <LessonFormWithUpload courseId={id} tierAccess={course.tier_access} action={createLesson} />
       </Card>
     </div>
   );
