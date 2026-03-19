@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { createLesson, updateLesson, deleteLesson, toggleCoursePublished } from "../../../actions";
 import { LessonFormWithUpload } from "@/components/admin/lesson-form-with-upload";
 import { BulkVideoUploader } from "@/components/admin/bulk-video-uploader";
+import { SyncDurationsButton } from "@/components/admin/sync-durations-button";
 
 interface AdminLessonsPageProps {
   params: Promise<{ id: string }>;
@@ -54,7 +55,10 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
 
       {/* Existing lessons */}
       <Card className="mt-4 p-4">
-        <h3 className="font-semibold">Lecciones ({lessons.length})</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Lecciones ({lessons.length})</h3>
+          <SyncDurationsButton />
+        </div>
         <ul className="mt-3 space-y-2 text-sm">
           {lessons.map((lesson) => (
             <li key={lesson.id} className="liquid-surface-soft rounded-lg p-3">

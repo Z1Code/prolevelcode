@@ -85,19 +85,26 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
         {(() => {
           const totalMinutes = lessons.reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0);
           if (totalMinutes === 0) return null;
-          const hours = Math.floor(totalMinutes / 60);
-          const mins = totalMinutes % 60;
-          const durationStr = hours > 0 ? `${hours}h${mins > 0 ? ` ${mins}min` : ""}` : `${mins}min`;
-          // Estimated completion: video time + ~1.5x for practice/setup
+          // Round video duration: 30m+ rounds up to next hour
+          const roundedHours = totalMinutes >= 30
+            ? Math.ceil(totalMinutes / 60)
+            : 0;
+          const durationStr = roundedHours > 0
+            ? `${roundedHours}h de video`
+            : `${totalMinutes}min de video`;
+          // Estimated completion: video + pauses + setup + practice (~2.5x)
           const estMinutes = Math.round(totalMinutes * 2.5);
-          const estHours = Math.floor(estMinutes / 60);
-          const estMins = estMinutes % 60;
-          const estStr = estHours > 0 ? `${estHours}h${estMins > 0 ? ` ${estMins}min` : ""}` : `${estMins}min`;
+          const estRoundedHours = estMinutes >= 30
+            ? Math.ceil(estMinutes / 60)
+            : 0;
+          const estStr = estRoundedHours > 0
+            ? `~${estRoundedHours}h para completar`
+            : `~${estMinutes}min para completar`;
           return (
             <>
-              {" — "}{durationStr} de video
+              {" — "}{durationStr}
               <span className="text-slate-600">{" · "}</span>
-              ~{estStr} para completar
+              {estStr}
             </>
           );
         })()}
