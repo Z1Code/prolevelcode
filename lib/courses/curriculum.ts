@@ -20,7 +20,7 @@ export interface CurriculumModuleData {
   defaultSlug: string;
   tier: "basic" | "pro";
   /** Icon identifier — rendered by the UI layer */
-  icon: "academic" | "lock" | "code" | "badge" | "star" | "fire" | "cube" | "code-pro" | "badge-pro" | "terminal";
+  icon: "academic" | "lock" | "code" | "badge" | "star" | "fire" | "cube" | "code-pro" | "badge-pro" | "terminal" | "gamepad" | "sword" | "map";
   /** Optional resources shown on the course page */
   resources?: CurriculumResource[];
 }
@@ -118,4 +118,55 @@ export const PRO_MODULES: CurriculumModuleData[] = [
   },
 ];
 
-export const ALL_MODULES = [...BASIC_MODULES, ...PRO_MODULES];
+export const GAMEDEV_MODULES: CurriculumModuleData[] = [
+  {
+    key: "gamedev-fundamentos",
+    title: "Fundamentos 2D",
+    description: "Setup del engine, sprites, animaciones y el game loop para un action RPG 2D",
+    defaultSlug: "gamedev-fundamentos-2d",
+    tier: "pro",
+    icon: "gamepad",
+  },
+  {
+    key: "gamedev-mundo",
+    title: "Mundo y Mapas",
+    description: "Tile maps, generación procedural de dungeons y sistema de navegación estilo Diablo",
+    defaultSlug: "gamedev-mundo-mapas",
+    tier: "pro",
+    icon: "map",
+  },
+  {
+    key: "gamedev-combate",
+    title: "Personaje y Combate",
+    description: "Clases de personaje, habilidades, enemigos con IA y sistema de combate en tiempo real",
+    defaultSlug: "gamedev-personaje-combate",
+    tier: "pro",
+    icon: "sword",
+  },
+  {
+    key: "gamedev-loot",
+    title: "Loot y Progresión",
+    description: "Inventario, items con rareza, stats, niveles y árboles de habilidades",
+    defaultSlug: "gamedev-loot-progresion",
+    tier: "pro",
+    icon: "cube",
+  },
+  {
+    key: "gamedev-multiplayer",
+    title: "Multijugador y Red",
+    description: "Networking, sincronización de estado, lobbies y co-op para dungeon crawling",
+    defaultSlug: "gamedev-multiplayer",
+    tier: "pro",
+    icon: "fire",
+  },
+  {
+    key: "gamedev-lanzamiento",
+    title: "Pulido y Lanzamiento",
+    description: "Audio, efectos de partículas, UI/HUD, optimización y publicación del juego",
+    defaultSlug: "gamedev-lanzamiento",
+    tier: "pro",
+    icon: "badge-pro",
+  },
+];
+
+export const ALL_MODULES = [...BASIC_MODULES, ...PRO_MODULES, ...GAMEDEV_MODULES];

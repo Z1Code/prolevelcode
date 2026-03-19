@@ -52,6 +52,21 @@ const icons: Record<CurriculumModuleData["icon"], ReactNode> = {
       <path fillRule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
     </svg>
   ),
+  gamepad: (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+      <path d="M8 3a2 2 0 00-2 2H4a2 2 0 00-2 2v4a6 6 0 1012 0V7a2 2 0 00-2-2h-2a2 2 0 00-2-2zm-1 7a1 1 0 11-2 0 1 1 0 012 0zm2-3a1 1 0 110-2 1 1 0 010 2zm4 3a1 1 0 11-2 0 1 1 0 012 0z" />
+    </svg>
+  ),
+  sword: (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+      <path d="M15.707 2.293a1 1 0 010 1.414L13.414 6l1.293 1.293a1 1 0 01-1.414 1.414L12 7.414l-2.293 2.293 4 4a1 1 0 01-1.414 1.414l-4-4L6 13.414l1.293 1.293a1 1 0 01-1.414 1.414L4.586 14.828l-2.293 2.293a1 1 0 01-1.414-1.414L3.172 13.414 1.879 12.121a1 1 0 011.414-1.414L4.586 12l7-7L10.293 3.707a1 1 0 011.414-1.414L13 3.586 15.293 1.293a1 1 0 011.414 0l-.001 1z" />
+    </svg>
+  ),
+  map: (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+      <path fillRule="evenodd" d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM14 5.586v12.828l2.293-2.293A1 1 0 0017 16V6a1 1 0 00-.293-.707L14 2.586v3z" clipRule="evenodd" />
+    </svg>
+  ),
 };
 
 export function CurriculumIcon({ icon }: { icon: CurriculumModuleData["icon"] }) {
