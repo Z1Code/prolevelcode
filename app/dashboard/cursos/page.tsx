@@ -9,9 +9,23 @@ import { BASIC_MODULES, PRO_MODULES, GAMEDEV_MODULES, MARKETING_MODULES, AGENTIC
 import type { CurriculumModuleData } from "@/lib/courses/curriculum";
 import { CurriculumIcon } from "@/components/courses/curriculum-icon";
 
+/* ── Duration helper ── */
+
+function CourseDuration({ minutes, accentClass = "text-slate-500" }: { minutes: number | null; accentClass?: string }) {
+  if (!minutes) return null;
+  const estMinutes = Math.round(minutes * 2.5);
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px]">
+      <span className={accentClass}>{minutes}min de video</span>
+      <span className="text-slate-600">·</span>
+      <span className="text-slate-500">~{estMinutes >= 60 ? `${Math.ceil(estMinutes / 60)}h` : `${estMinutes}min`} para completar</span>
+    </div>
+  );
+}
+
 /* ── Card components ── */
 
-function BasicModuleCard({ mod, slug }: { mod: CurriculumModuleData; slug: string | null }) {
+function BasicModuleCard({ mod, slug, videoMinutes }: { mod: CurriculumModuleData; slug: string | null; videoMinutes: number | null }) {
   const isAvailable = !!slug;
 
   const content = (
@@ -38,6 +52,7 @@ function BasicModuleCard({ mod, slug }: { mod: CurriculumModuleData; slug: strin
         <p className={`mt-1.5 text-xs leading-relaxed ${isAvailable ? "text-slate-500" : "text-slate-600"}`}>
           {mod.description}
         </p>
+        {isAvailable && <CourseDuration minutes={videoMinutes} accentClass="text-emerald-400/60" />}
       </div>
     </div>
   );
@@ -48,7 +63,7 @@ function BasicModuleCard({ mod, slug }: { mod: CurriculumModuleData; slug: strin
   return content;
 }
 
-function ProModuleCard({ mod, slug, locked }: { mod: CurriculumModuleData; slug: string | null; locked: boolean }) {
+function ProModuleCard({ mod, slug, locked, videoMinutes }: { mod: CurriculumModuleData; slug: string | null; locked: boolean; videoMinutes: number | null }) {
   if (locked) {
     return (
       <div className="relative overflow-hidden rounded-xl border border-amber-400/[0.06] bg-white/[0.015] p-5 opacity-40 select-none">
@@ -98,6 +113,7 @@ function ProModuleCard({ mod, slug, locked }: { mod: CurriculumModuleData; slug:
         <p className={`mt-1.5 text-xs leading-relaxed ${isAvailable ? "text-amber-400/40" : "text-amber-400/25"}`}>
           {mod.description}
         </p>
+        {isAvailable && <CourseDuration minutes={videoMinutes} accentClass="text-amber-400/50" />}
       </div>
     </div>
   );
@@ -108,7 +124,7 @@ function ProModuleCard({ mod, slug, locked }: { mod: CurriculumModuleData; slug:
   return content;
 }
 
-function GamedevModuleCard({ mod, slug, locked }: { mod: CurriculumModuleData; slug: string | null; locked: boolean }) {
+function GamedevModuleCard({ mod, slug, locked, videoMinutes }: { mod: CurriculumModuleData; slug: string | null; locked: boolean; videoMinutes: number | null }) {
   if (locked) {
     return (
       <div className="relative overflow-hidden rounded-xl border border-violet-400/[0.06] bg-white/[0.015] p-5 opacity-40 select-none">
@@ -158,6 +174,7 @@ function GamedevModuleCard({ mod, slug, locked }: { mod: CurriculumModuleData; s
         <p className={`mt-1.5 text-xs leading-relaxed ${isAvailable ? "text-violet-400/40" : "text-violet-400/25"}`}>
           {mod.description}
         </p>
+        {isAvailable && <CourseDuration minutes={videoMinutes} accentClass="text-violet-400/50" />}
       </div>
     </div>
   );
@@ -168,7 +185,7 @@ function GamedevModuleCard({ mod, slug, locked }: { mod: CurriculumModuleData; s
   return content;
 }
 
-function MarketingModuleCard({ mod, slug, locked }: { mod: CurriculumModuleData; slug: string | null; locked: boolean }) {
+function MarketingModuleCard({ mod, slug, locked, videoMinutes }: { mod: CurriculumModuleData; slug: string | null; locked: boolean; videoMinutes: number | null }) {
   if (locked) {
     return (
       <div className="relative overflow-hidden rounded-xl border border-pink-400/[0.06] bg-white/[0.015] p-5 opacity-40 select-none">
@@ -208,6 +225,7 @@ function MarketingModuleCard({ mod, slug, locked }: { mod: CurriculumModuleData;
         </div>
         <h3 className={`text-sm font-semibold ${isAvailable ? "text-pink-200 transition-colors group-hover:text-pink-100" : "text-pink-300/50"}`}>{mod.title}</h3>
         <p className={`mt-1.5 text-xs leading-relaxed ${isAvailable ? "text-pink-400/40" : "text-pink-400/25"}`}>{mod.description}</p>
+        {isAvailable && <CourseDuration minutes={videoMinutes} accentClass="text-pink-400/50" />}
       </div>
     </div>
   );
@@ -246,12 +264,22 @@ export default async function DashboardCoursesPage() {
   const isPro = currentTier === "pro";
   const hasAccess = currentTier === "basic" || currentTier === "pro";
 
-  // Fetch published courses to match slugs dynamically
+  // Fetch published courses with aggregated lesson durations
   const publishedCourses = await prisma.course.findMany({
     where: { is_published: true, is_coming_soon: false },
-    select: { slug: true },
+    select: {
+      slug: true,
+      lessons: { select: { duration_minutes: true } },
+    },
   });
   const publishedSlugs = new Set(publishedCourses.map((c) => c.slug));
+
+  // Map slug → total video minutes
+  const durationBySlug = new Map<string, number>();
+  for (const c of publishedCourses) {
+    const total = c.lessons.reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0);
+    if (total > 0) durationBySlug.set(c.slug, total);
+  }
 
   // For users without a plan, show pricing cards
   let spotsRemaining = 0;
@@ -269,6 +297,11 @@ export default async function DashboardCoursesPage() {
   /** Returns the slug only if the course is published */
   function resolveSlug(mod: CurriculumModuleData): string | null {
     return publishedSlugs.has(mod.defaultSlug) ? mod.defaultSlug : null;
+  }
+
+  /** Returns total video minutes for a module's course, or null */
+  function resolveMinutes(mod: CurriculumModuleData): number | null {
+    return durationBySlug.get(mod.defaultSlug) ?? null;
   }
 
   return (
@@ -299,7 +332,7 @@ export default async function DashboardCoursesPage() {
             <StaggerGrid className="grid grid-cols-1 gap-3 sm:grid-cols-2" stagger={0.08}>
               {BASIC_MODULES.map((mod) => (
                 <StaggerCard key={mod.key}>
-                  <BasicModuleCard mod={mod} slug={resolveSlug(mod)} />
+                  <BasicModuleCard mod={mod} slug={resolveSlug(mod)} videoMinutes={resolveMinutes(mod)} />
                 </StaggerCard>
               ))}
             </StaggerGrid>
@@ -324,7 +357,7 @@ export default async function DashboardCoursesPage() {
             <StaggerGrid className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
               {PRO_MODULES.map((mod) => (
                 <StaggerCard key={mod.key}>
-                  <ProModuleCard mod={mod} slug={resolveSlug(mod)} locked={!isPro} />
+                  <ProModuleCard mod={mod} slug={resolveSlug(mod)} locked={!isPro} videoMinutes={resolveMinutes(mod)} />
                 </StaggerCard>
               ))}
             </StaggerGrid>
@@ -349,7 +382,7 @@ export default async function DashboardCoursesPage() {
             <StaggerGrid className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
               {GAMEDEV_MODULES.map((mod) => (
                 <StaggerCard key={mod.key}>
-                  <GamedevModuleCard mod={mod} slug={resolveSlug(mod)} locked={!isPro} />
+                  <GamedevModuleCard mod={mod} slug={resolveSlug(mod)} locked={!isPro} videoMinutes={resolveMinutes(mod)} />
                 </StaggerCard>
               ))}
             </StaggerGrid>
@@ -374,7 +407,7 @@ export default async function DashboardCoursesPage() {
             <StaggerGrid className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
               {MARKETING_MODULES.map((mod) => (
                 <StaggerCard key={mod.key}>
-                  <MarketingModuleCard mod={mod} slug={resolveSlug(mod)} locked={!isPro} />
+                  <MarketingModuleCard mod={mod} slug={resolveSlug(mod)} locked={!isPro} videoMinutes={resolveMinutes(mod)} />
                 </StaggerCard>
               ))}
             </StaggerGrid>

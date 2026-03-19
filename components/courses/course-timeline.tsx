@@ -78,7 +78,13 @@ function TimelineCard({
         <p className="mt-1 text-sm text-slate-400">{course.subtitle ?? course.description}</p>
         <p className="mt-2 text-xs text-slate-500">
           {course.total_lessons ?? 0} lecciones{" "}
-          {course.total_duration_minutes ? `· ${course.total_duration_minutes} min` : ""}
+          {course.total_duration_minutes ? (
+            <>
+              · {course.total_duration_minutes}min de video
+              <span className="text-slate-600"> · </span>
+              ~{Math.ceil(course.total_duration_minutes * 2.5 / 60)}h para completar
+            </>
+          ) : ""}
         </p>
       </div>
     </div>

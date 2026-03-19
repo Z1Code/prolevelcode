@@ -70,5 +70,21 @@ export async function POST() {
     }
   }
 
+  // Update total_duration_minutes on all affected courses
+  if (updated > 0) {
+    const courses = await prisma.course.findMany({
+      where: { lessons: { some: { bunny_video_id: { not: null } } } },
+      select: { id: true, lessons: { select: { duration_minutes: true } } },
+    });
+
+    for (const course of courses) {
+      const total = course.lessons.reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0);
+      await prisma.course.update({
+        where: { id: course.id },
+        data: { total_duration_minutes: total > 0 ? total : null },
+      });
+    }
+  }
+
   return NextResponse.json({ updated, failed, total: lessons.length, errors: errors.length > 0 ? errors : undefined });
 }
