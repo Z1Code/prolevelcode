@@ -148,7 +148,7 @@ export async function POST(request: Request) {
           dashboardUrl: `${env.appUrl}/dashboard/cursos`,
         });
         await resend.emails.send({
-          from: "ProLevelCode <no-reply@prolevelcode.dev>",
+          from: "ProLevelCode <no-reply@prolevelcode.com>",
           to: userRecord.email,
           subject: emailData.subject,
           html: emailData.html,
@@ -160,7 +160,15 @@ export async function POST(request: Request) {
   }
 
   if (meta.type === "tier" && meta.tier) {
-    // Create tier purchase
+    // Guard: skip if user already has an active purchase for this tier
+    const existing = await prisma.tierPurchase.findFirst({
+      where: { user_id: meta.user_id, tier: meta.tier, status: "active" },
+    });
+    if (existing) {
+      console.log(`[binance-webhook] User ${meta.user_id} already has active ${meta.tier} tier, skipping duplicate`);
+      return NextResponse.json({ status: "duplicate_skipped" });
+    }
+
     await prisma.tierPurchase.create({
       data: {
         user_id: meta.user_id,
@@ -195,7 +203,7 @@ export async function POST(request: Request) {
       try {
         const resend = getResendClient();
         await resend.emails.send({
-          from: "ProLevelCode <no-reply@prolevelcode.dev>",
+          from: "ProLevelCode <no-reply@prolevelcode.com>",
           to: userRecord.email,
           subject: `Plan ${meta.tier === "pro" ? "Pro" : "Basic"} activado`,
           html: `<h2>Tu plan ${meta.tier === "pro" ? "Pro" : "Basic"} esta activo</h2><p>Ya tienes acceso a ${meta.tier === "pro" ? "todos los cursos" : "los cursos Basic"}.</p><p><a href="${env.appUrl}/dashboard/plan">Ver mi plan</a></p>`,

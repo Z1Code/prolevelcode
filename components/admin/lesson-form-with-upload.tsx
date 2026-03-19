@@ -7,12 +7,14 @@ import { BunnyUploader } from "./bunny-uploader";
 
 interface LessonFormWithUploadProps {
   courseId: string;
+  tierAccess?: string;
   action: (fd: FormData) => void;
 }
 
-export function LessonFormWithUpload({ courseId, action }: LessonFormWithUploadProps) {
+export function LessonFormWithUpload({ courseId, tierAccess, action }: LessonFormWithUploadProps) {
   const [bunnyVideoId, setBunnyVideoId] = useState("");
   const [title, setTitle] = useState("");
+  const [duration, setDuration] = useState("");
 
   return (
     <form action={action} className="mt-3 grid gap-3 md:grid-cols-2">
@@ -31,8 +33,11 @@ export function LessonFormWithUpload({ courseId, action }: LessonFormWithUploadP
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-slate-400">Duracion (minutos)</span>
-        <Input name="duration_minutes" type="number" placeholder="15" />
+        <span className="text-xs text-slate-400">
+          Duracion (minutos)
+          {duration && <span className="ml-1.5 text-emerald-400/70">— auto-detectado</span>}
+        </span>
+        <Input name="duration_minutes" type="number" placeholder="Se detecta al subir video" value={duration} onChange={(e) => setDuration(e.target.value)} />
       </label>
 
       <div className="md:col-span-2">
@@ -54,19 +59,17 @@ export function LessonFormWithUpload({ courseId, action }: LessonFormWithUploadP
             <BunnyUploader
               videoTitle={title || undefined}
               onUploadComplete={(id) => setBunnyVideoId(id)}
+              onDurationDetected={(mins) => setDuration(String(mins))}
             />
           </div>
         )}
       </div>
 
+      {tierAccess === "pro" && <input type="hidden" name="is_pro_only" value="on" />}
       <div className="flex items-center gap-4 md:col-span-2">
         <label className="flex items-center gap-2 text-sm text-slate-300">
           <input type="checkbox" name="is_free_preview" className="h-4 w-4 accent-emerald-400" />
           Preview gratuito
-        </label>
-        <label className="flex items-center gap-2 text-sm text-slate-300">
-          <input type="checkbox" name="is_pro_only" className="h-4 w-4 accent-violet-400" />
-          Solo Pro
         </label>
       </div>
 

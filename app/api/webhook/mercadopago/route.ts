@@ -153,14 +153,14 @@ export async function POST(request: Request) {
         });
 
         await resend.emails.send({
-          from: "ProLevelCode <no-reply@prolevelcode.dev>",
+          from: "ProLevelCode <no-reply@prolevelcode.com>",
           to: userEmail,
           subject: purchaseEmail.subject,
           html: purchaseEmail.html,
         });
 
         await resend.emails.send({
-          from: "ProLevelCode <no-reply@prolevelcode.dev>",
+          from: "ProLevelCode <no-reply@prolevelcode.com>",
           to: userEmail,
           subject: accessEmail.subject,
           html: accessEmail.html,
@@ -169,6 +169,15 @@ export async function POST(request: Request) {
     }
 
     if (ref.type === "tier" && ref.user_id && ref.tier) {
+      // Guard: skip if user already has an active purchase for this tier
+      const existing = await prisma.tierPurchase.findFirst({
+        where: { user_id: ref.user_id, tier: ref.tier, status: "active" },
+      });
+      if (existing) {
+        console.log(`[mp-webhook] User ${ref.user_id} already has active ${ref.tier} tier, skipping duplicate`);
+        return NextResponse.json({ status: "duplicate_skipped" });
+      }
+
       const tierPurchase = await prisma.tierPurchase.create({
         data: {
           user_id: ref.user_id,
@@ -209,7 +218,7 @@ export async function POST(request: Request) {
         try {
           const resend = getResendClient();
           await resend.emails.send({
-            from: "ProLevelCode <no-reply@prolevelcode.dev>",
+            from: "ProLevelCode <no-reply@prolevelcode.com>",
             to: tierUser.email,
             subject: `Plan ${ref.tier === "pro" ? "Pro" : "Basic"} activado`,
             html: `<h2>Tu plan ${ref.tier === "pro" ? "Pro" : "Basic"} esta activo</h2><p>Ya tienes acceso a ${ref.tier === "pro" ? "todos los cursos" : "los cursos Basic"}.</p><p><a href="${env.appUrl}/dashboard/plan">Ver mi plan</a></p>`,

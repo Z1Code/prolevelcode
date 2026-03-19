@@ -39,6 +39,14 @@ export async function POST(request: NextRequest) {
     return jsonError("Invalid payload", 400, parsed.error.flatten());
   }
 
+  // Prevent duplicate checkout if user already has this tier
+  const existingTier = await prisma.tierPurchase.findFirst({
+    where: { user_id: context.user.id, tier: parsed.data.tier, status: "active" },
+  });
+  if (existingTier) {
+    return jsonError("Ya tienes este plan activo", 409);
+  }
+
   const tierConfig = getTierConfig(parsed.data.tier);
   const amountUsdt = getTierPriceUsdt(parsed.data.tier);
   const merchantTradeNo = `PLC_T_${nanoid(16)}`;
