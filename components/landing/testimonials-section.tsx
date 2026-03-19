@@ -85,16 +85,10 @@ export function TestimonialsSection() {
                 <div className="pointer-events-none absolute left-[10%] right-[10%] top-0 h-px rounded-full bg-gradient-to-r from-transparent via-white/40 to-transparent" />
 
                 <div className="relative">
-                  {/* Rating */}
-                  {item.rating != null && (
-                    <p className="mb-3 text-sm tracking-wider">
-                      {Array.from({ length: 5 }, (_, j) => (
-                        <span key={j} className={j < item.rating! ? "text-amber-400" : "text-white/[0.08]"}>
-                          ★
-                        </span>
-                      ))}
-                    </p>
-                  )}
+                  {/* Rating — always 5 stars */}
+                  <p className="mb-3 text-sm tracking-wider">
+                    <span className="text-amber-400">★★★★★</span>
+                  </p>
 
                   {/* Quote */}
                   <p className="text-sm leading-relaxed text-slate-300">
