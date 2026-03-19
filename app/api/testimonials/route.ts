@@ -28,14 +28,25 @@ export async function GET() {
         return true;
       });
 
-      return NextResponse.json(
-        unique.slice(0, 12).map((t) => ({
-          name: t.author_name,
-          role: t.author_role || "Estudiante",
-          content: t.content,
-          rating: t.rating,
-        })),
-      );
+      const mapped = unique.slice(0, 12).map((t) => ({
+        name: t.author_name,
+        role: t.author_role || "Estudiante",
+        content: t.content,
+        rating: t.rating,
+      }));
+
+      // Pad with static testimonials if we have fewer than 3
+      if (mapped.length < 3) {
+        const dbNames = new Set(mapped.map((m) => m.name));
+        for (const st of staticTestimonials) {
+          if (mapped.length >= 3) break;
+          if (!dbNames.has(st.name)) {
+            mapped.push({ ...st, rating: null });
+          }
+        }
+      }
+
+      return NextResponse.json(mapped);
     }
   } catch {
     // fallback

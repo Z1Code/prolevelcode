@@ -27,18 +27,25 @@ const titleLine = {
 };
 
 export function TestimonialsSection() {
-  const [items, setItems] = useState<Testimonial[]>(
-    staticTestimonials.map((t) => ({ ...t, rating: null })),
-  );
+  const [items, setItems] = useState<Testimonial[] | null>(null);
 
   useEffect(() => {
     fetch("/api/testimonials")
       .then((r) => r.json())
       .then((data: Testimonial[]) => {
-        if (data.length > 0) setItems(data);
+        if (data.length > 0) {
+          setItems(data);
+        } else {
+          setItems(staticTestimonials.map((t) => ({ ...t, rating: null })));
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        setItems(staticTestimonials.map((t) => ({ ...t, rating: null })));
+      });
   }, []);
+
+  // Don't render until data is ready — prevents flash
+  if (!items) return null;
 
   return (
     <section className="section-spacing liquid-section">
