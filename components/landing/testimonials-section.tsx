@@ -1,14 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { testimonials as staticTestimonials } from "@/lib/utils/site-data";
 
 interface Testimonial {
   name: string;
   role: string;
   content: string;
-  rating?: number | null;
 }
 
 const titleContainer = {
@@ -26,20 +23,7 @@ const titleLine = {
   },
 };
 
-export function TestimonialsSection() {
-  const [items, setItems] = useState<Testimonial[]>(staticTestimonials);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/testimonials")
-      .then((r) => r.json())
-      .then((data: Testimonial[]) => {
-        if (Array.isArray(data) && data.length > 0) setItems(data);
-      })
-      .catch(() => {})
-      .finally(() => setLoaded(true));
-  }, []);
-
+export function TestimonialsSection({ items }: { items: Testimonial[] }) {
   return (
     <section className="section-spacing liquid-section">
       <div className="container-wide">
@@ -71,7 +55,7 @@ export function TestimonialsSection() {
         >
           {items.map((item, i) => (
             <motion.div
-              key={item.name + item.content.slice(0, 20) + i}
+              key={`testimonial-${i}`}
               variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}
               className="group"
             >
