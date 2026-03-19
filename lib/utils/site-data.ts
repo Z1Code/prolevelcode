@@ -55,15 +55,18 @@ export const testimonials = [
     name: "Laura M.",
     role: "CEO, TechCorp",
     content: "Pasamos de una idea a un producto real en 6 semanas. La calidad tecnica fue impecable.",
+    rating: 5,
   },
   {
     name: "Diego R.",
     role: "Founder, SaaSify",
     content: "El curso fue directo al grano y aplicable desde el dia uno. Excelente nivel.",
+    rating: 5,
   },
   {
     name: "Ana P.",
     role: "Product Lead",
     content: "La combinacion de diseno y performance nos subio conversion y retencion.",
+    rating: 5,
   },
 ];

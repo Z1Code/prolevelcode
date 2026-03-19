@@ -27,8 +27,7 @@ const titleLine = {
 };
 
 export function TestimonialsSection() {
-  const fallback = staticTestimonials.map((t) => ({ ...t, rating: null }));
-  const [items, setItems] = useState<Testimonial[]>(fallback);
+  const [items, setItems] = useState<Testimonial[]>(staticTestimonials);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {

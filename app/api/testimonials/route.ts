@@ -41,9 +41,7 @@ export async function GET() {
     // fallback
   }
 
-  return NextResponse.json(
-    staticTestimonials.map((t) => ({ ...t, rating: null })),
-  );
+  return NextResponse.json(staticTestimonials);
 }
 
 export async function POST(request: Request) {
