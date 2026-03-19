@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button";
 interface BunnyUploaderProps {
   /** Called when upload completes with the Bunny video GUID */
   onUploadComplete: (videoId: string) => void;
+  /** Called when video duration is detected (rounded up, in minutes) */
+  onDurationDetected?: (minutes: number) => void;
   /** Lesson title used as the video name on Bunny */
   videoTitle?: string;
 }
 
 type UploadState = "idle" | "creating" | "uploading" | "complete" | "error";
 
-export function BunnyUploader({ onUploadComplete, videoTitle }: BunnyUploaderProps) {
+export function BunnyUploader({ onUploadComplete, onDurationDetected, videoTitle }: BunnyUploaderProps) {
   const [state, setState] = useState<UploadState>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
@@ -28,6 +30,24 @@ export function BunnyUploader({ onUploadComplete, videoTitle }: BunnyUploaderPro
     setState("creating");
     setError("");
     setProgress(0);
+
+    // Detect video duration from file
+    if (onDurationDetected) {
+      try {
+        const url = URL.createObjectURL(file);
+        const video = document.createElement("video");
+        video.preload = "metadata";
+        video.src = url;
+        video.onloadedmetadata = () => {
+          URL.revokeObjectURL(url);
+          if (video.duration && isFinite(video.duration)) {
+            onDurationDetected(Math.ceil(video.duration / 60));
+          }
+        };
+      } catch {
+        // silent — duration detection is best-effort
+      }
+    }
 
     try {
       // 1. Create video entry on Bunny via our API

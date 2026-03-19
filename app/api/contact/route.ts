@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     });
 
     await resend.emails.send({
-      from: "ProLevelCode <no-reply@prolevelcode.dev>",
+      from: "ProLevelCode <no-reply@prolevelcode.com>",
       to: env.adminEmails,
       subject: template.subject,
       html: template.html,

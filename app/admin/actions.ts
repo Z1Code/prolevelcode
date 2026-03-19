@@ -291,14 +291,16 @@ export async function createLessonsBulk(fd: FormData) {
     bunny_video_id: string;
     sort_order: number;
     is_pro_only: boolean;
+    duration_minutes: number | null;
   }[] = [];
 
   for (let i = 0; i < count; i++) {
     const title = str(fd, `title_${i}`);
     const bunny_video_id = str(fd, `bunny_video_id_${i}`);
     const is_pro_only = fd.get(`is_pro_only_${i}`) === "on";
+    const duration_minutes = int(fd, `duration_minutes_${i}`) || null;
     if (!title || !bunny_video_id) continue;
-    lessons.push({ course_id, title, bunny_video_id, sort_order: nextOrder++, is_pro_only });
+    lessons.push({ course_id, title, bunny_video_id, sort_order: nextOrder++, is_pro_only, duration_minutes });
   }
 
   if (lessons.length === 0) {
@@ -428,14 +430,14 @@ export async function approvePaypalPayment(fd: FormData) {
     const resend = getResendClient();
     const tierLabel = payment.tier === "pro" ? "Pro" : "Basic";
     await resend.emails.send({
-      from: "ProLevelCode <no-reply@prolevelcode.dev>",
+      from: "ProLevelCode <no-reply@prolevelcode.com>",
       to: payment.user.email,
       subject: `Tu plan ${tierLabel} fue activado`,
       html: `
         <h2>Tu plan ${tierLabel} esta activo</h2>
         <p>Hola${payment.user.full_name ? ` ${payment.user.full_name}` : ""},</p>
         <p>Tu pago PayPal fue verificado y tu plan <strong>${tierLabel}</strong> ya esta disponible.</p>
-        <p><a href="${process.env.NEXT_PUBLIC_APP_URL || "https://prolevelcode.dev"}/cursos">Ir a mis cursos</a></p>
+        <p><a href="${process.env.NEXT_PUBLIC_APP_URL || "https://prolevelcode.com"}/cursos">Ir a mis cursos</a></p>
       `,
     });
   } catch {
@@ -513,6 +515,54 @@ export async function deleteEnrollment(fd: FormData) {
 
 /* ─────────────── SCHOLARSHIP ADMIN ─────────────── */
 
+function scholarshipWinnerEmailHtml(name: string, loginUrl: string, cursosUrl: string) {
+  return `
+    <div style="font-family:'Segoe UI',Roboto,sans-serif;max-width:580px;margin:0 auto;color:#e2e8f0;">
+      <div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:16px;padding:44px 36px;border:1px solid rgba(148,163,184,0.15);">
+        <div style="text-align:center;margin-bottom:28px;"><span style="font-size:48px;">🎓</span></div>
+        <h1 style="font-size:26px;font-weight:700;color:#fff;margin:0 0 6px;text-align:center;">
+          Hola${name ? ` ${name}` : ""}, felicidades
+        </h1>
+        <p style="font-size:16px;color:#34d399;font-weight:600;text-align:center;margin:0 0 28px;">
+          Has sido seleccionado para recibir una beca en ProLevelCode
+        </p>
+        <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:24px;margin-bottom:24px;">
+          <p style="font-size:15px;color:#d1d5db;margin:0;line-height:1.7;">
+            Leimos tu aplicacion y queremos decirte que tu historia y tus ganas de aprender nos inspiraron.
+            Esta beca te abre las puertas a nuestros cursos para que puedas formarte en programacion,
+            desarrollo web y uso de inteligencia artificial de forma practica.
+          </p>
+        </div>
+        <h2 style="font-size:17px;font-weight:600;color:#fff;margin:0 0 12px;">Que incluye tu beca?</h2>
+        <ul style="font-size:14px;color:#94a3b8;line-height:1.8;padding-left:20px;margin:0 0 24px;">
+          <li>Acceso completo a los cursos de nivel <strong style="color:#34d399;">Basic</strong></li>
+          <li>Contenido actualizado y en constante crecimiento</li>
+          <li>Lecciones paso a paso para que aprendas haciendo</li>
+          <li>Comunidad de estudiantes con quienes crecer juntos</li>
+        </ul>
+        <p style="font-size:14px;color:#94a3b8;margin:0 0 28px;line-height:1.6;">
+          Esta oportunidad es posible gracias a un miembro Pro de nuestra comunidad que decidio
+          compartir su beca con alguien que realmente la necesitara. Ahora te toca a ti aprovecharla al maximo.
+        </p>
+        <div style="text-align:center;margin:32px 0;">
+          <a href="${loginUrl}" style="display:inline-block;background:linear-gradient(120deg,#00ff88,#2dd4bf,#3b82f6);color:#04180f;font-weight:700;font-size:16px;padding:16px 40px;border-radius:50px;text-decoration:none;">
+            Comenzar a aprender
+          </a>
+        </div>
+        <p style="font-size:13px;color:#64748b;margin:0 0 8px;text-align:center;line-height:1.6;">
+          Inicia sesion con tu cuenta y ve directo a
+          <a href="${cursosUrl}" style="color:#6366f1;text-decoration:underline;">Mis Cursos</a> para empezar.
+        </p>
+        <div style="border-top:1px solid rgba(148,163,184,0.12);margin-top:32px;padding-top:20px;">
+          <p style="font-size:13px;color:#64748b;margin:0;line-height:1.6;text-align:center;">
+            Si conoces a alguien mas que quiera aprender, cuentale sobre ProLevelCode.<br/>Juntos llegamos mas lejos. 🚀
+          </p>
+        </div>
+        <p style="font-size:12px;color:#475569;margin:28px 0 0;text-align:center;">— El equipo de ProLevelCode</p>
+      </div>
+    </div>`;
+}
+
 export async function adminAssignScholarship(fd: FormData) {
   await requireRole(["admin", "superadmin"]);
   const scholarshipId = str(fd, "scholarship_id");
@@ -523,7 +573,7 @@ export async function adminAssignScholarship(fd: FormData) {
   const scholarship = await prisma.scholarship.findUnique({ where: { id: scholarshipId } });
   const application = await prisma.scholarshipApplication.findUnique({
     where: { id: applicationId },
-    include: { user: { select: { id: true, email: true } } },
+    include: { user: { select: { id: true, email: true, full_name: true } } },
   });
 
   if (!scholarship || !application || scholarship.status !== "unassigned" || application.status !== "pending") {
@@ -537,6 +587,20 @@ export async function adminAssignScholarship(fd: FormData) {
   const now = new Date();
   const expiresAt = isPermanent ? null : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+  // 1) Send welcome email to recipient BEFORE activating
+  const { getResendClient } = await import("@/lib/email/resend");
+  const { env } = await import("@/lib/env");
+  const resend = getResendClient();
+  const firstName = application.user.full_name?.split(" ")[0] ?? "";
+
+  await resend.emails.send({
+    from: "ProLevelCode <no-reply@prolevelcode.com>",
+    to: application.user.email,
+    subject: "Felicidades — Ganaste una beca en ProLevelCode",
+    html: scholarshipWinnerEmailHtml(firstName, `${env.appUrl}/login`, `${env.appUrl}/dashboard/cursos`),
+  });
+
+  // 2) Activate scholarship
   await prisma.$transaction([
     prisma.scholarship.update({
       where: { id: scholarship.id },
@@ -557,18 +621,15 @@ export async function adminAssignScholarship(fd: FormData) {
     }),
   ]);
 
-  // Notify Pro user
+  // 3) Notify Pro user (grantor)
   try {
-    const { getResendClient } = await import("@/lib/email/resend");
-    const { env } = await import("@/lib/env");
     const grantor = await prisma.user.findUnique({
       where: { id: scholarship.grantor_id },
       select: { email: true },
     });
     if (grantor?.email) {
-      const resend = getResendClient();
       await resend.emails.send({
-        from: "ProLevelCode <no-reply@prolevelcode.dev>",
+        from: "ProLevelCode <no-reply@prolevelcode.com>",
         to: grantor.email,
         subject: `Tu beca ${scholarship.scholarship_code} fue asignada`,
         html: `
@@ -582,7 +643,7 @@ export async function adminAssignScholarship(fd: FormData) {
       });
     }
   } catch {
-    // silent
+    // silent — grantor notification is best-effort
   }
 
   revalidatePath("/admin/becas");
@@ -595,28 +656,39 @@ export async function adminGrantScholarshipDirect(fd: FormData) {
 
   const app = await prisma.scholarshipApplication.findUnique({
     where: { id },
-    select: { user_id: true, status: true },
+    include: { user: { select: { id: true, email: true, full_name: true } } },
   });
   if (!app || app.status !== "pending") return;
 
-  // Check if user already has active Basic or higher
+  // 1) Send welcome email BEFORE activating
+  const { getResendClient } = await import("@/lib/email/resend");
+  const { env } = await import("@/lib/env");
+  const resend = getResendClient();
+  const firstName = app.user.full_name?.split(" ")[0] ?? "";
+
+  await resend.emails.send({
+    from: "ProLevelCode <no-reply@prolevelcode.com>",
+    to: app.user.email,
+    subject: "Felicidades — Ganaste una beca en ProLevelCode",
+    html: scholarshipWinnerEmailHtml(firstName, `${env.appUrl}/login`, `${env.appUrl}/dashboard/cursos`),
+  });
+
+  // 2) Activate scholarship
   const existing = await prisma.tierPurchase.findFirst({
-    where: { user_id: app.user_id, tier: { in: ["basic", "pro"] }, status: "active" },
+    where: { user_id: app.user.id, tier: { in: ["basic", "pro"] }, status: "active" },
   });
 
   await prisma.$transaction([
-    // Mark application as approved
     prisma.scholarshipApplication.update({
       where: { id },
       data: { status: "approved", reviewed_at: new Date() },
     }),
-    // Grant Basic tier at $0 (admin grant — not counted as revenue)
     ...(existing
       ? []
       : [
           prisma.tierPurchase.create({
             data: {
-              user_id: app.user_id,
+              user_id: app.user.id,
               tier: "basic",
               status: "active",
               payment_provider: "admin_grant",
@@ -698,7 +770,7 @@ export async function sendScholarshipWelcomeEmails() {
 
     try {
       await resend.emails.send({
-        from: "ProLevelCode <no-reply@prolevelcode.dev>",
+        from: "ProLevelCode <no-reply@prolevelcode.com>",
         to: email,
         subject: "Tu beca en ProLevelCode esta lista — activa tu cuenta",
         html: `

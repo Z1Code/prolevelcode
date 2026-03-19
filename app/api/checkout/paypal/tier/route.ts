@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     const amountDisplay = `$${(amountCents / 100).toFixed(0)} USD`;
 
     await resend.emails.send({
-      from: "ProLevelCode <no-reply@prolevelcode.dev>",
+      from: "ProLevelCode <no-reply@prolevelcode.com>",
       to: env.adminEmails,
       subject: `Nuevo pago PayPal pendiente - ${tierConfig.name} (${amountDisplay})`,
       html: `

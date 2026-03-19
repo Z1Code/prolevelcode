@@ -3,14 +3,17 @@ import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
-const analyticsDataClient = new BetaAnalyticsDataClient({
-  credentials: {
-    client_email: process.env.GA_CLIENT_EMAIL,
-    private_key: process.env.GA_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-  },
-});
+function createAnalyticsClient(): BetaAnalyticsDataClient {
+  return new BetaAnalyticsDataClient({
+    credentials: {
+      client_email: process.env.GA_CLIENT_EMAIL?.trim(),
+      private_key: process.env.GA_PRIVATE_KEY?.trim().replace(/\\n/g, "\n"),
+    },
+    fallback: "rest",
+  });
+}
 
-const propertyId = process.env.GA_PROPERTY_ID;
+const propertyId = process.env.GA_PROPERTY_ID?.trim();
 
 function resolveStartDate(range: string): string {
   switch (range) {
@@ -56,28 +59,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const client = createAnalyticsClient();
+
     switch (metric) {
       case "overview":
-        return await getOverviewMetrics(startDate);
+        return await getOverviewMetrics(client, startDate);
       case "realtime":
-        return await getRealtimeMetrics();
+        return await getRealtimeMetrics(client);
       case "pages":
-        return await getTopPages(startDate);
+        return await getTopPages(client, startDate);
       case "devices":
-        return await getDeviceMetrics(startDate);
+        return await getDeviceMetrics(client, startDate);
       case "locations":
-        return await getLocationMetrics(startDate);
+        return await getLocationMetrics(client, startDate);
       default:
         return NextResponse.json({ error: "Métrica no válida" }, { status: 400 });
     }
   } catch (error) {
-    console.error("Error en Analytics API:", error);
-    return NextResponse.json({ error: "Error obteniendo datos de Analytics" }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Error en Analytics API:", message, error);
+    return NextResponse.json({ error: `Error obteniendo datos de Analytics: ${message}` }, { status: 500 });
   }
 }
 
-async function getOverviewMetrics(startDate: string) {
-  const [response] = await analyticsDataClient.runReport({
+async function getOverviewMetrics(client: BetaAnalyticsDataClient, startDate: string) {
+  const [response] = await client.runReport({
     property: `properties/${propertyId}`,
     dateRanges: [{ startDate, endDate: "today" }],
     dimensions: [{ name: "date" }],
@@ -134,8 +140,8 @@ async function getOverviewMetrics(startDate: string) {
   });
 }
 
-async function getRealtimeMetrics() {
-  const [response] = await analyticsDataClient.runRealtimeReport({
+async function getRealtimeMetrics(client: BetaAnalyticsDataClient) {
+  const [response] = await client.runRealtimeReport({
     property: `properties/${propertyId}`,
     metrics: [{ name: "activeUsers" }],
   });
@@ -145,8 +151,8 @@ async function getRealtimeMetrics() {
   });
 }
 
-async function getTopPages(startDate: string) {
-  const [response] = await analyticsDataClient.runReport({
+async function getTopPages(client: BetaAnalyticsDataClient, startDate: string) {
+  const [response] = await client.runReport({
     property: `properties/${propertyId}`,
     dateRanges: [{ startDate, endDate: "today" }],
     dimensions: [{ name: "pageTitle" }, { name: "pagePath" }],
@@ -183,8 +189,8 @@ async function getTopPages(startDate: string) {
   return NextResponse.json({ pages });
 }
 
-async function getDeviceMetrics(startDate: string) {
-  const [response] = await analyticsDataClient.runReport({
+async function getDeviceMetrics(client: BetaAnalyticsDataClient, startDate: string) {
+  const [response] = await client.runReport({
     property: `properties/${propertyId}`,
     dateRanges: [{ startDate, endDate: "today" }],
     dimensions: [{ name: "deviceCategory" }],
@@ -201,8 +207,8 @@ async function getDeviceMetrics(startDate: string) {
   return NextResponse.json({ devices });
 }
 
-async function getLocationMetrics(startDate: string) {
-  const [response] = await analyticsDataClient.runReport({
+async function getLocationMetrics(client: BetaAnalyticsDataClient, startDate: string) {
+  const [response] = await client.runReport({
     property: `properties/${propertyId}`,
     dateRanges: [{ startDate, endDate: "today" }],
     dimensions: [{ name: "city" }, { name: "country" }],

@@ -52,7 +52,7 @@ export async function assignScholarship(fd: FormData) {
     const resend = getResendClient();
     const redeemUrl = `${env.appUrl}/beca/redeem?token=${scholarship.invite_token}`;
     await resend.emails.send({
-      from: "ProLevelCode <no-reply@prolevelcode.dev>",
+      from: "ProLevelCode <no-reply@prolevelcode.com>",
       to: recipientEmail,
       subject: "Te han otorgado una beca en ProLevelCode",
       html: `

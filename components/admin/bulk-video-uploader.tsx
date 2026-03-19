@@ -8,6 +8,7 @@ import { createLessonsBulk } from "@/app/admin/actions";
 
 interface BulkVideoUploaderProps {
   courseId: string;
+  tierAccess?: string;
 }
 
 type FileState = "queued" | "creating" | "uploading" | "complete" | "error";
@@ -21,12 +22,13 @@ interface UploadItem {
   error: string;
   title: string;
   isProOnly: boolean;
+  durationMinutes: number | null;
   tusUpload: tus.Upload | null;
 }
 
 const MAX_CONCURRENT = 3;
 
-export function BulkVideoUploader({ courseId }: BulkVideoUploaderProps) {
+export function BulkVideoUploader({ courseId, tierAccess }: BulkVideoUploaderProps) {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -47,6 +49,22 @@ export function BulkVideoUploader({ courseId }: BulkVideoUploaderProps) {
     async (item: UploadItem) => {
       activeCountRef.current++;
       updateItem(item.id, { state: "creating" });
+
+      // Detect video duration
+      try {
+        const url = URL.createObjectURL(item.file);
+        const video = document.createElement("video");
+        video.preload = "metadata";
+        video.src = url;
+        video.onloadedmetadata = () => {
+          URL.revokeObjectURL(url);
+          if (video.duration && isFinite(video.duration)) {
+            updateItem(item.id, { durationMinutes: Math.ceil(video.duration / 60) });
+          }
+        };
+      } catch {
+        // silent
+      }
 
       try {
         const title = item.file.name.replace(/\.[^.]+$/, "");
@@ -133,7 +151,8 @@ export function BulkVideoUploader({ courseId }: BulkVideoUploaderProps) {
           videoId: "",
           error: "",
           title: file.name.replace(/\.[^.]+$/, ""),
-          isProOnly: false,
+          isProOnly: tierAccess === "pro",
+          durationMinutes: null,
           tusUpload: null,
         }));
 
@@ -213,6 +232,7 @@ export function BulkVideoUploader({ courseId }: BulkVideoUploaderProps) {
       fd.set(`title_${i}`, it.title);
       fd.set(`bunny_video_id_${i}`, it.videoId);
       if (it.isProOnly) fd.set(`is_pro_only_${i}`, "on");
+      if (it.durationMinutes) fd.set(`duration_minutes_${i}`, String(it.durationMinutes));
     });
 
     await createLessonsBulk(fd);
@@ -346,15 +366,9 @@ export function BulkVideoUploader({ courseId }: BulkVideoUploaderProps) {
                         required
                       />
                     </label>
-                    <label className="flex items-center gap-1.5 pb-1.5 text-xs text-slate-300">
-                      <input
-                        type="checkbox"
-                        checked={item.isProOnly}
-                        onChange={(e) => updateItem(item.id, { isProOnly: e.target.checked })}
-                        className="h-3.5 w-3.5 accent-violet-400"
-                      />
-                      Solo Pro
-                    </label>
+                    <span className="pb-1.5 text-[10px] text-slate-500">
+                      {item.durationMinutes ? `${item.durationMinutes} min` : "..."}
+                    </span>
                   </div>
                 )}
               </li>
