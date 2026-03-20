@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const rawNext = searchParams.get("state") ?? searchParams.get("next");
   const next = rawNext && rawNext.startsWith("/") ? rawNext : "/dashboard";
 
-  const baseUrl = request.nextUrl.origin;
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin).trim();
 
   // Google OAuth callback
   if (code) {
