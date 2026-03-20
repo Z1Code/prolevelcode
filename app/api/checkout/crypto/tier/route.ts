@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     // email failure shouldn't block checkout
   }
 
-  const baseUrl = request.nextUrl.origin;
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin).trim();
   return NextResponse.json({
     url: `${baseUrl}/crypto/pay?order=${orderId}`,
   });

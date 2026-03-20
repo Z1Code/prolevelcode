@@ -9,14 +9,18 @@ import { parseRequestBody } from "@/lib/utils/request-body";
 import { jsonError } from "@/lib/utils/http";
 import { assertRateLimit } from "@/lib/utils/rate-limit";
 
+function getAppUrl(request: NextRequest) {
+  return (process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin).trim();
+}
+
 function hasValidOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
   if (!origin) return false;
-  return origin === request.nextUrl.origin;
+  return origin === getAppUrl(request);
 }
 
 export async function POST(request: NextRequest) {
-  const baseUrl = request.nextUrl.origin;
+  const baseUrl = getAppUrl(request);
 
   if (!hasValidOrigin(request)) {
     return jsonError("Invalid origin", 403);
