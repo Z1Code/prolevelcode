@@ -22,7 +22,7 @@ export function TestimonialsSection({ items }: { items: Testimonial[] }) {
         <div className="mx-auto mt-10 grid max-w-5xl gap-5 md:grid-cols-3">
           {items.map((item, i) => (
             <motion.div
-              key={`testimonial-${i}`}
+              key={`${item.name}-${item.role}-${i}`}
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.12 }}

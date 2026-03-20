@@ -2,7 +2,6 @@ import { Navbar } from "@/components/shared/navbar";
 import { Footer } from "@/components/shared/footer";
 import { getCurrentAppUser } from "@/lib/auth/session";
 import { getUserTier } from "@/lib/access/check-access";
-export const dynamic = "force-dynamic";
 
 export default async function LandingLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentAppUser().catch((error) => {

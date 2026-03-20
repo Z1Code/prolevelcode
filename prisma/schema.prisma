@@ -174,6 +174,7 @@ model Module {
   course      Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
   lessons     Lesson[]
 
+  @@index([course_id])
   @@map("modules")
 }
 
@@ -200,6 +201,8 @@ model Lesson {
   lessonReviews    LessonReview[]
   lessonComments   LessonComment[]
 
+  @@index([course_id, sort_order])
+  @@index([module_id])
   @@map("lessons")
 }
 
@@ -238,6 +241,8 @@ model LessonProgress {
   course          Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, lesson_id])
+  @@index([user_id, course_id])
+  @@index([course_id])
   @@map("lesson_progress")
 }
 
@@ -266,6 +271,9 @@ model VideoToken {
   usageLogs    TokenUsageLog[]
   activeSession ActiveVideoSession?
 
+  @@index([user_id, is_revoked, expires_at])
+  @@index([lesson_id])
+  @@index([course_id])
   @@map("video_tokens")
 }
 
@@ -283,6 +291,7 @@ model TokenUsageLog {
   token           VideoToken  @relation(fields: [token_id], references: [id], onDelete: Cascade)
   user            User?       @relation(fields: [user_id], references: [id], onDelete: SetNull)
 
+  @@index([token_id])
   @@map("token_usage_logs")
 }
 
@@ -325,6 +334,8 @@ model ServiceOrder {
   user                       User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
   service                    Service            @relation(fields: [service_id], references: [id], onDelete: Restrict)
 
+  @@index([service_id])
+  @@index([user_id])
   @@map("service_orders")
 }
 
@@ -361,6 +372,8 @@ model Testimonial {
 
   user              User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
 
+  @@index([user_id])
+  @@index([is_published, is_featured, sort_order])
   @@map("testimonials")
 }
 
@@ -423,6 +436,7 @@ model PaymentTransaction {
   metadata         Json?
   created_at       DateTime @default(now()) @db.Timestamptz(6)
 
+  @@index([payment_provider, status, created_at])
   @@map("payment_transactions")
 }
 
@@ -579,6 +593,8 @@ model LessonReview {
   course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, lesson_id])
+  @@index([lesson_id])
+  @@index([course_id])
   @@map("lesson_reviews")
 }
 
@@ -596,6 +612,7 @@ model CourseReview {
   course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, course_id])
+  @@index([course_id])
   @@map("course_reviews")
 }
 
@@ -612,5 +629,6 @@ model LessonComment {
   course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
 
   @@index([lesson_id, created_at])
+  @@index([course_id])
   @@map("lesson_comments")
 }

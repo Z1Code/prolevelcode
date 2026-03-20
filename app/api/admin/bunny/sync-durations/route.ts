@@ -33,39 +33,59 @@ export async function POST() {
   let failed = 0;
   const errors: { title: string; error: string }[] = [];
 
-  for (const lesson of lessons) {
-    try {
+  // Fetch all video data from Bunny in parallel
+  const fetchResults = await Promise.allSettled(
+    lessons.map(async (lesson) => {
       const res = await fetch(
         `https://video.bunnycdn.com/library/${libraryId}/videos/${lesson.bunny_video_id}`,
         { headers: { AccessKey: apiKey } },
       );
 
       if (!res.ok) {
-        errors.push({ title: lesson.title, error: `Bunny API ${res.status}` });
-        failed++;
-        continue;
+        throw new Error(`Bunny API ${res.status}`);
       }
 
       const data = (await res.json()) as { length?: number };
       const seconds = data.length ?? 0;
 
       if (seconds <= 0) {
-        errors.push({ title: lesson.title, error: "Video has no duration (still encoding?)" });
-        failed++;
-        continue;
+        throw new Error("Video has no duration (still encoding?)");
       }
 
-      const minutes = Math.ceil(seconds / 60);
+      return { lesson, minutes: Math.ceil(seconds / 60) };
+    }),
+  );
 
-      await prisma.lesson.update({
-        where: { id: lesson.id },
-        data: { duration_minutes: minutes },
-      });
+  // Process fetch results and update lessons in parallel
+  const lessonsToUpdate: { id: string; minutes: number }[] = [];
+  for (let i = 0; i < fetchResults.length; i++) {
+    const result = fetchResults[i];
+    if (result.status === "fulfilled") {
+      lessonsToUpdate.push({ id: result.value.lesson.id, minutes: result.value.minutes });
+    } else {
+      const msg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      errors.push({ title: lessons[i].title, error: msg });
+      failed++;
+    }
+  }
 
+  // Update all lesson durations in parallel
+  const updateResults = await Promise.allSettled(
+    lessonsToUpdate.map((item) =>
+      prisma.lesson.update({
+        where: { id: item.id },
+        data: { duration_minutes: item.minutes },
+      }),
+    ),
+  );
+
+  for (let i = 0; i < updateResults.length; i++) {
+    const result = updateResults[i];
+    if (result.status === "fulfilled") {
       updated++;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      errors.push({ title: lesson.title, error: msg });
+    } else {
+      const msg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      errors.push({ title: lessonsToUpdate[i].id, error: msg });
       failed++;
     }
   }
@@ -77,13 +97,15 @@ export async function POST() {
       select: { id: true, lessons: { select: { duration_minutes: true } } },
     });
 
-    for (const course of courses) {
-      const total = course.lessons.reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0);
-      await prisma.course.update({
-        where: { id: course.id },
-        data: { total_duration_minutes: total > 0 ? total : null },
-      });
-    }
+    await Promise.allSettled(
+      courses.map((course) => {
+        const total = course.lessons.reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0);
+        return prisma.course.update({
+          where: { id: course.id },
+          data: { total_duration_minutes: total > 0 ? total : null },
+        });
+      }),
+    );
   }
 
   return NextResponse.json({ updated, failed, total: lessons.length, errors: errors.length > 0 ? errors : undefined });

@@ -57,6 +57,7 @@ export function TestimonialPrompt({ open }: TestimonialPromptProps) {
             {/* Close button */}
             <button
               onClick={handleDismiss}
+              aria-label="Cerrar"
               className="absolute right-3 top-3 text-slate-500 transition hover:text-slate-300"
             >
               <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">

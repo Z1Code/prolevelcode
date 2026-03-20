@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth/session";
 import { getUserTier } from "@/lib/access/check-access";
 import { TIERS, EARLY_PRO_LIMIT } from "@/lib/tiers/config";
 import { TierCard } from "@/components/pricing/tier-card";
 import { prisma } from "@/lib/prisma";
+
+export const metadata: Metadata = {
+  title: "Planes y Precios | ProLevelCode",
+  description: "Acceso de por vida a cursos y guias de programacion. Un solo pago, sin suscripciones ni renovaciones.",
+};
 
 interface PlanesPageProps {
   searchParams: Promise<{ checkout?: string }>;

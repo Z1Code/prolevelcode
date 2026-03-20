@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getPublishedCourses } from "@/lib/utils/data";
 import { prisma } from "@/lib/prisma";
@@ -6,6 +7,11 @@ import { getBunnyThumbnailUrl } from "@/lib/bunny/signed-url";
 import { getSessionUser } from "@/lib/auth/session";
 import { getUserTier } from "@/lib/access/check-access";
 import { CourseTimeline } from "@/components/courses/course-timeline";
+
+export const metadata: Metadata = {
+  title: "Cursos de Programacion | ProLevelCode",
+  description: "Cursos orientados a resultados con proyectos reales y acceso de por vida. Aprende Next.js, TypeScript, IA y mas.",
+};
 
 export default async function CoursesPage() {
   const courses = await getPublishedCourses();

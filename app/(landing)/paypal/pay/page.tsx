@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,15 @@ const TIER_INFO = {
 const PAYPAL_EMAIL = "jtopicshow@gmail.com";
 const PAYMENT_CONCEPT = "pago de curso web prolevelcode";
 
-export default function PaypalPayPage() {
+export default function PaypalPayPageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" /></div>}>
+      <PaypalPayPage />
+    </Suspense>
+  );
+}
+
+function PaypalPayPage() {
   const searchParams = useSearchParams();
   const tierParam = searchParams.get("tier");
   const tier = tierParam === "pro" ? "pro" : "basic";

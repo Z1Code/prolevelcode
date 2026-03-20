@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
+import { assertRateLimit } from "@/lib/utils/rate-limit";
+import { jsonError } from "@/lib/utils/http";
 
 const PAGE_SIZE = 20;
 
@@ -40,6 +42,11 @@ export async function POST(
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  const allowed = await assertRateLimit("lessons/comments", user.id, 15, 60);
+  if (!allowed) {
+    return jsonError("Too many requests", 429);
+  }
+
   const { lessonId } = await params;
   const body = await req.json();
   const content = typeof body.content === "string" ? body.content.trim() : "";
@@ -47,6 +54,15 @@ export async function POST(
 
   if (!content || content.length > 500 || !courseId) {
     return NextResponse.json({ error: "Contenido invalido" }, { status: 400 });
+  }
+
+  // Verify lesson belongs to course
+  const lesson = await prisma.lesson.findFirst({
+    where: { id: lessonId, course_id: courseId },
+    select: { id: true },
+  });
+  if (!lesson) {
+    return NextResponse.json({ error: "Leccion no encontrada" }, { status: 404 });
   }
 
   const comment = await prisma.lessonComment.create({

@@ -23,8 +23,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
       <form action={loginAction} className="mt-6 space-y-3">
         <input type="hidden" name="next" value={next} />
-        <Input name="email" type="email" placeholder="tu@email.com" required />
-        <Input name="password" type="password" placeholder="Contrasena" required />
+        <Input name="email" type="email" placeholder="tu@email.com" required aria-label="Email" />
+        <Input name="password" type="password" placeholder="Contrasena" required aria-label="Contraseña" />
         <Button type="submit" className="w-full">
           Entrar
         </Button>
@@ -32,7 +32,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
       <form action={magicLinkAction} className="mt-3 space-y-3">
         <input type="hidden" name="next" value={next} />
-        <Input name="email" type="email" placeholder="Magic link por email" required />
+        <Input name="email" type="email" placeholder="Magic link por email" required aria-label="Email para magic link" />
         <Button type="submit" variant="ghost" className="w-full">
           Enviar magic link
         </Button>

@@ -30,6 +30,7 @@ export function StarRating({ value, onChange, readOnly = false, size = "md" }: S
             whileTap={readOnly ? {} : { scale: 0.85 }}
             animate={filled ? { scale: [1, 1.15, 1] } : { scale: 1 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
+            aria-label={`Calificar ${star} estrellas`}
             className={`transition-colors ${readOnly ? "cursor-default" : "cursor-pointer"}`}
           >
             <svg

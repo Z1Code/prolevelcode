@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -26,7 +26,15 @@ interface OrderInfo {
 
 /* ─── component ─── */
 
-export default function CryptoPayPage() {
+export default function CryptoPayPageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" /></div>}>
+      <CryptoPayPage />
+    </Suspense>
+  );
+}
+
+function CryptoPayPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const orderId = searchParams.get("order");

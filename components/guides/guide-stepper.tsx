@@ -10,7 +10,7 @@ export function GuideStepper({ steps }: { steps: GuideStep[] }) {
       <div className="absolute left-[15px] top-8 bottom-0 w-px bg-gradient-to-b from-white/15 via-white/8 to-transparent" />
 
       {steps.map((step, i) => (
-        <GuideStepBlock key={i} step={step} index={i} />
+        <GuideStepBlock key={step.title || `step-${i}`} step={step} index={i} />
       ))}
     </div>
   );

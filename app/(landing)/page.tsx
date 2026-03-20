@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { HeroSection } from "@/components/landing/hero-section";
 import { ShowcaseSection } from "@/components/landing/showcase-section";
 import { CoursesSection } from "@/components/landing/courses-section";
@@ -8,6 +9,11 @@ import { FinalCtaSection } from "@/components/landing/final-cta-section";
 import { getSiteFeatureFlags } from "@/lib/utils/site-config";
 import { prisma } from "@/lib/prisma";
 import { testimonials as staticTestimonials } from "@/lib/utils/site-data";
+
+export const metadata: Metadata = {
+  title: "ProLevelCode | Desarrollo Web e IA",
+  description: "Servicios de desarrollo web, cursos premium de programacion e inteligencia artificial. Aprende a construir productos digitales reales.",
+};
 
 async function getTestimonials() {
   try {

@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("Error en Analytics API:", message, error);
-    return NextResponse.json({ error: `Error obteniendo datos de Analytics: ${message}` }, { status: 500 });
+    return NextResponse.json({ error: "Error obteniendo datos de Analytics" }, { status: 500 });
   }
 }
 

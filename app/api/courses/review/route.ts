@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
+import { assertRateLimit } from "@/lib/utils/rate-limit";
+import { jsonError } from "@/lib/utils/http";
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const allowed = await assertRateLimit("courses/review", user.id, 10, 60);
+  if (!allowed) {
+    return jsonError("Too many requests", 429);
+  }
 
   const { courseId, rating, comment } = await req.json();
 

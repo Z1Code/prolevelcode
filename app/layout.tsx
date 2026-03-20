@@ -15,6 +15,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://prolevelcode.com"),
   title: "ProLevelCode | Desarrollo Web e IA",
   description: "Servicios de desarrollo web y cursos premium de programacion e IA.",
   icons: {
@@ -27,6 +28,19 @@ export const metadata: Metadata = {
     apple: [{ url: "/favicon/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/favicon/site.webmanifest",
+  openGraph: {
+    title: "ProLevelCode | Desarrollo Web e IA",
+    description: "Servicios de desarrollo web y cursos premium de programacion e IA.",
+    url: "https://prolevelcode.com",
+    siteName: "ProLevelCode",
+    locale: "es_CL",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ProLevelCode | Desarrollo Web e IA",
+    description: "Servicios de desarrollo web y cursos premium de programacion e IA.",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
