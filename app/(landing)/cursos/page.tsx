@@ -8,20 +8,20 @@ import { currencyFormatter } from "@/lib/payments/helpers";
 export default async function CoursesPage() {
   const courses = await getPublishedCourses();
 
-  // Get first free preview lesson per course for thumbnails
+  // Get first ready lesson per course for thumbnails
   const courseIds = courses.map((c) => c.id).filter(Boolean);
-  const previewLessons = courseIds.length
+  const thumbLessons = courseIds.length
     ? await prisma.lesson.findMany({
-        where: { course_id: { in: courseIds }, is_free_preview: true },
+        where: { course_id: { in: courseIds }, mux_status: "ready", thumbnail_url: { not: null } },
         orderBy: { sort_order: "asc" },
-        select: { course_id: true, youtube_video_id: true },
+        select: { course_id: true, thumbnail_url: true },
       })
     : [];
 
-  const previewMap = new Map<string, string>();
-  for (const lesson of previewLessons) {
-    if (!previewMap.has(lesson.course_id)) {
-      previewMap.set(lesson.course_id, lesson.youtube_video_id);
+  const thumbnailMap = new Map<string, string>();
+  for (const lesson of thumbLessons) {
+    if (lesson.thumbnail_url && !thumbnailMap.has(lesson.course_id)) {
+      thumbnailMap.set(lesson.course_id, lesson.thumbnail_url);
     }
   }
 
@@ -34,8 +34,7 @@ export default async function CoursesPage() {
 
       <div className="mt-10 space-y-4">
         {courses.map((course) => {
-          const ytId = previewMap.get(course.id);
-          const thumb = course.thumbnail_url || (ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : null);
+          const thumb = course.thumbnail_url || thumbnailMap.get(course.id) || null;
 
           return (
             <Card key={course.id} className="p-5">

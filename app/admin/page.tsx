@@ -58,21 +58,17 @@ export default async function AdminHomePage() {
             <table className="liquid-table w-full text-left text-sm">
               <thead className="text-slate-400">
                 <tr>
-                  <th>Token</th>
                   <th>User</th>
                   <th>Leccion</th>
-                  <th>Vistas</th>
+                  <th>Expira</th>
                 </tr>
               </thead>
               <tbody>
                 {metrics.latestTokens.map((token) => (
                   <tr key={token.id}>
-                    <td className="py-2">{token.token.slice(0, 6)}...</td>
-                    <td>{token.user?.email ?? "-"}</td>
+                    <td className="py-2">{token.user?.email ?? "-"}</td>
                     <td>{token.lesson?.title ?? "-"}</td>
-                    <td>
-                      {token.current_views}/{token.max_views}
-                    </td>
+                    <td>{token.expires_at.toLocaleString("es-ES")}</td>
                   </tr>
                 ))}
               </tbody>

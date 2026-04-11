@@ -40,10 +40,9 @@ export interface Enrollment {
 }
 
 export interface VideoTokenResponse {
-  token: string;
-  videoUrl: string;
+  playbackId: string;
+  tokens: { playback: string; thumbnail: string; storyboard: string; drm: string };
   expiresAt: string;
-  remainingViews: number;
 }
 
 export interface ServiceOrder {

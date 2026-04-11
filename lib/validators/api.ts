@@ -27,13 +27,5 @@ export const generateTokenSchema = z.object({
   courseId: z.string().uuid(),
 });
 
-export const validateTokenSchema = z.object({
-  token: z.string().min(12),
-});
-
-export const revokeTokenSchema = z.object({
-  tokenId: z.string().uuid(),
-  reason: z.string().trim().min(3).max(300),
-});
 
 

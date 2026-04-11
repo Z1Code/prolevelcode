@@ -43,7 +43,7 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
     <div>
       <Link href="/dashboard/cursos" className="mb-3 inline-flex text-xs text-slate-400 hover:text-slate-200">← Mis cursos</Link>
       <h2 className="text-2xl font-semibold">{course.title}</h2>
-      <p className="mt-2 text-sm text-slate-400">Reproduccion segura con token auto-destruible.</p>
+      <p className="mt-2 text-sm text-slate-400">Reproduccion segura con proteccion DRM.</p>
       <div className="mt-4">
         <SecureCoursePlayer lessons={playerLessons} />
       </div>

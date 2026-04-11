@@ -53,7 +53,7 @@ export default async function EditCoursePage({ params }: Props) {
             <Input name="difficulty" defaultValue={course.difficulty ?? ""} />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs text-slate-400">Preview Video (YouTube ID)</span>
+            <span className="text-xs text-slate-400">Preview Video URL</span>
             <Input name="preview_video_url" defaultValue={course.preview_video_url ?? ""} />
           </label>
           <div className="flex items-end gap-4">

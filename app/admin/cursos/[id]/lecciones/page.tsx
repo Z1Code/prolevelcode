@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { MuxUploadButton } from "@/components/admin/mux-upload-button";
 import { createLesson, updateLesson, deleteLesson } from "../../../actions";
 
 interface AdminLessonsPageProps {
@@ -47,16 +48,12 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
         <ul className="mt-3 space-y-2 text-sm">
           {lessons.map((lesson) => (
             <li key={lesson.id} className="liquid-surface-soft rounded-lg p-3">
-              <form action={updateLesson} className="grid gap-2 md:grid-cols-[1fr_1fr_auto_auto]">
+              <form action={updateLesson} className="grid gap-2 md:grid-cols-[1fr_auto_auto]">
                 <input type="hidden" name="id" value={lesson.id} />
                 <input type="hidden" name="course_id" value={id} />
                 <div>
                   <span className="text-xs text-slate-500">Titulo</span>
                   <Input name="title" defaultValue={lesson.title} className="mt-0.5 h-9 text-xs" required />
-                </div>
-                <div>
-                  <span className="text-xs text-slate-500">YouTube ID</span>
-                  <Input name="youtube_video_id" defaultValue={lesson.youtube_video_id} className="mt-0.5 h-9 text-xs" required />
                 </div>
                 <div>
                   <span className="text-xs text-slate-500">Modulo</span>
@@ -74,7 +71,7 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
                   <span className="text-xs text-slate-500">Min</span>
                   <Input name="duration_minutes" type="number" defaultValue={lesson.duration_minutes ?? ""} className="mt-0.5 h-9 w-20 text-xs" />
                 </div>
-                <div className="flex items-center gap-3 md:col-span-4">
+                <div className="flex items-center gap-3 md:col-span-3">
                   <label className="flex items-center gap-1.5 text-xs text-slate-300">
                     <input type="checkbox" name="is_free_preview" defaultChecked={lesson.is_free_preview} className="h-3.5 w-3.5 accent-emerald-400" />
                     Preview gratuito
@@ -85,6 +82,9 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
                   </div>
                 </div>
               </form>
+              <div className="mt-2">
+                <MuxUploadButton lessonId={lesson.id} currentStatus={lesson.mux_status} />
+              </div>
               <form action={deleteLesson} className="mt-1 flex justify-end">
                 <input type="hidden" name="id" value={lesson.id} />
                 <input type="hidden" name="course_id" value={id} />
@@ -103,10 +103,6 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
           <label className="flex flex-col gap-1">
             <span className="text-xs text-slate-400">Titulo *</span>
             <Input name="title" placeholder="Introduccion a React" required />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs text-slate-400">YouTube Video ID *</span>
-            <Input name="youtube_video_id" placeholder="dQw4w9WgXcQ" required />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs text-slate-400">Modulo</span>

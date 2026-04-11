@@ -11,9 +11,6 @@ export interface AdminLatestSale {
 
 export interface AdminLatestToken {
   id: string;
-  token: string;
-  current_views: number;
-  max_views: number;
   expires_at: Date;
   user: { email: string };
   lesson: { title: string };
@@ -40,7 +37,7 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
     }),
     prisma.user.count({ where: { created_at: { gte: thirtyDaysAgo } } }),
     prisma.course.count({ where: { is_published: true } }),
-    prisma.videoToken.count({ where: { is_revoked: false, expires_at: { gt: now } } }),
+    prisma.videoToken.count({ where: { expires_at: { gt: now } } }),
     prisma.enrollment.findMany({
       orderBy: { enrolled_at: "desc" },
       take: 8,
@@ -54,14 +51,11 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
       },
     }),
     prisma.videoToken.findMany({
-      where: { is_revoked: false, expires_at: { gt: now } },
+      where: { expires_at: { gt: now } },
       orderBy: { created_at: "desc" },
       take: 8,
       select: {
         id: true,
-        token: true,
-        current_views: true,
-        max_views: true,
         expires_at: true,
         user: { select: { email: true } },
         lesson: { select: { title: true } },

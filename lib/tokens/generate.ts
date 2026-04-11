@@ -1,22 +1,15 @@
-import { nanoid } from "nanoid";
-import { env } from "@/lib/env";
+import { getMux } from "@/lib/mux";
 import { prisma } from "@/lib/prisma";
-import { signVideoAccess } from "@/lib/tokens/hmac";
 import type { VideoTokenResponse } from "@/lib/types";
 
-const CONCURRENT_SESSION_STALE_MS = 2 * 60 * 1000; // 2 minutes
-
-interface GenerateVideoTokenParams {
+interface GenerateMuxTokensParams {
   userId: string;
   lessonId: string;
   courseId: string;
-  ipAddress: string;
-  userAgent: string;
-  fingerprint?: string;
 }
 
-export async function generateVideoToken(params: GenerateVideoTokenParams): Promise<VideoTokenResponse> {
-  const { userId, lessonId, courseId, ipAddress, userAgent } = params;
+export async function generateMuxTokens(params: GenerateMuxTokensParams): Promise<VideoTokenResponse> {
+  const { userId, lessonId, courseId } = params;
 
   const enrollment = await prisma.enrollment.findFirst({
     where: { user_id: userId, course_id: courseId, status: "active" },
@@ -26,301 +19,51 @@ export async function generateVideoToken(params: GenerateVideoTokenParams): Prom
     throw new Error("NO_ENROLLMENT");
   }
 
-  // --- Clean stale sessions (opportunistic) ---
-  await prisma.activeVideoSession.deleteMany({
-    where: {
-      user_id: userId,
-      last_heartbeat: { lt: new Date(Date.now() - CONCURRENT_SESSION_STALE_MS) },
-    },
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    select: { mux_playback_id: true, mux_status: true },
   });
 
-  // --- Token reuse ---
-  const existingTokens = await prisma.videoToken.findMany({
-    where: {
-      user_id: userId,
-      lesson_id: lessonId,
-      is_revoked: false,
-      expires_at: { gt: new Date() },
-    },
-    orderBy: { created_at: "desc" },
-    take: 3,
-  });
-
-  const existing = existingTokens.find((item) => item.current_views < item.max_views);
-
-  if (existing) {
-    const sig = signVideoAccess(existing.id, userId, env.tokenDefaultTtl);
-    return {
-      token: existing.token,
-      videoUrl: `/api/video/${existing.token}?sig=${sig}`,
-      expiresAt: existing.expires_at.toISOString(),
-      remainingViews: existing.max_views - existing.current_views,
-    };
+  if (!lesson || lesson.mux_status !== "ready" || !lesson.mux_playback_id) {
+    throw new Error("VIDEO_NOT_READY");
   }
 
-  // --- Create new token ---
-  const ttlSeconds = env.tokenDefaultTtl;
-  const maxViews = env.tokenDefaultMaxViews;
-  const token = nanoid(32);
-  const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+  const playbackId = lesson.mux_playback_id;
+  const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000);
 
-  const newToken = await prisma.videoToken.create({
+  const mux = getMux();
+  const [playbackToken, thumbnailToken, storyboardToken, drmToken] = await Promise.all([
+    mux.jwt.signPlaybackId(playbackId, { expiration: "4h", type: "video" }),
+    mux.jwt.signPlaybackId(playbackId, { expiration: "4h", type: "thumbnail" }),
+    mux.jwt.signPlaybackId(playbackId, { expiration: "4h", type: "storyboard" }),
+    mux.jwt.signPlaybackId(playbackId, { expiration: "4h", type: "drm_license" }),
+  ]);
+
+  const videoToken = await prisma.videoToken.create({
     data: {
-      token,
       user_id: userId,
       lesson_id: lessonId,
       course_id: courseId,
       expires_at: expiresAt,
-      max_views: maxViews,
-      ttl_seconds: ttlSeconds,
-      ip_address: ipAddress,
-      allowed_ips: [ipAddress],
-      user_agent: userAgent,
     },
   });
 
   await prisma.tokenUsageLog.create({
     data: {
-      token_id: newToken.id,
+      token_id: videoToken.id,
       user_id: userId,
-      ip_address: ipAddress,
-      user_agent: userAgent,
       action: "generated",
     },
   });
 
-  const sig = signVideoAccess(newToken.id, userId, ttlSeconds);
-
   return {
-    token: newToken.token,
-    videoUrl: `/api/video/${newToken.token}?sig=${sig}`,
-    expiresAt: newToken.expires_at.toISOString(),
-    remainingViews: newToken.max_views - newToken.current_views,
-  };
-}
-
-export async function logTokenUsage(input: {
-  tokenId: string;
-  userId: string | null;
-  ipAddress: string;
-  userAgent: string;
-  action: "generated" | "validated" | "viewed" | "expired" | "revoked" | "rejected";
-  rejectionReason?: string;
-  metadata?: Record<string, unknown>;
-}) {
-  await prisma.tokenUsageLog.create({
-    data: {
-      token_id: input.tokenId,
-      user_id: input.userId,
-      ip_address: input.ipAddress,
-      user_agent: input.userAgent,
-      action: input.action,
-      rejection_reason: input.rejectionReason ?? null,
-      metadata: (input.metadata as object) ?? undefined,
+    playbackId,
+    tokens: {
+      playback: playbackToken,
+      thumbnail: thumbnailToken,
+      storyboard: storyboardToken,
+      drm: drmToken,
     },
-  });
-}
-
-/**
- * XOR-obfuscate a string with a key, then base64-encode.
- * Not encryption — just enough to keep the YouTube ID out of plain view
- * in page source and DevTools Elements panel.
- */
-function obfuscateId(plain: string, key: string): string {
-  let result = "";
-  for (let i = 0; i < plain.length; i++) {
-    result += String.fromCharCode(
-      plain.charCodeAt(i) ^ key.charCodeAt(i % key.length),
-    );
-  }
-  return Buffer.from(result, "binary").toString("base64");
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-export function renderSecurePlayerHtml(input: {
-  youtubeId: string;
-  userEmail: string;
-  title: string;
-  remaining: number;
-  expiresAt: string;
-  tokenId: string;
-  heartbeatUrl: string;
-}) {
-  const { youtubeId, userEmail, title, remaining, expiresAt, tokenId, heartbeatUrl } = input;
-
-  const safeTitle = escapeHtml(title);
-  const safeEmail = escapeHtml(userEmail);
-  const safeTokenId = tokenId.replace(/[^a-zA-Z0-9_-]/g, "");
-  const safeHeartbeatUrl = heartbeatUrl.replace(/[^a-zA-Z0-9/_-]/g, "");
-
-  const obfKey = "pLc$9xW#";
-  const encodedId = obfuscateId(youtubeId, obfKey);
-
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex,nofollow" />
-  <title>${safeTitle}</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#000;color:#fff;font-family:Inter,system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;overflow:hidden;user-select:none;-webkit-user-select:none}
-    .player{position:relative;width:min(95vw,1100px);aspect-ratio:16/9}
-    #vp{width:100%;height:100%;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
-    iframe{border:0;border-radius:12px}
-    .watermark{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.08;transform:rotate(-24deg);font-weight:700;letter-spacing:.4rem;z-index:6}
-    /* Click shield: blocks right-click on iframe, passes left-clicks via JS */
-    .click-shield{position:absolute;inset:0;z-index:3;border-radius:12px;background:rgba(0,0,0,.001)}
-    /* Block YouTube title bar / share / copy-link at top */
-    .yt-block-top{position:absolute;top:0;left:0;right:0;height:80px;z-index:5;cursor:default;border-radius:12px 12px 0 0;background:rgba(0,0,0,.001)}
-    /* Block YouTube logo at bottom-right */
-    .yt-block-logo{position:absolute;bottom:0;right:0;width:160px;height:56px;z-index:5;cursor:default;border-radius:0 0 12px 0;background:rgba(0,0,0,.001)}
-    .bar{display:flex;gap:16px;font-size:12px;color:#9ca3af;flex-wrap:wrap;justify-content:center}
-    .warn{color:#f97316}
-    .revoked-overlay{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.95);z-index:100}
-    .revoked-overlay h2{color:#ef4444;font-size:20px;text-align:center;max-width:440px;line-height:1.6}
-  </style>
-</head>
-<body oncontextmenu="return false">
-  <div class="player">
-    <div id="vp"></div>
-    <div class="click-shield" id="clickShield"></div>
-    <div class="yt-block-top"></div>
-    <div class="yt-block-logo"></div>
-    <div class="watermark">${safeEmail}</div>
-  </div>
-  <div class="bar">
-    <span>${safeTitle}</span>
-    <span>Vistas restantes: ${remaining}</span>
-    <span class="warn">Expira: ${new Date(expiresAt).toLocaleString("es-ES")}</span>
-  </div>
-  <script>
-  (function(){
-    // --- Decode resource identifier at runtime ---
-    var _d = '${encodedId}';
-    var _k = ['pLc$','9xW#'];
-    function _r(e,k){
-      var b=atob(e),o='',j=0;
-      for(var i=0;i<b.length;i++){o+=String.fromCharCode(b.charCodeAt(i)^k.charCodeAt(j));j=(j+1)%k.length;}
-      return o;
-    }
-    var _v = _r(_d, _k[0]+_k[1]);
-
-    // --- Load YouTube IFrame API ---
-    var tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-
-    var player;
-
-    window.onYouTubeIframeAPIReady = function() {
-      player = new YT.Player('vp', {
-        host: 'https://www.youtube-nocookie.com',
-        videoId: _v,
-        playerVars: {
-          autoplay: 0,
-          controls: 1,
-          disablekb: 0,
-          fs: 1,
-          modestbranding: 1,
-          rel: 0,
-          showinfo: 0,
-          iv_load_policy: 3,
-          origin: window.location.origin,
-          enablejsapi: 1,
-          playsinline: 1
-        },
-        events: { onReady: function(){ /* ready */ } }
-      });
-    };
-
-    // --- Anti-screenshot / print / DevTools deterrent ---
-    document.addEventListener('keydown', function(e) {
-      var blur = e.key === 'PrintScreen'
-        || (e.ctrlKey && e.key.toLowerCase() === 'p')
-        || e.key === 'F12'
-        || (e.ctrlKey && e.shiftKey && 'ijk'.indexOf(e.key.toLowerCase()) !== -1)
-        || (e.ctrlKey && e.key.toLowerCase() === 'u');
-      if (blur) {
-        e.preventDefault();
-        document.body.style.filter = 'blur(24px)';
-        setTimeout(function() { document.body.style.filter = ''; }, 2000);
-      }
-    });
-
-    // --- Expiration check ---
-    var expiry = new Date('${expiresAt}').getTime();
-    setInterval(function() {
-      if (Date.now() > expiry) {
-        if (player && player.destroy) player.destroy();
-        document.body.innerHTML = '<div class="revoked-overlay"><h2>Token expirado. Regresa al curso para generar uno nuevo.</h2></div>';
-      }
-    }, 15000);
-
-    // --- Device fingerprint ---
-    function getFingerprint() {
-      var signals = [
-        screen.width, screen.height, screen.colorDepth,
-        navigator.language, navigator.hardwareConcurrency,
-        Intl.DateTimeFormat().resolvedOptions().timeZone,
-        navigator.platform, navigator.userAgent
-      ].join('|');
-      var hash = 0;
-      for (var i = 0; i < signals.length; i++) {
-        hash = ((hash << 5) - hash) + signals.charCodeAt(i);
-        hash |= 0;
-      }
-      return 'fp_' + Math.abs(hash).toString(36);
-    }
-
-    // --- Heartbeat ---
-    var fp = getFingerprint();
-    function sendHeartbeat() {
-      fetch('${safeHeartbeatUrl}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ tokenId: '${safeTokenId}', fingerprint: fp })
-      })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        if (data.active === false) {
-          if (player && player.destroy) player.destroy();
-          document.body.innerHTML = '<div class="revoked-overlay"><h2>Se detect\\u00f3 una sesi\\u00f3n activa en otro dispositivo. Solo se permite una reproducci\\u00f3n simult\\u00e1nea por cuenta.</h2></div>';
-        }
-      })
-      .catch(function() {});
-    }
-
-    sendHeartbeat();
-    setInterval(sendHeartbeat, 30000);
-
-    // --- Click shield: pass left-clicks through, block right-click ---
-    var shield = document.getElementById('clickShield');
-    if (shield) {
-      shield.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-      shield.addEventListener('mousedown', function(e) {
-        if (e.button === 0) {
-          shield.style.pointerEvents = 'none';
-          setTimeout(function() { shield.style.pointerEvents = 'auto'; }, 200);
-        }
-      });
-      shield.addEventListener('touchstart', function() {
-        shield.style.pointerEvents = 'none';
-        setTimeout(function() { shield.style.pointerEvents = 'auto'; }, 400);
-      }, { passive: true });
-    }
-  })();
-  </script>
-</body>
-</html>`;
+    expiresAt: expiresAt.toISOString(),
+  };
 }

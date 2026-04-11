@@ -17,6 +17,9 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@mux/mux-node": "^12.8.1",
+    "@mux/mux-player-react": "^3.10.2",
+    "@mux/mux-uploader-react": "^1.4.1",
     "@prisma/client": "^6.16.2",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",

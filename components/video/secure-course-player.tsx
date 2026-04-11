@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import MuxPlayer from "@mux/mux-player-react";
 import { Button } from "@/components/ui/button";
-import { getDeviceFingerprint } from "@/lib/tokens/fingerprint";
 
 interface LessonOption {
   id: string;
@@ -11,10 +11,9 @@ interface LessonOption {
 }
 
 interface TokenPayload {
-  token: string;
-  videoUrl: string;
+  playbackId: string;
+  tokens: { playback: string; thumbnail: string; storyboard: string; drm: string };
   expiresAt: string;
-  remainingViews: number;
 }
 
 export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
@@ -22,19 +21,11 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
   const [tokenData, setTokenData] = useState<TokenPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const fingerprintRef = useRef<string | null>(null);
 
   const currentLesson = useMemo(
     () => lessons.find((lesson) => lesson.id === selectedLessonId),
     [lessons, selectedLessonId],
   );
-
-  // Generate fingerprint on mount
-  useEffect(() => {
-    getDeviceFingerprint().then((fp) => {
-      fingerprintRef.current = fp;
-    });
-  }, []);
 
   async function generateToken() {
     if (!currentLesson) return;
@@ -48,7 +39,6 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
       body: JSON.stringify({
         lessonId: currentLesson.id,
         courseId: currentLesson.courseId,
-        fingerprint: fingerprintRef.current,
       }),
     });
 
@@ -94,10 +84,10 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold">{currentLesson?.title ?? "Selecciona leccion"}</h3>
-            <p className="text-sm text-slate-400">El video se sirve via token seguro y expira automaticamente.</p>
+            <p className="text-sm text-slate-400">Reproduccion protegida con DRM.</p>
           </div>
           <Button onClick={generateToken} disabled={loading || !currentLesson}>
-            {loading ? "Generando..." : "Generar token"}
+            {loading ? "Cargando..." : "Reproducir"}
           </Button>
         </div>
 
@@ -105,14 +95,19 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
 
         {tokenData ? (
           <div className="mt-4">
-            <iframe
-              src={tokenData.videoUrl}
-              className="aspect-video w-full rounded-xl border border-white/10"
-              allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+            <MuxPlayer
+              playbackId={tokenData.playbackId}
+              tokens={{
+                playback: tokenData.tokens.playback,
+                thumbnail: tokenData.tokens.thumbnail,
+                storyboard: tokenData.tokens.storyboard,
+                drm: tokenData.tokens.drm,
+              }}
+              accentColor="#34d399"
+              className="aspect-video w-full rounded-xl"
             />
             <p className="mt-2 text-xs text-slate-400">
-              Expira: {new Date(tokenData.expiresAt).toLocaleString("es-ES")} - Vistas restantes:{" "}
-              {tokenData.remainingViews}
+              Expira: {new Date(tokenData.expiresAt).toLocaleString("es-ES")}
             </p>
           </div>
         ) : (

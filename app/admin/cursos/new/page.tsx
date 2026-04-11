@@ -41,8 +41,8 @@ export default function NewCoursePage() {
             <Input name="difficulty" placeholder="Ej: Principiante, Intermedio" />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-xs text-slate-400">Preview Video (YouTube ID)</span>
-            <Input name="preview_video_url" placeholder="dQw4w9WgXcQ" />
+            <span className="text-xs text-slate-400">Preview Video URL</span>
+            <Input name="preview_video_url" placeholder="https://..." />
           </label>
           <div className="flex items-end gap-4">
             <label className="flex items-center gap-2 text-sm text-slate-300">

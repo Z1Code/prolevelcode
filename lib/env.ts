@@ -22,10 +22,13 @@ export const env = {
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean),
 
-  // Video tokens
-  tokenDefaultTtl: Number((process.env.TOKEN_DEFAULT_TTL ?? "14400").trim()),
-  tokenDefaultMaxViews: Number((process.env.TOKEN_DEFAULT_MAX_VIEWS ?? "3").trim()),
-  tokenIpMode: (process.env.TOKEN_IP_MODE ?? "flex").trim(),
+  // Mux Video
+  muxTokenId: process.env.MUX_TOKEN_ID?.trim(),
+  muxTokenSecret: process.env.MUX_TOKEN_SECRET?.trim(),
+  muxSigningKey: process.env.MUX_SIGNING_KEY?.trim(),
+  muxPrivateKey: process.env.MUX_PRIVATE_KEY?.trim(),
+  muxWebhookSecret: process.env.MUX_WEBHOOK_SECRET?.trim(),
+  muxDrmConfigId: process.env.MUX_DRM_CONFIG_ID?.trim(),
 };
 
 export function requireEnv<T extends keyof typeof env>(key: T): NonNullable<(typeof env)[T]> {
