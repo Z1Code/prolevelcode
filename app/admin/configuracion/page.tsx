@@ -66,7 +66,7 @@ export default async function AdminConfigPage() {
   }
 
   return (
-    <div>
+    <div className="page-enter">
       <h2 className="text-2xl font-semibold">Configuracion</h2>
 
       <Card className="mt-4 p-4">
@@ -75,10 +75,11 @@ export default async function AdminConfigPage() {
             Secciones visibles en el landing
           </p>
 
-          {sectionToggles.map((toggle) => (
+          {sectionToggles.map((toggle, i) => (
             <label
               key={toggle.key}
-              className="liquid-surface-soft flex items-center justify-between gap-4 rounded-lg p-4"
+              className="liquid-surface-soft flex items-center justify-between gap-4 rounded-lg p-4 hover-lift"
+              style={{ animationDelay: `${i * 0.05}s` }}
             >
               <div>
                 <p className="font-medium text-slate-100">{toggle.label}</p>

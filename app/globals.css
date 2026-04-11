@@ -275,6 +275,119 @@ a {
   border-bottom-right-radius: 16px;
 }
 
+/* --- Dropdown Glass (matching navbar liquid glass, deeper blur) --- */
+.navbar-dropdown-glass {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: linear-gradient(
+    155deg,
+    rgba(14, 18, 32, 0.62) 0%,
+    rgba(10, 14, 26, 0.58) 50%,
+    rgba(14, 18, 32, 0.62) 100%
+  );
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.50),
+    0 4px 16px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(28px) saturate(170%) contrast(0.96);
+  -webkit-backdrop-filter: blur(28px) saturate(170%) contrast(0.96);
+}
+
+/* Specular top-edge highlight */
+.navbar-dropdown-glass::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.40) 20%,
+    rgba(255, 255, 255, 0.65) 50%,
+    rgba(255, 255, 255, 0.40) 80%,
+    transparent
+  );
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* Prismatic inner glow */
+.navbar-dropdown-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    rgba(0, 255, 136, 0.05) 0%,
+    rgba(51, 102, 255, 0.04) 25%,
+    rgba(136, 85, 255, 0.035) 50%,
+    rgba(51, 102, 255, 0.04) 75%,
+    rgba(0, 255, 136, 0.05) 100%
+  );
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* Shimmer (reuses glassShimmer keyframe) */
+.navbar-dropdown-shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.06) 45%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.06) 55%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: glassShimmer 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Chromatic refraction edge */
+.navbar-dropdown-refraction {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(0, 255, 136, 0.22),
+      rgba(51, 102, 255, 0.18) 33%,
+      rgba(136, 85, 255, 0.18) 66%,
+      rgba(0, 255, 136, 0.22)
+    ) border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.30;
+  pointer-events: none;
+}
+
+/* Frosted noise grain */
+.navbar-dropdown-refraction::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.04;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
 /* ══════════════════════════════════════════════════════
    Footer — Glassmorphism matching navbar
    ══════════════════════════════════════════════════════ */
@@ -1309,7 +1422,7 @@ a {
 .liquid-surface {
   position: relative;
   overflow: hidden;
-  border-radius: 22px;
+  border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   background:
     linear-gradient(150deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02) 54%, rgba(255, 255, 255, 0.06)),
@@ -1344,7 +1457,7 @@ a {
 }
 
 .liquid-surface-soft {
-  border-radius: 14px;
+  border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.26);
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.01)),
@@ -1353,7 +1466,7 @@ a {
 }
 
 .liquid-form-shell {
-  border-radius: 22px;
+  border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   background:
     linear-gradient(150deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
@@ -1801,12 +1914,12 @@ a {
   }
 
   .liquid-surface {
-    border-radius: 18px;
+    border-radius: 12px;
     backdrop-filter: blur(18px) saturate(1.3);
   }
 
   .liquid-form-shell {
-    border-radius: 18px;
+    border-radius: 12px;
     backdrop-filter: blur(16px) saturate(1.25);
   }
 
@@ -1816,11 +1929,7 @@ a {
   }
 
   .liquid-bar-grid {
-    grid-template-columns: repeat(5, 1fr);
-  }
-
-  .liquid-bar:nth-child(n+6) {
-    display: none;
+    grid-template-columns: repeat(9, 1fr);
   }
 
   .liquid-glass {
@@ -1897,6 +2006,73 @@ a {
     height: 28px;
     padding-inline: 11px;
   }
+}
+
+/* ══════════════════════════════════════════════════════
+   Guides — Code blocks, prompt surfaces, OS tabs
+   ══════════════════════════════════════════════════════ */
+
+/* Code block surface */
+.guide-code-surface {
+  position: relative;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(160deg, rgba(10, 14, 26, 0.98), rgba(6, 10, 18, 0.95));
+  overflow: hidden;
+}
+
+.guide-code-header {
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.guide-code-body {
+  padding: 16px;
+  font-family: var(--font-mono, monospace);
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #e2e8f0;
+  overflow-x: auto;
+}
+
+/* Prompt surface */
+.guide-prompt-surface {
+  border-radius: 16px;
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  background:
+    linear-gradient(150deg, rgba(0, 255, 136, 0.06), rgba(59, 130, 246, 0.04) 54%, rgba(0, 255, 136, 0.03)),
+    linear-gradient(160deg, rgba(6, 10, 21, 0.94), rgba(6, 10, 18, 0.8));
+  box-shadow: 0 0 30px rgba(0, 255, 136, 0.06);
+  overflow: hidden;
+}
+
+/* OS tabs */
+.guide-os-tab {
+  border-radius: 9999px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.guide-os-tab-active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.guide-os-tab-inactive {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(148, 163, 184, 0.65);
+}
+
+.guide-os-tab-inactive:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(148, 163, 184, 0.85);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2165,4 +2341,445 @@ a {
     bottom: -30px;
     height: 60px;
   }
+}
+
+/* ═══════════════════════════════════════════════════
+   Payment buttons — /planes tier cards
+   Unified glass-border system: same structure, tinted per brand
+   ═══════════════════════════════════════════════════ */
+
+.pay-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 2.75rem;
+  border-radius: 9999px;
+  border: 1px solid;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+  transition: all 0.3s ease;
+}
+
+.pay-btn:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.pay-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+/* Label sits above shimmer */
+.pay-btn-label {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Shimmer sweep (shared) ── */
+.pay-btn-shimmer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.12) 46%,
+    rgba(255, 255, 255, 0.18) 50%,
+    rgba(255, 255, 255, 0.12) 54%,
+    transparent 60%
+  );
+  transform: translateX(-120%);
+  animation: payBtnSweep 2.4s ease-in-out 1s forwards;
+}
+
+@keyframes payBtnSweep {
+  0%   { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+
+/* ── MercadoPago: site-accent teal/emerald ── */
+.pay-btn-mp {
+  border-color: rgba(45, 212, 191, 0.30);
+  background: linear-gradient(
+    145deg,
+    rgba(45, 212, 191, 0.12),
+    rgba(0, 255, 136, 0.06) 50%,
+    rgba(45, 212, 191, 0.10)
+  );
+  color: #5eead4;
+}
+
+.pay-btn-mp:hover:not(:disabled) {
+  border-color: rgba(45, 212, 191, 0.50);
+  background: linear-gradient(
+    145deg,
+    rgba(45, 212, 191, 0.18),
+    rgba(0, 255, 136, 0.10) 50%,
+    rgba(45, 212, 191, 0.16)
+  );
+}
+
+/* ── Crypto: warm amber/orange ── */
+.pay-btn-crypto {
+  border-color: rgba(251, 146, 60, 0.30);
+  background: linear-gradient(
+    145deg,
+    rgba(251, 146, 60, 0.12),
+    rgba(245, 158, 11, 0.06) 50%,
+    rgba(251, 146, 60, 0.10)
+  );
+  color: #fbbf24;
+}
+
+.pay-btn-crypto:hover:not(:disabled) {
+  border-color: rgba(251, 146, 60, 0.50);
+  background: linear-gradient(
+    145deg,
+    rgba(251, 146, 60, 0.18),
+    rgba(245, 158, 11, 0.10) 50%,
+    rgba(251, 146, 60, 0.16)
+  );
+}
+
+/* ── PayPal: brand blue ── */
+.pay-btn-paypal {
+  border-color: rgba(56, 152, 236, 0.30);
+  background: linear-gradient(
+    145deg,
+    rgba(56, 152, 236, 0.12),
+    rgba(0, 112, 186, 0.06) 50%,
+    rgba(56, 152, 236, 0.10)
+  );
+  color: #7dd3fc;
+}
+
+.pay-btn-paypal:hover:not(:disabled) {
+  border-color: rgba(56, 152, 236, 0.50);
+  background: linear-gradient(
+    145deg,
+    rgba(56, 152, 236, 0.18),
+    rgba(0, 112, 186, 0.10) 50%,
+    rgba(56, 152, 236, 0.16)
+  );
+}
+
+/* ── Dashboard micro-animations ── */
+
+/* Progress bar shimmer */
+.progress-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent
+  );
+  animation: progressShimmer 2.4s ease-in-out infinite;
+}
+
+@keyframes progressShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Pulse ring — play button */
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.15); opacity: 0; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+
+@keyframes pulseRingSlow {
+  0% { transform: scale(1); opacity: 0.25; }
+  50% { transform: scale(1.25); opacity: 0; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+
+/* Skeleton loading pulse */
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.06; }
+  50% { opacity: 0.12; }
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: white;
+  opacity: 0.06;
+  animation: skeletonPulse 1.8s ease-in-out infinite;
+}
+
+/* Stat counter entrance */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* Subtle hover lift for cards */
+.hover-lift {
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 28px 54px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset;
+}
+
+/* ── Global button micro-interactions ── */
+.btn-press {
+  transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 0.2s ease,
+              filter 0.2s ease;
+}
+
+.btn-press:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 255, 136, 0.1);
+  filter: brightness(1.08);
+}
+
+.btn-press:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.98);
+  box-shadow: none;
+  filter: brightness(0.95);
+}
+
+/* Ghost/danger button variant press */
+.btn-press-subtle:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.04);
+}
+
+.btn-press-subtle:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.98);
+}
+
+/* ── Nav link active indicator ── */
+.nav-link-active {
+  position: relative;
+}
+
+.nav-link-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #00ff88, #2dd4bf);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.nav-link-active:hover::before,
+.nav-link-active[data-active="true"]::before {
+  opacity: 1;
+}
+
+/* ── Table row hover ── */
+.liquid-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.liquid-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* ── Status badge pulse for pending items ── */
+@keyframes subtlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.badge-pending {
+  animation: subtlePulse 2.5s ease-in-out infinite;
+}
+
+/* ── Horizontal bar grow animation ── */
+@keyframes barGrow {
+  from {
+    width: 0%;
+    opacity: 0.3;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.bar-grow {
+  animation: barGrow 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ── Alert/notification entrance ── */
+@keyframes alertSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.alert-enter {
+  animation: alertSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ── Focus glow for inputs globally ── */
+.liquid-field:focus-visible,
+textarea:focus-visible {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* ── Details/summary smooth ── */
+details summary {
+  transition: color 0.2s ease;
+}
+
+details[open] summary {
+  color: white;
+}
+
+/* ── Page entrance (for server components without framer) ── */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.page-enter {
+  animation: pageEnter 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Stagger children with CSS (no JS needed) */
+.stagger-enter > * {
+  animation: pageEnter 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.stagger-enter > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-enter > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger-enter > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-enter > *:nth-child(4) { animation-delay: 0.20s; }
+.stagger-enter > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-enter > *:nth-child(6) { animation-delay: 0.30s; }
+.stagger-enter > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-enter > *:nth-child(8) { animation-delay: 0.40s; }
+.stagger-enter > *:nth-child(9) { animation-delay: 0.45s; }
+.stagger-enter > *:nth-child(10) { animation-delay: 0.50s; }
+.stagger-enter > *:nth-child(n+11) { animation-delay: 0.55s; }
+
+/* ── Privacy toggle ── */
+.privacy-on .pv {
+  filter: blur(5px);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Testimonial & Process Glass Cards — navbar-inspired
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* --- Shared card glass base --- */
+.testimonial-glass,
+.process-glass {
+  background: linear-gradient(
+    135deg,
+    rgba(18, 22, 35, 0.55) 0%,
+    rgba(12, 16, 28, 0.50) 50%,
+    rgba(18, 22, 35, 0.55) 100%
+  );
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(16px) saturate(150%) contrast(0.96);
+  -webkit-backdrop-filter: blur(16px) saturate(150%) contrast(0.96);
+  transition: box-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+.testimonial-glass:hover,
+.process-glass:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20);
+}
+
+/* --- Shimmer sweep --- */
+.testimonial-shimmer,
+.process-shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.05) 45%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.05) 55%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: glassShimmer 8s ease-in-out infinite;
+  opacity: 0.7;
+}
+
+/* --- Chromatic refraction edge --- */
+.testimonial-refraction,
+.process-refraction {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(0, 255, 136, 0.18),
+      rgba(51, 102, 255, 0.14) 33%,
+      rgba(136, 85, 255, 0.14) 66%,
+      rgba(0, 255, 136, 0.18)
+    ) border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.25;
+  transition: opacity 0.4s ease;
+}
+
+.group:hover .testimonial-refraction,
+.group:hover .process-refraction {
+  opacity: 0.40;
+}
+
+/* --- Gradient text shimmer keyframe --- */
+@keyframes shimmerGradient {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }

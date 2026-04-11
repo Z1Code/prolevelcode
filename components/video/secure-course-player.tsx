@@ -1,13 +1,22 @@
 "use client";
 
+<<<<<<< HEAD
 import { useMemo, useState } from "react";
 import MuxPlayer from "@mux/mux-player-react";
 import { Button } from "@/components/ui/button";
+=======
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { getDeviceFingerprint } from "@/lib/tokens/fingerprint";
+import { LessonReviewModal } from "./lesson-review-modal";
+import { LessonCommentSection } from "./lesson-comment-section";
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 
 interface LessonOption {
   id: string;
   title: string;
   courseId: string;
+  durationMinutes?: number | null;
 }
 
 interface TokenPayload {
@@ -16,18 +25,54 @@ interface TokenPayload {
   expiresAt: string;
 }
 
-export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
+interface SecureCoursePlayerProps {
+  lessons: LessonOption[];
+  completedLessonIds: string[];
+}
+
+const lessonVariants = {
+  hidden: { opacity: 0, x: -12 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: i * 0.05,
+      duration: 0.35,
+      ease: [0.25, 0.46, 0.45, 0.94] as const,
+    },
+  }),
+};
+
+export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCoursePlayerProps) {
   const [selectedLessonId, setSelectedLessonId] = useState(lessons[0]?.id ?? "");
   const [tokenData, setTokenData] = useState<TokenPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+<<<<<<< HEAD
+=======
+  const [showOverlay, setShowOverlay] = useState(true);
+  const [completed, setCompleted] = useState<Set<string>>(new Set(completedLessonIds));
+  const [completing, setCompleting] = useState(false);
+  const [reviewModal, setReviewModal] = useState<{ lessonId: string; courseId: string; title: string } | null>(null);
+  const fingerprintRef = useRef<string | null>(null);
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 
   const currentLesson = useMemo(
     () => lessons.find((lesson) => lesson.id === selectedLessonId),
     [lessons, selectedLessonId],
   );
 
+<<<<<<< HEAD
   async function generateToken() {
+=======
+  useEffect(() => {
+    getDeviceFingerprint().then((fp) => {
+      fingerprintRef.current = fp;
+    });
+  }, []);
+
+  async function handlePlay() {
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
     if (!currentLesson) return;
 
     setLoading(true);
@@ -45,41 +90,258 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
     const payload = await response.json();
 
     if (!response.ok) {
-      setError(payload.error ?? "No se pudo generar token");
+      setError(payload.error ?? "No se pudo cargar el video");
       setLoading(false);
       return;
     }
 
     setTokenData(payload);
     setLoading(false);
+    setTimeout(() => setShowOverlay(false), 300);
+  }
+
+  async function handleComplete() {
+    if (!currentLesson || completed.has(currentLesson.id)) return;
+    setCompleting(true);
+    try {
+      const res = await fetch("/api/lessons/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessonId: currentLesson.id, courseId: currentLesson.courseId }),
+      });
+      if (res.ok) {
+        setCompleted((prev) => new Set(prev).add(currentLesson.id));
+        setReviewModal({
+          lessonId: currentLesson.id,
+          courseId: currentLesson.courseId,
+          title: currentLesson.title,
+        });
+      }
+    } finally {
+      setCompleting(false);
+    }
+  }
+
+  function selectLesson(lessonId: string) {
+    setSelectedLessonId(lessonId);
+    setTokenData(null);
+    setError(null);
+    setShowOverlay(true);
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-      <aside className="liquid-surface p-4">
-        <h3 className="font-semibold">Lecciones</h3>
-        <ul className="mt-3 space-y-2">
-          {lessons.map((lesson) => (
-            <li key={lesson.id}>
-              <button
-                className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
-                  selectedLessonId === lesson.id
-                    ? "border-emerald-300/40 bg-emerald-300/10"
-                    : "liquid-surface-soft hover:border-white/30"
-                }`}
-                onClick={() => {
-                  setSelectedLessonId(lesson.id);
-                  setTokenData(null);
-                  setError(null);
-                }}
-              >
-                {lesson.title}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </aside>
+    <>
+      <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+        {/* Sidebar */}
+        <aside className="liquid-surface p-4">
+          <p className="px-1 text-[11px] font-medium uppercase tracking-widest text-slate-500">Lecciones</p>
+          <ul className="mt-3 space-y-1.5">
+            {lessons.map((lesson, i) => {
+              const isActive = selectedLessonId === lesson.id;
+              const isCompleted = completed.has(lesson.id);
+              return (
+                <motion.li
+                  key={lesson.id}
+                  custom={i}
+                  initial="hidden"
+                  animate="visible"
+                  variants={lessonVariants}
+                >
+                  <button
+                    className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-200 ${
+                      isActive
+                        ? "border border-emerald-400/25 bg-emerald-500/10 text-white shadow-[0_0_12px_rgba(52,211,153,0.06)]"
+                        : "border border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-slate-200"
+                    }`}
+                    onClick={() => selectLesson(lesson.id)}
+                  >
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold transition-colors duration-200 ${
+                      isCompleted
+                        ? "bg-emerald-400/20 text-emerald-300"
+                        : isActive
+                          ? "bg-emerald-400/20 text-emerald-300"
+                          : "bg-white/5 text-slate-500 group-hover:text-slate-400"
+                    }`}>
+                      {isCompleted ? (
+                        <motion.svg
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          className="h-3.5 w-3.5"
+                          initial={{ scale: 0, rotate: -45 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                        >
+                          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                        </motion.svg>
+                      ) : (
+                        i + 1
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{lesson.title}</span>
+                    {lesson.durationMinutes != null && lesson.durationMinutes > 0 && (
+                      <span className="shrink-0 rounded-md border border-cyan-400/15 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-cyan-300">
+                        {lesson.durationMinutes}m
+                      </span>
+                    )}
+                  </button>
+                </motion.li>
+              );
+            })}
+          </ul>
+        </aside>
 
+        {/* Player area */}
+        <div className="space-y-3">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="relative overflow-hidden rounded-xl border border-white/[0.06] bg-black/40 shadow-2xl shadow-black/40"
+          >
+            {/* Video container */}
+            <div className="relative aspect-video w-full">
+              {/* Iframe (loads behind overlay) */}
+              {tokenData && (
+                <iframe
+                  src={tokenData.videoUrl}
+                  className="absolute inset-0 h-full w-full"
+                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
+
+              {/* Play overlay */}
+              <AnimatePresence>
+                {showOverlay && (
+                  <motion.div
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.6, ease: "easeInOut" }}
+                    className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gradient-to-b from-black/70 via-black/50 to-black/70"
+                  >
+                    {/* Animated decorative rings */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <motion.div
+                        className="h-40 w-40 rounded-full border border-white/[0.04]"
+                        animate={{ scale: [1, 1.08, 1], opacity: [0.4, 0.2, 0.4] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                      <motion.div
+                        className="absolute h-56 w-56 rounded-full border border-white/[0.02]"
+                        animate={{ scale: [1, 1.05, 1], opacity: [0.25, 0.1, 0.25] }}
+                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                      />
+                      <motion.div
+                        className="absolute h-28 w-28 rounded-full border border-emerald-400/[0.06]"
+                        animate={{ scale: [1, 1.12, 1], opacity: [0.3, 0.05, 0.3] }}
+                        transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                      />
+                    </div>
+
+                    {/* Lesson title */}
+                    <motion.p
+                      key={currentLesson?.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.1 }}
+                      className="relative mb-6 max-w-md text-center text-sm font-medium text-slate-300"
+                    >
+                      {currentLesson?.title ?? "Selecciona una leccion"}
+                    </motion.p>
+
+                    {/* Play button with pulse rings */}
+                    <div className="relative">
+                      {/* Pulse ring 1 */}
+                      <div
+                        className="absolute inset-0 rounded-full border border-emerald-400/20"
+                        style={{ animation: "pulseRing 3s ease-out infinite" }}
+                      />
+                      {/* Pulse ring 2 */}
+                      <div
+                        className="absolute inset-0 rounded-full border border-emerald-400/10"
+                        style={{ animation: "pulseRingSlow 3s ease-out infinite 1.5s" }}
+                      />
+                      <button
+                        onClick={handlePlay}
+                        disabled={loading || !currentLesson}
+                        className="group relative flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/5 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-emerald-400/30 hover:bg-emerald-500/10 hover:shadow-[0_0_30px_rgba(52,211,153,0.12)] active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
+                      >
+                        {loading ? (
+                          <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-emerald-400" />
+                        ) : (
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className="ml-1 h-8 w-8 text-white/80 transition-colors group-hover:text-emerald-300"
+                          >
+                            <path d="M8 5.14v14l11-7-11-7z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Error */}
+                    <AnimatePresence>
+                      {error && (
+                        <motion.p
+                          initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                          className="mt-4 rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-1.5 text-xs text-red-300"
+                        >
+                          {error}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+
+          {/* Info bar with complete button */}
+          <AnimatePresence>
+            {tokenData && !showOverlay && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-slate-500"
+              >
+                <span>{currentLesson?.title}</span>
+                <div className="flex items-center gap-3">
+                  <span>Vistas restantes: {tokenData.remainingViews}</span>
+                  {currentLesson && !completed.has(currentLesson.id) && (
+                    <motion.button
+                      onClick={handleComplete}
+                      disabled={completing}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-medium text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-40"
+                    >
+                      {completing ? "Marcando..." : "Marcar como completada"}
+                    </motion.button>
+                  )}
+                  {currentLesson && completed.has(currentLesson.id) && (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      className="flex items-center gap-1 text-emerald-400"
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                        <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                      </svg>
+                      Completada
+                    </motion.span>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+<<<<<<< HEAD
       <div className="liquid-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -113,7 +375,28 @@ export function SecureCoursePlayer({ lessons }: { lessons: LessonOption[] }) {
         ) : (
           <div className="liquid-surface-soft mt-4 aspect-video rounded-xl border border-dashed border-white/20" />
         )}
+=======
+          {/* Comments section */}
+          {currentLesson && (
+            <LessonCommentSection
+              lessonId={currentLesson.id}
+              courseId={currentLesson.courseId}
+            />
+          )}
+        </div>
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       </div>
-    </div>
+
+      {/* Review modal */}
+      {reviewModal && (
+        <LessonReviewModal
+          open={!!reviewModal}
+          lessonId={reviewModal.lessonId}
+          courseId={reviewModal.courseId}
+          lessonTitle={reviewModal.title}
+          onClose={() => setReviewModal(null)}
+        />
+      )}
+    </>
   );
 }

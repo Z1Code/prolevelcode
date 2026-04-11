@@ -4,8 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+<<<<<<< HEAD
 import { MuxUploadButton } from "@/components/admin/mux-upload-button";
 import { createLesson, updateLesson, deleteLesson } from "../../../actions";
+=======
+import { createLesson, updateLesson, deleteLesson, toggleCoursePublished } from "../../../actions";
+import { LessonFormWithUpload } from "@/components/admin/lesson-form-with-upload";
+import { BulkVideoUploader } from "@/components/admin/bulk-video-uploader";
+import { SyncDurationsButton } from "@/components/admin/sync-durations-button";
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 
 interface AdminLessonsPageProps {
   params: Promise<{ id: string }>;
@@ -16,39 +23,55 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
 
   const course = await prisma.course.findUnique({
     where: { id },
-    select: { id: true, title: true },
+    select: { id: true, title: true, is_published: true, tier_access: true },
   });
 
   if (!course) notFound();
 
-  const modules = await prisma.module.findMany({
-    where: { course_id: id },
-    orderBy: { sort_order: "asc" },
-    select: { id: true, title: true, sort_order: true },
-  });
-
   const lessons = await prisma.lesson.findMany({
     where: { course_id: id },
     orderBy: { sort_order: "asc" },
-    include: { module: { select: { title: true } } },
   });
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <Link href={`/admin/cursos/${id}`} className="text-xs text-slate-400 hover:text-slate-200">← Volver al curso</Link>
+          <Link href="/admin/cursos" className="text-xs text-slate-400 hover:text-slate-200">← Volver a cursos</Link>
           <h2 className="text-2xl font-semibold">Lecciones: {course.title}</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Tier: <span className={course.tier_access === "pro" ? "text-amber-300" : "text-slate-300"}>{course.tier_access.toUpperCase()}</span>
+            {" · "}
+            {course.is_published ? <span className="text-emerald-300">Publicado</span> : <span className="text-amber-300">Borrador</span>}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <form action={toggleCoursePublished}>
+            <input type="hidden" name="id" value={id} />
+            <Button type="submit" variant={course.is_published ? "ghost" : "primary"} size="sm">
+              {course.is_published ? "Despublicar" : "Publicar"}
+            </Button>
+          </form>
+          <Link href={`/admin/cursos/${id}/editar`} className="liquid-surface-soft px-3 py-2 text-xs">
+            Editar
+          </Link>
         </div>
       </div>
 
       {/* Existing lessons */}
       <Card className="mt-4 p-4">
-        <h3 className="font-semibold">Lecciones ({lessons.length})</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">Lecciones ({lessons.length})</h3>
+          <SyncDurationsButton />
+        </div>
         <ul className="mt-3 space-y-2 text-sm">
           {lessons.map((lesson) => (
             <li key={lesson.id} className="liquid-surface-soft rounded-lg p-3">
+<<<<<<< HEAD
               <form action={updateLesson} className="grid gap-2 md:grid-cols-[1fr_auto_auto]">
+=======
+              <form action={updateLesson} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
                 <input type="hidden" name="id" value={lesson.id} />
                 <input type="hidden" name="course_id" value={id} />
                 <div>
@@ -56,6 +79,7 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
                   <Input name="title" defaultValue={lesson.title} className="mt-0.5 h-9 text-xs" required />
                 </div>
                 <div>
+<<<<<<< HEAD
                   <span className="text-xs text-slate-500">Modulo</span>
                   <select
                     name="module_id"
@@ -71,12 +95,24 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
                   <span className="text-xs text-slate-500">Min</span>
                   <Input name="duration_minutes" type="number" defaultValue={lesson.duration_minutes ?? ""} className="mt-0.5 h-9 w-20 text-xs" />
                 </div>
+=======
+                  <span className="text-xs text-slate-500">Bunny Video ID</span>
+                  <Input name="bunny_video_id" defaultValue={lesson.bunny_video_id ?? ""} className="mt-0.5 h-9 text-xs" placeholder="GUID de Bunny" />
+                </div>
+                <div>
+                  <span className="text-xs text-slate-500">
+                    Min {lesson.duration_minutes ? <span className="text-emerald-400/60">({lesson.duration_minutes})</span> : <span className="text-amber-400/50">sin dato</span>}
+                  </span>
+                  <Input name="duration_minutes" type="number" defaultValue={lesson.duration_minutes ?? ""} className="mt-0.5 h-9 w-20 text-xs" placeholder="—" />
+                </div>
+                {course.tier_access === "pro" && <input type="hidden" name="is_pro_only" value="on" />}
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
                 <div className="flex items-center gap-3 md:col-span-3">
                   <label className="flex items-center gap-1.5 text-xs text-slate-300">
                     <input type="checkbox" name="is_free_preview" defaultChecked={lesson.is_free_preview} className="h-3.5 w-3.5 accent-emerald-400" />
                     Preview gratuito
                   </label>
-                  <span className="text-xs text-slate-500">#{lesson.sort_order} &middot; {lesson.module?.title ?? "Sin modulo"}</span>
+                  <span className="text-xs text-slate-500">#{lesson.sort_order}</span>
                   <div className="ml-auto flex gap-2">
                     <Button type="submit" variant="ghost" size="sm">Guardar</Button>
                   </div>
@@ -95,8 +131,9 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
         </ul>
       </Card>
 
-      {/* Add lesson */}
+      {/* Bulk upload */}
       <Card className="mt-4 p-4">
+<<<<<<< HEAD
         <h3 className="font-semibold">Agregar leccion</h3>
         <form action={createLesson} className="mt-3 grid gap-3 md:grid-cols-2">
           <input type="hidden" name="course_id" value={id} />
@@ -131,6 +168,21 @@ export default async function AdminLessonsPage({ params }: AdminLessonsPageProps
             <Button type="submit">Agregar leccion</Button>
           </div>
         </form>
+=======
+        <h3 className="font-semibold">Subida masiva de videos</h3>
+        <p className="mt-1 text-xs text-slate-400">
+          Arrastra multiples videos para crear lecciones en lote.
+        </p>
+        <div className="mt-3">
+          <BulkVideoUploader courseId={id} tierAccess={course.tier_access} />
+        </div>
+      </Card>
+
+      {/* Add single lesson with Bunny upload */}
+      <Card className="mt-4 p-4">
+        <h3 className="font-semibold">Agregar leccion individual</h3>
+        <LessonFormWithUpload courseId={id} tierAccess={course.tier_access} action={createLesson} />
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       </Card>
     </div>
   );

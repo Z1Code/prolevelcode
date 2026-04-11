@@ -1,30 +1,495 @@
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
-import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
+import { getUserTier } from "@/lib/access/check-access";
+import { DashboardShell, StaggerGrid, StaggerCard } from "@/components/dashboard/dashboard-shell";
+import { TierCard } from "@/components/pricing/tier-card";
+import { TIERS, EARLY_PRO_LIMIT } from "@/lib/tiers/config";
+import { prisma } from "@/lib/prisma";
+import { BASIC_MODULES, PRO_MODULES, GAMEDEV_MODULES, MARKETING_MODULES, AGENTIC_MODULES } from "@/lib/courses/curriculum";
+import type { CurriculumModuleData } from "@/lib/courses/curriculum";
+import { CurriculumIcon } from "@/components/courses/curriculum-icon";
+
+/* ── Duration helper ── */
+
+function CourseDuration({ minutes, accentClass = "text-slate-500" }: { minutes: number | null; accentClass?: string }) {
+  if (!minutes) return null;
+  const estMinutes = Math.round(minutes * 2.5);
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px]">
+      <span className={accentClass}>{minutes}min de video</span>
+      <span className="text-slate-600">·</span>
+      <span className="text-slate-500">~{estMinutes >= 60 ? `${Math.ceil(estMinutes / 60)}h` : `${estMinutes}min`} para completar</span>
+    </div>
+  );
+}
+
+/* ── Card components ── */
+
+function BasicModuleCard({ mod, slug, videoMinutes }: { mod: CurriculumModuleData; slug: string | null; videoMinutes: number | null }) {
+  const isAvailable = !!slug;
+
+  const content = (
+    <div className={`group relative overflow-hidden rounded-xl border p-5 transition-all duration-200 ${isAvailable ? "border-white/[0.08] bg-white/[0.03] hover:border-emerald-400/20 hover:bg-white/[0.05] hover:shadow-[0_0_24px_rgba(52,211,153,0.06)]" : "border-white/[0.05] bg-white/[0.02]"}`}>
+      <div className={`absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent ${isAvailable ? "opacity-0 transition-opacity duration-300 group-hover:opacity-100" : "opacity-0"}`} />
+      <div className="relative">
+        <div className="mb-3 flex items-center justify-between">
+          <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${isAvailable ? "bg-emerald-500/10 text-emerald-400 transition-colors group-hover:bg-emerald-500/15" : "bg-white/[0.04] text-slate-600"}`}>
+            <CurriculumIcon icon={mod.icon} />
+          </div>
+          {isAvailable ? (
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-slate-600 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-emerald-400">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <span className="rounded-full border border-slate-500/20 bg-slate-600/10 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+              Pronto
+            </span>
+          )}
+        </div>
+        <h3 className={`text-sm font-semibold ${isAvailable ? "text-slate-200 transition-colors group-hover:text-white" : "text-slate-400"}`}>
+          {mod.title}
+        </h3>
+        <p className={`mt-1.5 text-xs leading-relaxed ${isAvailable ? "text-slate-500" : "text-slate-600"}`}>
+          {mod.description}
+        </p>
+        {isAvailable && <CourseDuration minutes={videoMinutes} accentClass="text-emerald-400/60" />}
+      </div>
+    </div>
+  );
+
+  if (isAvailable) {
+    return <Link href={`/dashboard/cursos/${slug}`} className="block">{content}</Link>;
+  }
+  return content;
+}
+
+function ProModuleCard({ mod, slug, locked, videoMinutes }: { mod: CurriculumModuleData; slug: string | null; locked: boolean; videoMinutes: number | null }) {
+  if (locked) {
+    return (
+      <div className="relative overflow-hidden rounded-xl border border-amber-400/[0.06] bg-white/[0.015] p-5 opacity-40 select-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.03] via-transparent to-transparent" />
+        <div className="relative">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/[0.07] text-amber-400/50">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-amber-400/60">
+              PRO
+            </span>
+          </div>
+          <h3 className="text-sm font-medium text-slate-400">
+            {mod.title}
+          </h3>
+        </div>
+      </div>
+    );
+  }
+
+  const isAvailable = !!slug;
+
+  const content = (
+    <div className={`group relative overflow-hidden rounded-xl border bg-gradient-to-br from-amber-500/[0.04] via-white/[0.02] to-transparent p-5 transition-all duration-200 ${isAvailable ? "border-amber-400/[0.12] hover:border-amber-400/25 hover:shadow-[0_0_24px_rgba(251,191,36,0.08)]" : "border-amber-400/[0.06]"}`}>
+      <div className={`absolute inset-0 bg-gradient-to-br from-amber-500/[0.06] via-transparent to-transparent ${isAvailable ? "opacity-0 transition-opacity duration-300 group-hover:opacity-100" : "opacity-0"}`} />
+      <div className="relative">
+        <div className="mb-3 flex items-center justify-between">
+          <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${isAvailable ? "bg-amber-500/10 text-amber-400 transition-colors group-hover:bg-amber-500/15" : "bg-amber-500/[0.06] text-amber-500/40"}`}>
+            <CurriculumIcon icon={mod.icon} />
+          </div>
+          {isAvailable ? (
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-amber-600/50 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-amber-400">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <span className="rounded-full border border-amber-400/15 bg-amber-500/[0.06] px-2 py-0.5 text-[10px] font-medium text-amber-400/50">
+              Pronto
+            </span>
+          )}
+        </div>
+        <h3 className={`text-sm font-semibold ${isAvailable ? "text-amber-200 transition-colors group-hover:text-amber-100" : "text-amber-300/50"}`}>
+          {mod.title}
+        </h3>
+        <p className={`mt-1.5 text-xs leading-relaxed ${isAvailable ? "text-amber-400/40" : "text-amber-400/25"}`}>
+          {mod.description}
+        </p>
+        {isAvailable && <CourseDuration minutes={videoMinutes} accentClass="text-amber-400/50" />}
+      </div>
+    </div>
+  );
+
+  if (isAvailable) {
+    return <Link href={`/dashboard/cursos/${slug}`} className="block">{content}</Link>;
+  }
+  return content;
+}
+
+function GamedevModuleCard({ mod, slug, locked, videoMinutes }: { mod: CurriculumModuleData; slug: string | null; locked: boolean; videoMinutes: number | null }) {
+  if (locked) {
+    return (
+      <div className="relative overflow-hidden rounded-xl border border-violet-400/[0.06] bg-white/[0.015] p-5 opacity-40 select-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.03] via-transparent to-transparent" />
+        <div className="relative">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/[0.07] text-violet-400/50">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-violet-400/60">
+              PRO
+            </span>
+          </div>
+          <h3 className="text-sm font-medium text-slate-400">
+            {mod.title}
+          </h3>
+        </div>
+      </div>
+    );
+  }
+
+  const isAvailable = !!slug;
+
+  const content = (
+    <div className={`group relative overflow-hidden rounded-xl border bg-gradient-to-br from-violet-500/[0.04] via-white/[0.02] to-transparent p-5 transition-all duration-200 ${isAvailable ? "border-violet-400/[0.12] hover:border-violet-400/25 hover:shadow-[0_0_24px_rgba(139,92,246,0.08)]" : "border-violet-400/[0.06]"}`}>
+      <div className={`absolute inset-0 bg-gradient-to-br from-violet-500/[0.06] via-transparent to-transparent ${isAvailable ? "opacity-0 transition-opacity duration-300 group-hover:opacity-100" : "opacity-0"}`} />
+      <div className="relative">
+        <div className="mb-3 flex items-center justify-between">
+          <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${isAvailable ? "bg-violet-500/10 text-violet-400 transition-colors group-hover:bg-violet-500/15" : "bg-violet-500/[0.06] text-violet-500/40"}`}>
+            <CurriculumIcon icon={mod.icon} />
+          </div>
+          {isAvailable ? (
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-violet-600/50 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-violet-400">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <span className="rounded-full border border-violet-400/15 bg-violet-500/[0.06] px-2 py-0.5 text-[10px] font-medium text-violet-400/50">
+              Pronto
+            </span>
+          )}
+        </div>
+        <h3 className={`text-sm font-semibold ${isAvailable ? "text-violet-200 transition-colors group-hover:text-violet-100" : "text-violet-300/50"}`}>
+          {mod.title}
+        </h3>
+        <p className={`mt-1.5 text-xs leading-relaxed ${isAvailable ? "text-violet-400/40" : "text-violet-400/25"}`}>
+          {mod.description}
+        </p>
+        {isAvailable && <CourseDuration minutes={videoMinutes} accentClass="text-violet-400/50" />}
+      </div>
+    </div>
+  );
+
+  if (isAvailable) {
+    return <Link href={`/dashboard/cursos/${slug}`} className="block">{content}</Link>;
+  }
+  return content;
+}
+
+function MarketingModuleCard({ mod, slug, locked, videoMinutes }: { mod: CurriculumModuleData; slug: string | null; locked: boolean; videoMinutes: number | null }) {
+  if (locked) {
+    return (
+      <div className="relative overflow-hidden rounded-xl border border-pink-400/[0.06] bg-white/[0.015] p-5 opacity-40 select-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-pink-500/[0.03] via-transparent to-transparent" />
+        <div className="relative">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-pink-500/[0.07] text-pink-400/50">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <span className="rounded-full border border-pink-400/20 bg-pink-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-pink-400/60">
+              PRO
+            </span>
+          </div>
+          <h3 className="text-sm font-medium text-slate-400">{mod.title}</h3>
+        </div>
+      </div>
+    );
+  }
+  const isAvailable = !!slug;
+  const content = (
+    <div className={`group relative overflow-hidden rounded-xl border bg-gradient-to-br from-pink-500/[0.04] via-white/[0.02] to-transparent p-5 transition-all duration-200 ${isAvailable ? "border-pink-400/[0.12] hover:border-pink-400/25 hover:shadow-[0_0_24px_rgba(236,72,153,0.08)]" : "border-pink-400/[0.06]"}`}>
+      <div className={`absolute inset-0 bg-gradient-to-br from-pink-500/[0.06] via-transparent to-transparent ${isAvailable ? "opacity-0 transition-opacity duration-300 group-hover:opacity-100" : "opacity-0"}`} />
+      <div className="relative">
+        <div className="mb-3 flex items-center justify-between">
+          <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${isAvailable ? "bg-pink-500/10 text-pink-400 transition-colors group-hover:bg-pink-500/15" : "bg-pink-500/[0.06] text-pink-500/40"}`}>
+            <CurriculumIcon icon={mod.icon} />
+          </div>
+          {isAvailable ? (
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-pink-600/50 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-pink-400">
+              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <span className="rounded-full border border-pink-400/15 bg-pink-500/[0.06] px-2 py-0.5 text-[10px] font-medium text-pink-400/50">Pronto</span>
+          )}
+        </div>
+        <h3 className={`text-sm font-semibold ${isAvailable ? "text-pink-200 transition-colors group-hover:text-pink-100" : "text-pink-300/50"}`}>{mod.title}</h3>
+        <p className={`mt-1.5 text-xs leading-relaxed ${isAvailable ? "text-pink-400/40" : "text-pink-400/25"}`}>{mod.description}</p>
+        {isAvailable && <CourseDuration minutes={videoMinutes} accentClass="text-pink-400/50" />}
+      </div>
+    </div>
+  );
+  if (isAvailable) return <Link href={`/dashboard/cursos/${slug}`} className="block">{content}</Link>;
+  return content;
+}
+
+function AgenticModuleCard({ mod }: { mod: CurriculumModuleData }) {
+  return (
+    <div className="group relative overflow-hidden rounded-xl border border-slate-300/[0.08] bg-gradient-to-br from-slate-400/[0.03] via-white/[0.015] to-transparent p-5">
+      {/* Shimmer effect */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -inset-[100%] animate-[spin_8s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0%,rgba(148,163,184,0.06)_10%,transparent_20%)]" />
+      </div>
+      <div className="relative">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-300/[0.08] text-slate-300/60">
+            <CurriculumIcon icon={mod.icon} />
+          </div>
+          <span className="rounded-full border border-slate-300/15 bg-gradient-to-r from-slate-400/10 via-white/[0.06] to-slate-400/10 px-2 py-0.5 text-[9px] font-semibold tracking-wider text-slate-300/70">
+            COMING SOON
+          </span>
+        </div>
+        <h3 className="text-sm font-semibold text-slate-300/70">{mod.title}</h3>
+        <p className="mt-1.5 text-xs leading-relaxed text-slate-400/30">{mod.description}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Page ── */
 
 export default async function DashboardCoursesPage() {
   const user = await getSessionUser();
+  const currentTier = user ? await getUserTier(user.id) : null;
+  const isPro = currentTier === "pro";
+  const hasAccess = currentTier === "basic" || currentTier === "pro";
 
-  const enrollments = await prisma.enrollment.findMany({
-    where: { user_id: user?.id ?? "", status: "active" },
-    include: { course: { select: { title: true, slug: true, subtitle: true } } },
+  // Fetch published courses with aggregated lesson durations
+  const publishedCourses = await prisma.course.findMany({
+    where: { is_published: true, is_coming_soon: false },
+    select: {
+      slug: true,
+      lessons: { select: { duration_minutes: true } },
+    },
   });
+  const publishedSlugs = new Set(publishedCourses.map((c) => c.slug));
+
+  // Map slug → total video minutes
+  const durationBySlug = new Map<string, number>();
+  for (const c of publishedCourses) {
+    const total = c.lessons.reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0);
+    if (total > 0) durationBySlug.set(c.slug, total);
+  }
+
+  // For users without a plan, show pricing cards
+  let spotsRemaining = 0;
+  if (!hasAccess) {
+    try {
+      const proCount = await prisma.tierPurchase.count({
+        where: { tier: "pro", status: "active" },
+      });
+      spotsRemaining = Math.max(0, EARLY_PRO_LIMIT - proCount);
+    } catch {
+      spotsRemaining = 0;
+    }
+  }
+
+  /** Returns the slug only if the course is published */
+  function resolveSlug(mod: CurriculumModuleData): string | null {
+    return publishedSlugs.has(mod.defaultSlug) ? mod.defaultSlug : null;
+  }
+
+  /** Returns total video minutes for a module's course, or null */
+  function resolveMinutes(mod: CurriculumModuleData): number | null {
+    return durationBySlug.get(mod.defaultSlug) ?? null;
+  }
 
   return (
-    <div>
-      <h2 className="text-2xl font-semibold">Mis cursos</h2>
-      <div className="mt-4 space-y-3">
-        {enrollments.map((item) => (
-          <Card key={item.id} className="p-4">
-            <h3 className="text-lg font-semibold">{item.course.title}</h3>
-            <p className="mt-1 text-sm text-slate-400">{item.course.subtitle}</p>
-            <Link href={`/dashboard/cursos/${item.course.slug}`} className="mt-3 inline-flex text-sm text-emerald-300">
-              Abrir curso
-            </Link>
-          </Card>
-        ))}
+    <DashboardShell>
+      {/* Header */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold tracking-tight">Mis cursos</h2>
+        {currentTier && (
+          <p className="mt-1 text-sm text-slate-500">
+            Plan activo:{" "}
+            <span className={isPro ? "font-medium text-amber-300" : "font-medium text-slate-300"}>
+              {isPro ? "Pro" : "Basic"}
+            </span>
+          </p>
+        )}
       </div>
-    </div>
+
+      {hasAccess ? (
+        <>
+          {/* Basic Tier Section */}
+          <div className="mb-10">
+            <div className="mb-4 flex items-center gap-2.5">
+              <span className="rounded-full border border-slate-300/20 bg-slate-300/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-slate-300">
+                BASIC
+              </span>
+              <div className="h-px flex-1 bg-white/[0.06]" />
+            </div>
+            <StaggerGrid className="grid grid-cols-1 gap-3 sm:grid-cols-2" stagger={0.08}>
+              {BASIC_MODULES.map((mod) => (
+                <StaggerCard key={mod.key}>
+                  <BasicModuleCard mod={mod} slug={resolveSlug(mod)} videoMinutes={resolveMinutes(mod)} />
+                </StaggerCard>
+              ))}
+            </StaggerGrid>
+          </div>
+
+          {/* Pro Tier Section */}
+          <div>
+            <div className="mb-4 flex items-center gap-2.5">
+              <span className="rounded-full border border-amber-400/25 bg-gradient-to-r from-amber-500/15 via-yellow-400/15 to-amber-500/15 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-amber-300 shadow-[0_0_6px_rgba(251,191,36,0.1)]">
+                PRO
+              </span>
+              <div className="h-px flex-1 bg-amber-400/[0.08]" />
+              {!isPro && (
+                <Link
+                  href="/planes"
+                  className="rounded-lg border border-amber-400/15 bg-amber-500/[0.06] px-3 py-1 text-[11px] font-medium text-amber-400/70 transition-all duration-200 hover:border-amber-400/25 hover:bg-amber-500/10 hover:text-amber-300"
+                >
+                  Desbloquear
+                </Link>
+              )}
+            </div>
+            <StaggerGrid className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
+              {PRO_MODULES.map((mod) => (
+                <StaggerCard key={mod.key}>
+                  <ProModuleCard mod={mod} slug={resolveSlug(mod)} locked={!isPro} videoMinutes={resolveMinutes(mod)} />
+                </StaggerCard>
+              ))}
+            </StaggerGrid>
+          </div>
+
+          {/* Gamedev Section */}
+          <div className="mt-10">
+            <div className="mb-4 flex items-center gap-2.5">
+              <span className="rounded-full border border-violet-400/25 bg-gradient-to-r from-violet-500/15 via-fuchsia-400/15 to-violet-500/15 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-violet-300 shadow-[0_0_6px_rgba(139,92,246,0.1)]">
+                VIDEOJUEGOS
+              </span>
+              <div className="h-px flex-1 bg-violet-400/[0.08]" />
+              {!isPro && (
+                <Link
+                  href="/planes"
+                  className="rounded-lg border border-violet-400/15 bg-violet-500/[0.06] px-3 py-1 text-[11px] font-medium text-violet-400/70 transition-all duration-200 hover:border-violet-400/25 hover:bg-violet-500/10 hover:text-violet-300"
+                >
+                  Desbloquear
+                </Link>
+              )}
+            </div>
+            <StaggerGrid className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
+              {GAMEDEV_MODULES.map((mod) => (
+                <StaggerCard key={mod.key}>
+                  <GamedevModuleCard mod={mod} slug={resolveSlug(mod)} locked={!isPro} videoMinutes={resolveMinutes(mod)} />
+                </StaggerCard>
+              ))}
+            </StaggerGrid>
+          </div>
+
+          {/* Marketing Section */}
+          <div className="mt-10">
+            <div className="mb-4 flex items-center gap-2.5">
+              <span className="rounded-full border border-pink-400/25 bg-gradient-to-r from-pink-500/15 via-rose-400/15 to-pink-500/15 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-pink-300 shadow-[0_0_6px_rgba(236,72,153,0.1)]">
+                MARKETING
+              </span>
+              <div className="h-px flex-1 bg-pink-400/[0.08]" />
+              {!isPro && (
+                <Link
+                  href="/planes"
+                  className="rounded-lg border border-pink-400/15 bg-pink-500/[0.06] px-3 py-1 text-[11px] font-medium text-pink-400/70 transition-all duration-200 hover:border-pink-400/25 hover:bg-pink-500/10 hover:text-pink-300"
+                >
+                  Desbloquear
+                </Link>
+              )}
+            </div>
+            <StaggerGrid className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
+              {MARKETING_MODULES.map((mod) => (
+                <StaggerCard key={mod.key}>
+                  <MarketingModuleCard mod={mod} slug={resolveSlug(mod)} locked={!isPro} videoMinutes={resolveMinutes(mod)} />
+                </StaggerCard>
+              ))}
+            </StaggerGrid>
+          </div>
+
+          {/* Agentic IA Section */}
+          <div className="mt-10">
+            <div className="mb-4 flex items-center gap-2.5">
+              <span className="rounded-full border border-slate-300/20 bg-gradient-to-r from-slate-300/15 via-white/10 to-slate-300/15 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-slate-200 shadow-[0_0_8px_rgba(148,163,184,0.08)]">
+                AGENTIC IA
+              </span>
+              <div className="h-px flex-1 bg-slate-400/[0.06]" />
+            </div>
+            <StaggerGrid className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
+              {AGENTIC_MODULES.map((mod) => (
+                <StaggerCard key={mod.key}>
+                  <AgenticModuleCard mod={mod} />
+                </StaggerCard>
+              ))}
+            </StaggerGrid>
+          </div>
+        </>
+      ) : (
+        /* No plan — show pricing cards inline */
+        <div>
+          <div className="mb-6 text-center">
+            <p className="text-sm text-slate-400">
+              Elige un plan para desbloquear los cursos.
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Un solo pago. Acceso de por vida.
+            </p>
+          </div>
+
+          {spotsRemaining > 0 && (
+            <div className="mx-auto mb-6 max-w-2xl rounded-xl border border-violet-400/25 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/5 to-violet-500/10 px-5 py-3 text-center">
+              <p className="text-sm text-violet-200">
+                Los primeros <span className="font-bold">{EARLY_PRO_LIMIT} usuarios Pro</span> reciben una beca
+                <span className="font-semibold text-emerald-300"> permanente </span>
+                para regalar a un amigo
+                <span className="ml-1 text-xs text-slate-400">
+                  ({spotsRemaining} {spotsRemaining === 1 ? "lugar disponible" : "lugares disponibles"})
+                </span>
+              </p>
+            </div>
+          )}
+
+          <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
+            <TierCard
+              name={TIERS.basic.name}
+              price={TIERS.basic.priceDisplay}
+              description={TIERS.basic.description}
+              features={[...TIERS.basic.features]}
+              tier="basic"
+              isCurrentPlan={false}
+              isLoggedIn={!!user}
+              onCheckoutMp="/api/checkout/tier"
+              onCheckoutCrypto="/api/checkout/crypto/tier"
+              onCheckoutPaypal="/paypal/pay"
+            />
+            <TierCard
+              name={TIERS.pro.name}
+              price={TIERS.pro.priceDisplay}
+              description={TIERS.pro.description}
+              features={[...TIERS.pro.features]}
+              tier="pro"
+              highlighted
+              isCurrentPlan={false}
+              isLoggedIn={!!user}
+              onCheckoutMp="/api/checkout/tier"
+              onCheckoutCrypto="/api/checkout/crypto/tier"
+              onCheckoutPaypal="/paypal/pay"
+            />
+          </div>
+
+          <div className="mt-4 text-center">
+            <Link href="/cursos" className="text-xs text-slate-500 transition hover:text-slate-300">
+              O compra cursos individuales →
+            </Link>
+          </div>
+        </div>
+      )}
+    </DashboardShell>
   );
 }

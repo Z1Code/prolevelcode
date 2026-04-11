@@ -4,11 +4,11 @@ import { getCourseBySlug } from "@/lib/utils/data";
 import { Button } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { currencyFormatter } from "@/lib/payments/helpers";
+import { checkCourseAccess, getUserTier } from "@/lib/access/check-access";
+import { TierBadge } from "@/components/courses/tier-badge";
 
 interface CourseDetailPageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ checkout?: string }>;
 }
 
 interface CourseLesson {
@@ -24,6 +24,12 @@ interface CourseModule {
   lessons: CourseLesson[];
 }
 
+<<<<<<< HEAD
+=======
+/**
+ * Compute thumbnail URL server-side so no video IDs leak to the client.
+ */
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 async function getCourseThumbnail(course: {
   id: string;
   thumbnail_url?: string | null;
@@ -31,6 +37,7 @@ async function getCourseThumbnail(course: {
   if (course.thumbnail_url) return course.thumbnail_url;
 
   try {
+<<<<<<< HEAD
     const lesson = await prisma.lesson.findFirst({
       where: { course_id: course.id, mux_status: "ready", thumbnail_url: { not: null } },
       orderBy: { sort_order: "asc" },
@@ -40,11 +47,34 @@ async function getCourseThumbnail(course: {
   } catch {
     return null;
   }
+=======
+    const previewLesson = await prisma.lesson.findFirst({
+      where: { course_id: course.id, is_free_preview: true },
+      orderBy: { sort_order: "asc" },
+      select: { bunny_video_id: true, bunny_thumbnail_url: true, youtube_video_id: true },
+    });
+
+    if (previewLesson?.bunny_thumbnail_url) return previewLesson.bunny_thumbnail_url;
+    if (previewLesson?.bunny_video_id) {
+      const { getBunnyThumbnailUrl } = await import("@/lib/bunny/signed-url");
+      return getBunnyThumbnailUrl(previewLesson.bunny_video_id);
+    }
+    if (previewLesson?.youtube_video_id) {
+      return `https://img.youtube.com/vi/${previewLesson.youtube_video_id}/maxresdefault.jpg`;
+    }
+  } catch {
+    // fallback
+  }
+
+  const youtubeId = course.preview_video_url ?? null;
+  return youtubeId
+    ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
+    : null;
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 }
 
-export default async function CourseDetailPage({ params, searchParams }: CourseDetailPageProps) {
+export default async function CourseDetailPage({ params }: CourseDetailPageProps) {
   const { slug } = await params;
-  const { checkout } = await searchParams;
   const course = await getCourseBySlug(slug);
 
   if (!course) {
@@ -54,50 +84,83 @@ export default async function CourseDetailPage({ params, searchParams }: CourseD
   const modules = (Array.isArray(course.modules) ? course.modules : []) as CourseModule[];
   const user = await getSessionUser();
 
-  let isEnrolled = false;
+  let hasAccess = false;
+  let userTier: "pro" | "basic" | null = null;
   if (user && course.id) {
-    const enrollment = await prisma.enrollment.findFirst({
-      where: { user_id: user.id, course_id: course.id, status: "active" },
-    });
-    isEnrolled = !!enrollment;
+    const access = await checkCourseAccess(user.id, course.id);
+    hasAccess = access.granted;
+    userTier = await getUserTier(user.id);
   }
+
+  const courseTierAccess = (course as { tier_access?: string }).tier_access ?? "basic";
+  const isComingSoon = (course as { is_coming_soon?: boolean }).is_coming_soon ?? false;
 
   const thumbnailUrl = await getCourseThumbnail(course);
 
   return (
     <main className="container-wide section-spacing liquid-section">
-      {checkout === "error" && (
-        <div className="mb-6 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          No se pudo iniciar el pago. Intenta de nuevo mas tarde o contactanos.
-        </div>
-      )}
-      {checkout === "failure" && (
-        <div className="mb-6 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          El pago no se completo. Puedes intentar de nuevo.
-        </div>
-      )}
       <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
         <div>
-          <h1 className="text-4xl font-bold md:text-5xl">{course.title}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-bold md:text-5xl">{course.title}</h1>
+            <TierBadge tier={courseTierAccess} isComingSoon={isComingSoon} />
+          </div>
           <p className="mt-4 max-w-3xl text-slate-300">{course.long_description ?? course.subtitle ?? course.description}</p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            {course.price_cents != null && (
-              <span className="liquid-pill text-sm">{currencyFormatter(course.price_cents, course.currency)}</span>
-            )}
+          {(() => {
+            const allLessons = modules.flatMap((m) => m.lessons ?? []);
+            const totalMinutes = allLessons.reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0);
+            const totalLessons = allLessons.length;
+            if (totalLessons === 0) return null;
+            const hours = Math.floor(totalMinutes / 60);
+            const mins = totalMinutes % 60;
+            const durationStr = hours > 0 ? `${hours}h ${mins > 0 ? `${mins}min` : ""}` : `${mins}min`;
+            return (
+              <div className="mt-3 flex items-center gap-4 text-sm text-slate-400">
+                <span className="flex items-center gap-1.5">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-slate-500">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clipRule="evenodd" />
+                  </svg>
+                  {totalMinutes > 0 ? durationStr : "Duracion por definir"}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-slate-500">
+                    <path d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z" />
+                  </svg>
+                  {totalLessons} {totalLessons === 1 ? "leccion" : "lecciones"}
+                </span>
+              </div>
+            );
+          })()}
 
-            {isEnrolled ? (
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            {isComingSoon ? (
+              <span className="text-sm text-amber-300">Este curso estara disponible proximamente</span>
+            ) : hasAccess ? (
               <Link href={`/dashboard/cursos/${slug}`}>
                 <Button>Ir al curso →</Button>
               </Link>
             ) : user ? (
-              <form action="/api/checkout/course" method="post">
-                <input type="hidden" name="courseId" value={course.id ?? ""} />
-                <Button type="submit">Comprar curso</Button>
-              </form>
+              <div className="space-y-3">
+                {courseTierAccess === "pro" && userTier !== "pro" ? (
+                  <div className="rounded-lg border border-violet-400/20 bg-violet-500/5 p-3">
+                    <p className="text-sm text-violet-200">
+                      Este curso requiere el plan Pro.{" "}
+                      <Link href="/planes" className="font-medium underline">Ver planes</Link>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/5 p-3">
+                    <p className="text-sm text-emerald-200">
+                      Accede a este curso con un plan.{" "}
+                      <Link href="/planes" className="font-medium underline">Ver planes</Link>
+                    </p>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link href={`/login?next=${encodeURIComponent(`/cursos/${slug}`)}`}>
-                <Button>Inicia sesion para comprar</Button>
+                <Button>Inicia sesion para acceder</Button>
               </Link>
             )}
           </div>

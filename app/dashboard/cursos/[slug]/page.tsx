@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SecureCoursePlayer } from "@/components/video/secure-course-player";
+import { CourseReviewSection } from "@/components/video/course-review-section";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
+import { checkCourseAccess, getUserTier } from "@/lib/access/check-access";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { CourseResources } from "@/components/courses/course-resources";
+import { ALL_MODULES } from "@/lib/courses/curriculum";
 
 interface DashboardCoursePageProps {
   params: Promise<{ slug: string }>;
@@ -21,32 +26,132 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
 
   if (!course) notFound();
 
-  const enrollment = await prisma.enrollment.findFirst({
-    where: { user_id: user.id, course_id: course.id, status: "active" },
-  });
+  const access = await checkCourseAccess(user.id, course.id);
 
-  if (!enrollment) notFound();
+  if (!access.granted) notFound();
+
+  const userTier = await getUserTier(user.id);
+  const lessonFilter = userTier === "pro" ? {} : { is_pro_only: false };
 
   const lessons = await prisma.lesson.findMany({
-    where: { course_id: course.id },
+    where: { course_id: course.id, ...lessonFilter },
     orderBy: { sort_order: "asc" },
-    select: { id: true, title: true, course_id: true },
+    select: { id: true, title: true, course_id: true, duration_minutes: true },
   });
+
+  // Fetch completed lesson IDs
+  const completedProgress = await prisma.lessonProgress.findMany({
+    where: { user_id: user.id, course_id: course.id, is_completed: true },
+    select: { lesson_id: true },
+  });
+  const completedLessonIds = completedProgress.map((p) => p.lesson_id);
+
+  // Compute completion percentage
+  const totalLessons = lessons.length;
+  const completedCount = completedLessonIds.length;
+  const completionPct = totalLessons > 0 ? (completedCount / totalLessons) * 100 : 0;
+
+  // Fetch existing course review if eligible
+  let existingReview: { rating: number; comment: string } | null = null;
+  if (completionPct >= 70) {
+    const review = await prisma.courseReview.findUnique({
+      where: { user_id_course_id: { user_id: user.id, course_id: course.id } },
+      select: { rating: true, comment: true },
+    });
+    existingReview = review;
+  }
 
   const playerLessons = lessons.map((lesson) => ({
     id: lesson.id,
     title: lesson.title,
     courseId: lesson.course_id,
+    durationMinutes: lesson.duration_minutes,
   }));
 
   return (
+<<<<<<< HEAD
     <div>
       <Link href="/dashboard/cursos" className="mb-3 inline-flex text-xs text-slate-400 hover:text-slate-200">← Mis cursos</Link>
       <h2 className="text-2xl font-semibold">{course.title}</h2>
       <p className="mt-2 text-sm text-slate-400">Reproduccion segura con proteccion DRM.</p>
       <div className="mt-4">
         <SecureCoursePlayer lessons={playerLessons} />
+=======
+    <DashboardShell>
+      <Link
+        href="/dashboard/cursos"
+        className="group mb-4 inline-flex items-center gap-1.5 text-xs text-slate-500 transition-colors hover:text-slate-300"
+      >
+        <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-x-0.5">
+          <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
+        </svg>
+        Mis cursos
+      </Link>
+      <h2 className="text-xl font-semibold tracking-tight">{course.title}</h2>
+      <p className="mt-1 text-sm text-slate-500">
+        Selecciona una leccion y presiona play para reproducir.
+        {(() => {
+          const totalMinutes = lessons.reduce((sum, l) => sum + (l.duration_minutes ?? 0), 0);
+          if (totalMinutes === 0) return null;
+          // Round video duration: 30m+ rounds up to next hour
+          const roundedHours = totalMinutes >= 30
+            ? Math.ceil(totalMinutes / 60)
+            : 0;
+          const durationStr = roundedHours > 0
+            ? `${roundedHours}h de video`
+            : `${totalMinutes}min de video`;
+          // Estimated completion: video + pauses + setup + practice (~2.5x)
+          const estMinutes = Math.round(totalMinutes * 2.5);
+          const estRoundedHours = estMinutes >= 30
+            ? Math.ceil(estMinutes / 60)
+            : 0;
+          const estStr = estRoundedHours > 0
+            ? `~${estRoundedHours}h para completar`
+            : `~${estMinutes}min para completar`;
+          return (
+            <>
+              {" — "}{durationStr}
+              <span className="text-slate-600">{" · "}</span>
+              {estStr}
+            </>
+          );
+        })()}
+      </p>
+
+      {/* Progress bar */}
+      {totalLessons > 0 && (
+        <div className="mt-3">
+          <div className="flex items-center justify-between text-[11px] text-slate-500">
+            <span>{completedCount}/{totalLessons} lecciones completadas</span>
+            <span>{Math.round(completionPct)}%</span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/5">
+            <div
+              className="progress-shimmer h-full rounded-full bg-emerald-500/60 transition-all duration-700 ease-out"
+              style={{ width: `${completionPct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Course resources (from curriculum config) */}
+      {(() => {
+        const mod = ALL_MODULES.find((m) => m.defaultSlug === slug);
+        if (!mod?.resources?.length) return null;
+        return <CourseResources resources={mod.resources} />;
+      })()}
+
+      <div className="mt-5">
+        <SecureCoursePlayer lessons={playerLessons} completedLessonIds={completedLessonIds} />
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       </div>
-    </div>
+
+      {/* Course review section — shown when >= 70% complete */}
+      {completionPct >= 70 && (
+        <div className="mt-6">
+          <CourseReviewSection courseId={course.id} existingReview={existingReview} />
+        </div>
+      )}
+    </DashboardShell>
   );
 }

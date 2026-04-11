@@ -2,9 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { CourseForm } from "@/components/admin/course-form";
 import { updateCourse, deleteCourse } from "../../../actions";
 
 interface Props {
@@ -22,6 +21,7 @@ export default async function EditCoursePage({ params }: Props) {
       <Link href={`/admin/cursos/${id}`} className="mb-3 inline-flex text-xs text-slate-400 hover:text-slate-200">← Volver al curso</Link>
       <h2 className="text-2xl font-semibold">Editar curso</h2>
       <Card className="mt-4 p-4">
+<<<<<<< HEAD
         <form action={updateCourse} className="grid gap-3 md:grid-cols-2">
           <input type="hidden" name="id" value={course.id} />
           <label className="flex flex-col gap-1">
@@ -76,6 +76,26 @@ export default async function EditCoursePage({ params }: Props) {
             <Button type="submit">Guardar cambios</Button>
           </div>
         </form>
+=======
+        <CourseForm
+          action={updateCourse}
+          course={{
+            id: course.id,
+            title: course.title,
+            slug: course.slug,
+            subtitle: course.subtitle,
+            description: course.description,
+            difficulty: course.difficulty,
+            category: course.category,
+            preview_video_url: course.preview_video_url,
+            is_published: course.is_published,
+            is_featured: course.is_featured,
+            is_coming_soon: course.is_coming_soon,
+            tier_access: course.tier_access,
+          }}
+          submitLabel="Guardar cambios"
+        />
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       </Card>
 
       <Card className="mt-4 p-4">

@@ -1,3 +1,10 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Sobre Mi | ProLevelCode",
+  description: "Desarrollador full-stack especializado en productos digitales de alto impacto. Next.js, TypeScript, PostgreSQL e IA.",
+};
+
 export default function AboutPage() {
   return (
     <main className="container-wide section-spacing liquid-section">

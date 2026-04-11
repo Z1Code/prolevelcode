@@ -2,7 +2,6 @@ import { unstable_noStore as noStore } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
 export interface SiteFeatureFlags {
-  showServices: boolean;
   showCourses: boolean;
   showProcess: boolean;
   showTestimonials: boolean;
@@ -30,7 +29,6 @@ export async function getSiteFeatureFlags(): Promise<SiteFeatureFlags> {
   const get = (key: string) => rows.find((r) => r.key === key)?.value;
 
   return {
-    showServices: coerceBooleanConfig(get("show_services"), false),
     showCourses: coerceBooleanConfig(get("show_courses"), false),
     showProcess: coerceBooleanConfig(get("show_process"), false),
     showTestimonials: coerceBooleanConfig(get("show_testimonials"), false),

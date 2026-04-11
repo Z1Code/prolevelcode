@@ -5,14 +5,21 @@ const csp = [
   "script-src 'self' 'unsafe-inline' https://cdn.mux.com https://sdk.mercadopago.com https://www.googletagmanager.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
+<<<<<<< HEAD
   "img-src 'self' data: blob: https: https://image.mux.com",
   "media-src 'self' https: https://stream.mux.com",
   "frame-src 'self' https://www.mercadopago.cl https://www.mercadopago.com https://www.mercadopago.com.ar https://www.mercadopago.com.mx https://www.mercadopago.com.br",
   "connect-src 'self' https: wss: https://*.mux.com",
+=======
+  "img-src 'self' data: blob: https:",
+  "media-src 'self' https:",
+  "frame-src 'self' https://www.youtube-nocookie.com https://iframe.mediadelivery.net https://www.mercadopago.cl https://www.mercadopago.com https://www.mercadopago.com.ar https://www.mercadopago.com.mx https://www.mercadopago.com.br",
+  "connect-src 'self' https: wss:",
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self' https://www.mercadopago.cl https://www.mercadopago.com https://www.mercadopago.com.ar https://www.mercadopago.com.mx https://www.mercadopago.com.br",
-  "frame-ancestors 'none'",
+  "frame-ancestors 'self'",
   "upgrade-insecure-requests",
 ].join("; ");
 const appOrigin = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").trim();

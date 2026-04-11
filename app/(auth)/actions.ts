@@ -23,7 +23,9 @@ export async function loginAction(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent("Email y contraseña son requeridos")}&next=${encodeURIComponent(next)}`);
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
 
   if (!user || !user.password_hash) {
     redirect(`/login?error=${encodeURIComponent("Credenciales incorrectas")}&next=${encodeURIComponent(next)}`);
@@ -44,26 +46,34 @@ export async function loginAction(formData: FormData) {
   });
 
   await bootstrapAdminRoleByEmail(user);
+
+  // Re-fetch to get updated role after bootstrap
+  const freshUser = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true } });
+  const destination = freshUser?.role === "superadmin" || freshUser?.role === "admin" ? "/admin" : next;
+
   await createSession(user.id, user.email);
-  redirect(next);
+  redirect(destination);
 }
 
 export async function registerAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("fullName") ?? "").trim();
+  const scholarshipToken = String(formData.get("scholarship") ?? "").trim();
 
   if (!email || !password) {
-    redirect(`/registro?error=${encodeURIComponent("Email y contraseña son requeridos")}`);
+    redirect(`/registro?error=${encodeURIComponent("Email y contraseña son requeridos")}${scholarshipToken ? `&scholarship=${scholarshipToken}` : ""}`);
   }
 
   if (password.length < 8) {
-    redirect(`/registro?error=${encodeURIComponent("La contraseña debe tener al menos 8 caracteres")}`);
+    redirect(`/registro?error=${encodeURIComponent("La contraseña debe tener al menos 8 caracteres")}${scholarshipToken ? `&scholarship=${scholarshipToken}` : ""}`);
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
   if (existing) {
-    redirect(`/registro?error=${encodeURIComponent("Ya existe una cuenta con este email")}`);
+    redirect(`/registro?error=${encodeURIComponent("Ya existe una cuenta con este email")}${scholarshipToken ? `&scholarship=${scholarshipToken}` : ""}`);
   }
 
   const passwordHash = hashPassword(password);
@@ -75,6 +85,31 @@ export async function registerAction(formData: FormData) {
       auth_provider: "credentials",
     },
   });
+
+  // Auto-link scholarship if token provided
+  if (scholarshipToken) {
+    try {
+      const scholarship = await prisma.scholarship.findUnique({
+        where: { invite_token: scholarshipToken },
+      });
+
+      if (scholarship && scholarship.status === "pending") {
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        await prisma.scholarship.update({
+          where: { id: scholarship.id },
+          data: {
+            recipient_user_id: user.id,
+            status: "active",
+            redeemed_at: now,
+            expires_at: expiresAt,
+          },
+        });
+      }
+    } catch {
+      // scholarship link failure shouldn't block registration
+    }
+  }
 
   const rawToken = generateToken();
   const tokenHash = hashToken(rawToken);
@@ -90,7 +125,7 @@ export async function registerAction(formData: FormData) {
     const resend = getResendClient();
     const verifyUrl = `${env.appUrl}/auth/callback?type=verify-email&token=${rawToken}`;
     await resend.emails.send({
-      from: "ProLevelCode <no-reply@prolevelcode.dev>",
+      from: "ProLevelCode <no-reply@prolevelcode.com>",
       to: email,
       subject: "Verifica tu email - ProLevelCode",
       html: `
@@ -105,6 +140,10 @@ export async function registerAction(formData: FormData) {
     // email send failure shouldn't block registration
   }
 
+  if (scholarshipToken) {
+    redirect("/login?message=Cuenta creada y beca activada. Revisa tu email para verificar tu cuenta.");
+  }
+
   redirect("/login?message=Cuenta creada. Revisa tu email para verificar tu cuenta.");
 }
 
@@ -116,10 +155,12 @@ export async function magicLinkAction(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent("Email es requerido")}&next=${encodeURIComponent(next)}`);
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
   if (!user) {
     // Don't reveal if email exists
-    redirect(`/login?message=${encodeURIComponent("Si tu email está registrado, recibirás un magic link")}`);
+    redirect(`/login?message=${encodeURIComponent("Si tu email está registrado, recibirás un magic link")}&next=${encodeURIComponent(next)}`);
   }
 
   const rawToken = generateToken();
@@ -136,7 +177,7 @@ export async function magicLinkAction(formData: FormData) {
     const resend = getResendClient();
     const loginUrl = `${env.appUrl}/auth/callback?type=magic-link&token=${rawToken}&next=${encodeURIComponent(next)}`;
     await resend.emails.send({
-      from: "ProLevelCode <no-reply@prolevelcode.dev>",
+      from: "ProLevelCode <no-reply@prolevelcode.com>",
       to: email,
       subject: "Tu magic link - ProLevelCode",
       html: `
@@ -151,7 +192,7 @@ export async function magicLinkAction(formData: FormData) {
     // silent
   }
 
-  redirect(`/login?message=${encodeURIComponent("Si tu email está registrado, recibirás un magic link")}`);
+  redirect(`/login?message=${encodeURIComponent("Si tu email está registrado, recibirás un magic link")}&next=${encodeURIComponent(next)}`);
 }
 
 export async function recoverAction(formData: FormData) {
@@ -161,7 +202,9 @@ export async function recoverAction(formData: FormData) {
     redirect(`/recuperar?error=${encodeURIComponent("Email es requerido")}`);
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
 
   // Always show success to prevent email enumeration
   if (!user) {
@@ -182,7 +225,7 @@ export async function recoverAction(formData: FormData) {
     const resend = getResendClient();
     const resetUrl = `${env.appUrl}/recuperar?token=${rawToken}`;
     await resend.emails.send({
-      from: "ProLevelCode <no-reply@prolevelcode.dev>",
+      from: "ProLevelCode <no-reply@prolevelcode.com>",
       to: email,
       subject: "Recuperar contraseña - ProLevelCode",
       html: `

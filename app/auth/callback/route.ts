@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const rawNext = searchParams.get("state") ?? searchParams.get("next");
   const next = rawNext && rawNext.startsWith("/") ? rawNext : "/dashboard";
 
-  const baseUrl = request.nextUrl.origin;
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin).trim();
 
   // Google OAuth callback
   if (code) {
@@ -58,8 +58,8 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      let user = await prisma.user.findUnique({
-        where: { email: userInfo.email.toLowerCase() },
+      let user = await prisma.user.findFirst({
+        where: { email: { equals: userInfo.email.toLowerCase(), mode: "insensitive" } },
       });
 
       if (!user) {
@@ -85,6 +85,27 @@ export async function GET(request: NextRequest) {
       }
 
       await bootstrapAdminRoleByEmail(user);
+
+      // Auto-grant Pro to family accounts (no payment, no contability)
+      const familyProEmails = ["elioafh@gmail.com", "americamelendez@gmail.com"];
+      if (familyProEmails.includes(user.email.toLowerCase())) {
+        const hasProTier = await prisma.tierPurchase.findFirst({
+          where: { user_id: user.id, tier: "pro", status: "active" },
+        });
+        if (!hasProTier) {
+          await prisma.tierPurchase.create({
+            data: {
+              user_id: user.id,
+              tier: "pro",
+              status: "active",
+              payment_provider: "admin_grant",
+              payment_reference: "Familiar — sin pago",
+              amount_paid_cents: 0,
+              currency: "USD",
+            },
+          });
+        }
+      }
 
       // Re-fetch to get updated role after bootstrap
       const freshUser = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true } });

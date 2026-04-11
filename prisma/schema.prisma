@@ -36,7 +36,11 @@ enum ServiceOrderStatus {
 
 enum TokenAction {
   generated
+  validated
   viewed
+  expired
+  revoked
+  rejected
 }
 
 model User {
@@ -53,15 +57,28 @@ model User {
   created_at       DateTime        @default(now()) @db.Timestamptz(6)
   updated_at       DateTime        @updatedAt @db.Timestamptz(6)
 
-  enrollments      Enrollment[]
-  lessonProgress   LessonProgress[]
-  videoTokens      VideoToken[]
-  serviceOrders    ServiceOrder[]
-  adminAuditLogs   AdminAuditLog[] @relation("AdminAuditLogs")
-  tokenUsageLogs   TokenUsageLog[]
-  sessions         Session[]
-  passwordResets   PasswordResetToken[]
-  emailVerifications EmailVerificationToken[]
+  enrollments            Enrollment[]
+  lessonProgress         LessonProgress[]
+  videoTokens            VideoToken[]
+  serviceOrders          ServiceOrder[]
+  adminAuditLogs         AdminAuditLog[] @relation("AdminAuditLogs")
+  tokenUsageLogs         TokenUsageLog[]
+  activeSessions         ActiveVideoSession[]
+  sessions               Session[]
+  passwordResets         PasswordResetToken[]
+  emailVerifications     EmailVerificationToken[]
+  tierPurchases          TierPurchase[]
+  scholarshipsGranted    Scholarship[] @relation("ScholarshipsGranted")
+  scholarshipsReceived   Scholarship[] @relation("ScholarshipsReceived")
+  cryptoPayments         CryptoPayment[]
+  paypalPayments         PaypalPayment[]
+  proQueries             ProQuery[]
+  scholarshipApplications ScholarshipApplication[]
+  lessonReviews          LessonReview[]
+  courseReviews          CourseReview[]
+  lessonComments         LessonComment[]
+  testimonials           Testimonial[]
+  testimonial_dismissed_at DateTime?    @db.Timestamptz(6)
 
   @@map("users")
 }
@@ -128,6 +145,8 @@ model Course {
   total_lessons          Int?
   is_published           Boolean      @default(false)
   is_featured            Boolean      @default(false)
+  is_coming_soon         Boolean      @default(false)
+  tier_access            String       @default("basic")
   launch_date            DateTime?    @db.Timestamptz(6)
   created_at             DateTime     @default(now()) @db.Timestamptz(6)
   updated_at             DateTime     @updatedAt @db.Timestamptz(6)
@@ -137,6 +156,9 @@ model Course {
   enrollments            Enrollment[]
   lessonProgress         LessonProgress[]
   videoTokens            VideoToken[]
+  lessonReviews          LessonReview[]
+  courseReviews          CourseReview[]
+  lessonComments         LessonComment[]
 
   @@map("courses")
 }
@@ -152,31 +174,35 @@ model Module {
   course      Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
   lessons     Lesson[]
 
+  @@index([course_id])
   @@map("modules")
 }
 
 model Lesson {
-  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  module_id        String           @db.Uuid
-  course_id        String           @db.Uuid
-  title            String
-  description      String?
-  mux_asset_id     String?
-  mux_playback_id  String?
-  mux_upload_id    String?
-  mux_status       String           @default("pending")
-  thumbnail_url    String?
-  duration_minutes Int?
-  sort_order       Int
-  is_free_preview  Boolean          @default(false)
-  resources        Json?
-  created_at       DateTime         @default(now()) @db.Timestamptz(6)
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  module_id           String?          @db.Uuid
+  course_id           String           @db.Uuid
+  title               String
+  description         String?
+  youtube_video_id    String?
+  bunny_video_id      String?
+  bunny_thumbnail_url String?
+  duration_minutes    Int?
+  sort_order          Int
+  is_free_preview     Boolean          @default(false)
+  is_pro_only         Boolean          @default(false)
+  resources           Json?
+  created_at          DateTime         @default(now()) @db.Timestamptz(6)
 
-  module           Module           @relation(fields: [module_id], references: [id], onDelete: Cascade)
+  module           Module?          @relation(fields: [module_id], references: [id], onDelete: SetNull)
   course           Course           @relation(fields: [course_id], references: [id], onDelete: Cascade)
   lessonProgress   LessonProgress[]
   videoTokens      VideoToken[]
+  lessonReviews    LessonReview[]
+  lessonComments   LessonComment[]
 
+  @@index([course_id, sort_order])
+  @@index([module_id])
   @@map("lessons")
 }
 
@@ -186,6 +212,8 @@ model Enrollment {
   course_id                  String           @db.Uuid
   mp_payment_id              String?
   mp_preference_id           String?
+  payment_provider           String?
+  binance_order_id           String?
   amount_paid_cents          Int?
   currency                   String           @default("USD")
   status                     EnrollmentStatus @default(active)
@@ -213,36 +241,57 @@ model LessonProgress {
   course          Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, lesson_id])
+  @@index([user_id, course_id])
+  @@index([course_id])
   @@map("lesson_progress")
 }
 
 model VideoToken {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id    String   @db.Uuid
-  lesson_id  String   @db.Uuid
-  course_id  String   @db.Uuid
-  expires_at DateTime @db.Timestamptz(6)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token        String   @unique
+  user_id      String   @db.Uuid
+  lesson_id    String   @db.Uuid
+  course_id    String   @db.Uuid
+  expires_at   DateTime @db.Timestamptz(6)
+  max_views    Int      @default(1)
+  current_views Int     @default(0)
+  ttl_seconds  Int      @default(14400)
+  ip_address   String?
+  user_agent   String?
+  allowed_ips  String[]
+  is_revoked   Boolean  @default(false)
+  revoked_at   DateTime? @db.Timestamptz(6)
+  revoked_reason String?
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  last_used_at DateTime? @db.Timestamptz(6)
 
-  user      User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  lesson    Lesson         @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
-  course    Course         @relation(fields: [course_id], references: [id], onDelete: Cascade)
-  usageLogs TokenUsageLog[]
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  lesson       Lesson   @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  course       Course   @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  usageLogs    TokenUsageLog[]
+  activeSession ActiveVideoSession?
 
+  @@index([user_id, is_revoked, expires_at])
+  @@index([lesson_id])
+  @@index([course_id])
   @@map("video_tokens")
 }
 
 model TokenUsageLog {
-  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  token_id   String      @db.Uuid
-  user_id    String?     @db.Uuid
-  action     TokenAction
-  metadata   Json?
-  created_at DateTime    @default(now()) @db.Timestamptz(6)
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token_id        String      @db.Uuid
+  user_id         String?     @db.Uuid
+  ip_address      String?
+  user_agent      String?
+  action          TokenAction
+  rejection_reason String?
+  metadata        Json?
+  created_at      DateTime    @default(now()) @db.Timestamptz(6)
 
-  token      VideoToken  @relation(fields: [token_id], references: [id], onDelete: Cascade)
-  user       User?       @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  token           VideoToken  @relation(fields: [token_id], references: [id], onDelete: Cascade)
+  user            User?       @relation(fields: [user_id], references: [id], onDelete: SetNull)
 
+  @@index([token_id])
   @@map("token_usage_logs")
 }
 
@@ -285,6 +334,8 @@ model ServiceOrder {
   user                       User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
   service                    Service            @relation(fields: [service_id], references: [id], onDelete: Restrict)
 
+  @@index([service_id])
+  @@index([user_id])
   @@map("service_orders")
 }
 
@@ -307,6 +358,7 @@ model ContactMessage {
 
 model Testimonial {
   id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String?  @db.Uuid
   author_name       String
   author_role       String?
   author_avatar_url String?
@@ -318,6 +370,10 @@ model Testimonial {
   sort_order        Int?
   created_at        DateTime @default(now()) @db.Timestamptz(6)
 
+  user              User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id])
+  @@index([is_published, is_featured, sort_order])
   @@map("testimonials")
 }
 
@@ -353,15 +409,34 @@ model RateLimitEvent {
   @@map("rate_limit_events")
 }
 
-model PaymentTransaction {
+model ActiveVideoSession {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  mp_payment_id  String   @unique
-  amount_cents   Int
-  currency       String
-  status         String
-  metadata       Json?
+  user_id        String   @db.Uuid
+  token_id       String   @unique @db.Uuid
+  fingerprint    String
+  ip_address     String
+  last_heartbeat DateTime @default(now()) @db.Timestamptz(6)
   created_at     DateTime @default(now()) @db.Timestamptz(6)
 
+  user  User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  token VideoToken @relation(fields: [token_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, last_heartbeat])
+  @@map("active_video_sessions")
+}
+
+model PaymentTransaction {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mp_payment_id    String?  @unique
+  binance_order_id String?  @unique
+  payment_provider String   @default("mercadopago")
+  amount_cents     Int
+  currency         String
+  status           String
+  metadata         Json?
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([payment_provider, status, created_at])
   @@map("payment_transactions")
 }
 
@@ -373,4 +448,187 @@ model PaymentEvent {
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("payment_events")
+}
+
+model TierPurchase {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String       @db.Uuid
+  tier              String       // "basic" | "pro"
+  status            String       @default("active") // active | refunded
+  payment_provider  String       // "mercadopago" | "binance" | "admin_grant"
+  payment_reference String?
+  amount_paid_cents Int
+  currency          String       @default("USD")
+  purchased_at      DateTime     @default(now()) @db.Timestamptz(6)
+  expires_at        DateTime?    @db.Timestamptz(6)
+
+  user        User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  scholarship Scholarship?
+
+  @@index([user_id, tier])
+  @@map("tier_purchases")
+}
+
+model Scholarship {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scholarship_code  String    @unique // "BECA-XXXX" human-readable identifier
+  grantor_id        String    @db.Uuid
+  tier_purchase_id  String    @unique @db.Uuid
+  recipient_email   String?   // set when grantor assigns manually
+  recipient_user_id String?   @db.Uuid
+  status            String    @default("unassigned") // unassigned | pending | active | expired | revoked
+  invite_token      String    @unique
+  pool_available_at DateTime  @db.Timestamptz(6) // when it enters the pool (purchase + 7 days)
+  application_id    String?   @unique @db.Uuid // linked ScholarshipApplication if assigned from pool
+  applicant_reason  String?   // copied from application for Pro user notification
+  granted_at        DateTime  @default(now()) @db.Timestamptz(6)
+  assigned_at       DateTime? @db.Timestamptz(6) // when grantor assigned or auto-assigned
+  redeemed_at       DateTime? @db.Timestamptz(6)
+  expires_at        DateTime? @db.Timestamptz(6)
+
+  grantor      User                    @relation("ScholarshipsGranted", fields: [grantor_id], references: [id], onDelete: Cascade)
+  recipient    User?                   @relation("ScholarshipsReceived", fields: [recipient_user_id], references: [id], onDelete: SetNull)
+  tierPurchase TierPurchase            @relation(fields: [tier_purchase_id], references: [id], onDelete: Cascade)
+  application  ScholarshipApplication? @relation(fields: [application_id], references: [id], onDelete: SetNull)
+
+  @@index([status, pool_available_at])
+  @@map("scholarships")
+}
+
+model ScholarshipApplication {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String    @db.Uuid
+  reason      String    // why they should receive the scholarship
+  status      String    @default("pending") // pending | approved | rejected
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  reviewed_at DateTime? @db.Timestamptz(6)
+
+  user        User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  scholarship Scholarship?
+
+  @@index([status, created_at])
+  @@map("scholarship_applications")
+}
+
+model BinancePayment {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  binance_order_id  String   @unique
+  merchant_trade_no String   @unique
+  status            String   // INITIAL | PENDING | PAID | CANCELED | REFUNDED | EXPIRED
+  amount            String
+  currency          String
+  metadata          Json?
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("binance_payments")
+}
+
+model CryptoPayment {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id     String    @unique
+  user_id      String    @db.Uuid
+  type         String    // "course" | "tier"
+  target_id    String    // course_id or tier name ("basic"/"pro")
+  amount_usdt  String    // exact amount with random cents e.g. "30.17"
+  status       String    @default("pending") // pending | completed | expired
+  tx_hash      String?   // blockchain tx hash once detected
+  expires_at   DateTime  @db.Timestamptz(6)
+  completed_at DateTime? @db.Timestamptz(6)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime  @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([status, expires_at])
+  @@map("crypto_payments")
+}
+
+model PaypalPayment {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String    @db.Uuid
+  tier            String    // "basic" | "pro"
+  amount_usd_cents Int      // amount in USD cents (2900 = $29)
+  status          String    @default("pending") // pending | approved | rejected
+  screenshot_b64  String    @db.Text // base64 data URL of payment screenshot
+  approved_at     DateTime? @db.Timestamptz(6)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([status, created_at])
+  @@map("paypal_payments")
+}
+
+model ProQuery {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  question   String    // user's question (direct, concise)
+  answer     String?   // admin's response
+  status     String    @default("pending") // pending | answered
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  answered_at DateTime? @db.Timestamptz(6)
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([status, created_at])
+  @@map("pro_queries")
+}
+
+model LessonReview {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  lesson_id  String   @db.Uuid
+  course_id  String   @db.Uuid
+  rating     Int      // 1-5
+  comment    String?  @db.VarChar(280)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, lesson_id])
+  @@index([lesson_id])
+  @@index([course_id])
+  @@map("lesson_reviews")
+}
+
+model CourseReview {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String   @db.Uuid
+  course_id   String   @db.Uuid
+  rating      Int      // 1-5
+  comment     String   @db.VarChar(500)
+  is_featured Boolean  @default(false)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, course_id])
+  @@index([course_id])
+  @@map("course_reviews")
+}
+
+model LessonComment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  lesson_id  String   @db.Uuid
+  course_id  String   @db.Uuid
+  content    String   @db.VarChar(500)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lesson_id], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@index([lesson_id, created_at])
+  @@index([course_id])
+  @@map("lesson_comments")
 }

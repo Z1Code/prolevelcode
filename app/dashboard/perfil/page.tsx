@@ -21,9 +21,9 @@ export default async function DashboardProfilePage({ searchParams }: ProfilePage
     : null;
 
   return (
-    <div>
+    <div className="page-enter">
       <h2 className="text-2xl font-semibold">Perfil</h2>
-      {message && <p className="mt-2 text-sm text-emerald-300">{message}</p>}
+      {message && <p className="mt-2 alert-enter text-sm text-emerald-300">{message}</p>}
       <form action={updateProfile} className="mt-4 grid gap-3 max-w-lg">
         <label className="flex flex-col gap-1">
           <span className="text-xs text-slate-400">Nombre completo</span>

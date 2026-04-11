@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Manrope } from "next/font/google";
 import { LanguageProvider } from "@/lib/i18n/language-provider";
+import { GoogleAnalytics } from "@/lib/google-analytics";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -14,6 +15,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://prolevelcode.com"),
   title: "ProLevelCode | Desarrollo Web e IA",
   description: "Servicios de desarrollo web y cursos premium de programacion e IA.",
   icons: {
@@ -26,12 +28,26 @@ export const metadata: Metadata = {
     apple: [{ url: "/favicon/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/favicon/site.webmanifest",
+  openGraph: {
+    title: "ProLevelCode | Desarrollo Web e IA",
+    description: "Servicios de desarrollo web y cursos premium de programacion e IA.",
+    url: "https://prolevelcode.com",
+    siteName: "ProLevelCode",
+    locale: "es_CL",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ProLevelCode | Desarrollo Web e IA",
+    description: "Servicios de desarrollo web y cursos premium de programacion e IA.",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${spaceGrotesk.variable} ${manrope.variable} liquid-theme antialiased`}>
+        <GoogleAnalytics />
         <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>

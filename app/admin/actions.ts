@@ -29,6 +29,67 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+/* ─────────────── CURRICULUM CARD → LESSONS ─────────────── */
+
+export async function openCurriculumModule(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const moduleKey = str(fd, "module_key");
+  const defaultSlug = str(fd, "default_slug");
+  const title = str(fd, "title");
+  const tier = str(fd, "tier") || "basic";
+
+  if (!moduleKey || !defaultSlug || !title) {
+    redirect("/admin/cursos");
+  }
+
+  // Check if course already exists by slug
+  let course = await prisma.course.findUnique({
+    where: { slug: defaultSlug },
+    select: { id: true },
+  });
+
+  // Auto-create if it doesn't exist
+  if (!course) {
+    course = await prisma.course.create({
+      data: {
+        title,
+        slug: defaultSlug,
+        tier_access: tier,
+        price_cents: 0,
+        currency: "USD",
+        is_published: false,
+        is_coming_soon: false,
+      },
+      select: { id: true },
+    });
+    revalidatePath("/admin/cursos");
+  }
+
+  redirect(`/admin/cursos/${course.id}/lecciones`);
+}
+
+export async function toggleCoursePublished(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  const course = await prisma.course.findUnique({
+    where: { id },
+    select: { is_published: true },
+  });
+  if (!course) return;
+
+  await prisma.course.update({
+    where: { id },
+    data: { is_published: !course.is_published, is_coming_soon: false },
+  });
+
+  revalidatePath(`/admin/cursos/${id}`);
+  revalidatePath(`/admin/cursos/${id}/lecciones`);
+  revalidatePath("/admin/cursos");
+  revalidatePath("/dashboard/cursos");
+}
+
 /* ─────────────── COURSES ─────────────── */
 
 export async function createCourse(fd: FormData) {
@@ -37,19 +98,18 @@ export async function createCourse(fd: FormData) {
   const slug = str(fd, "slug") || slugify(title);
   const subtitle = str(fd, "subtitle") || null;
   const description = str(fd, "description") || null;
-  const price_dollars = Number(fd.get("price_dollars")) || 0;
-  const price_cents = Math.round(price_dollars * 100);
-  const currency = str(fd, "currency") || "USD";
   const difficulty = str(fd, "difficulty") || null;
   const category = str(fd, "category") || null;
   const preview_video_url = str(fd, "preview_video_url") || null;
   const is_published = bool(fd, "is_published");
   const is_featured = bool(fd, "is_featured");
+  const is_coming_soon = bool(fd, "is_coming_soon");
+  const tier_access = str(fd, "tier_access") || "basic";
 
   if (!title) redirect("/admin/cursos/new?error=titulo-requerido");
 
   const course = await prisma.course.create({
-    data: { title, slug, subtitle, description, price_cents, currency, difficulty, category, preview_video_url, is_published, is_featured },
+    data: { title, slug, subtitle, description, price_cents: 0, currency: "USD", difficulty, category, preview_video_url, is_published, is_featured, is_coming_soon, tier_access },
   });
 
   revalidatePath("/admin/cursos");
@@ -63,20 +123,19 @@ export async function updateCourse(fd: FormData) {
   const slug = str(fd, "slug") || slugify(title);
   const subtitle = str(fd, "subtitle") || null;
   const description = str(fd, "description") || null;
-  const price_dollars = Number(fd.get("price_dollars")) || 0;
-  const price_cents = Math.round(price_dollars * 100);
-  const currency = str(fd, "currency") || "USD";
   const difficulty = str(fd, "difficulty") || null;
   const category = str(fd, "category") || null;
   const preview_video_url = str(fd, "preview_video_url") || null;
   const is_published = bool(fd, "is_published");
   const is_featured = bool(fd, "is_featured");
+  const is_coming_soon = bool(fd, "is_coming_soon");
+  const tier_access = str(fd, "tier_access") || "basic";
 
   if (!id || !title) redirect(`/admin/cursos/${id}/editar?error=titulo-requerido`);
 
   await prisma.course.update({
     where: { id },
-    data: { title, slug, subtitle, description, price_cents, currency, difficulty, category, preview_video_url, is_published, is_featured },
+    data: { title, slug, subtitle, description, difficulty, category, preview_video_url, is_published, is_featured, is_coming_soon, tier_access },
   });
 
   revalidatePath("/admin/cursos");
@@ -153,12 +212,20 @@ export async function reorderModule(fd: FormData) {
 export async function createLesson(fd: FormData) {
   await requireRole(["admin", "superadmin"]);
   const course_id = str(fd, "course_id");
-  const module_id = str(fd, "module_id");
   const title = str(fd, "title");
+<<<<<<< HEAD
+=======
+  const bunny_video_id = str(fd, "bunny_video_id") || null;
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
   const duration_minutes = int(fd, "duration_minutes") || null;
   const is_free_preview = bool(fd, "is_free_preview");
+  const is_pro_only = bool(fd, "is_pro_only");
 
+<<<<<<< HEAD
   if (!title) {
+=======
+  if (!title || !bunny_video_id) {
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
     revalidatePath(`/admin/cursos/${course_id}/lecciones`);
     return;
   }
@@ -171,15 +238,18 @@ export async function createLesson(fd: FormData) {
   await prisma.lesson.create({
     data: {
       course_id,
-      module_id,
       title,
+<<<<<<< HEAD
+=======
+      bunny_video_id,
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       duration_minutes,
       sort_order: (maxOrder._max.sort_order ?? 0) + 1,
       is_free_preview,
+      is_pro_only,
     },
   });
 
-  // Update course total_lessons count
   const count = await prisma.lesson.count({ where: { course_id } });
   await prisma.course.update({ where: { id: course_id }, data: { total_lessons: count } });
 
@@ -190,20 +260,79 @@ export async function updateLesson(fd: FormData) {
   await requireRole(["admin", "superadmin"]);
   const id = str(fd, "id");
   const course_id = str(fd, "course_id");
-  const module_id = str(fd, "module_id");
   const title = str(fd, "title");
+<<<<<<< HEAD
+=======
+  const bunny_video_id = str(fd, "bunny_video_id") || null;
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
   const duration_minutes = int(fd, "duration_minutes") || null;
   const is_free_preview = bool(fd, "is_free_preview");
+  const is_pro_only = bool(fd, "is_pro_only");
 
+<<<<<<< HEAD
   if (!title) {
+=======
+  if (!title || !bunny_video_id) {
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
     revalidatePath(`/admin/cursos/${course_id}/lecciones`);
     return;
   }
 
   await prisma.lesson.update({
     where: { id },
+<<<<<<< HEAD
     data: { module_id, title, duration_minutes, is_free_preview },
+=======
+    data: { title, bunny_video_id, duration_minutes, is_free_preview, is_pro_only },
+>>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
   });
+
+  revalidatePath(`/admin/cursos/${course_id}/lecciones`);
+}
+
+export async function createLessonsBulk(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const course_id = str(fd, "course_id");
+  const count = int(fd, "count");
+
+  if (!course_id || count < 1) {
+    revalidatePath(`/admin/cursos/${course_id}/lecciones`);
+    return;
+  }
+
+  const maxOrder = await prisma.lesson.aggregate({
+    where: { course_id },
+    _max: { sort_order: true },
+  });
+  let nextOrder = (maxOrder._max.sort_order ?? 0) + 1;
+
+  const lessons: {
+    course_id: string;
+    title: string;
+    bunny_video_id: string;
+    sort_order: number;
+    is_pro_only: boolean;
+    duration_minutes: number | null;
+  }[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const title = str(fd, `title_${i}`);
+    const bunny_video_id = str(fd, `bunny_video_id_${i}`);
+    const is_pro_only = fd.get(`is_pro_only_${i}`) === "on";
+    const duration_minutes = int(fd, `duration_minutes_${i}`) || null;
+    if (!title || !bunny_video_id) continue;
+    lessons.push({ course_id, title, bunny_video_id, sort_order: nextOrder++, is_pro_only, duration_minutes });
+  }
+
+  if (lessons.length === 0) {
+    revalidatePath(`/admin/cursos/${course_id}/lecciones`);
+    return;
+  }
+
+  await prisma.lesson.createMany({ data: lessons });
+
+  const totalCount = await prisma.lesson.count({ where: { course_id } });
+  await prisma.course.update({ where: { id: course_id }, data: { total_lessons: totalCount } });
 
   revalidatePath(`/admin/cursos/${course_id}/lecciones`);
 }
@@ -218,6 +347,151 @@ export async function deleteLesson(fd: FormData) {
   await prisma.course.update({ where: { id: course_id }, data: { total_lessons: count } });
 
   revalidatePath(`/admin/cursos/${course_id}/lecciones`);
+}
+
+/* ─────────────── CRYPTO PAYMENTS ─────────────── */
+
+export async function approveCryptoPayment(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  const { fulfillCryptoPayment } = await import("@/lib/crypto/fulfill");
+
+  const payment = await prisma.cryptoPayment.findUnique({ where: { id } });
+  if (!payment || payment.status === "completed") {
+    revalidatePath("/admin/pagos");
+    return;
+  }
+
+  await prisma.cryptoPayment.update({
+    where: { id, status: "pending" },
+    data: {
+      status: "completed",
+      tx_hash: "manual_admin_approval",
+      completed_at: new Date(),
+    },
+  });
+
+  await fulfillCryptoPayment(payment);
+  revalidatePath("/admin/pagos");
+}
+
+export async function rejectCryptoPayment(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  await prisma.cryptoPayment.update({
+    where: { id },
+    data: { status: "expired" },
+  });
+
+  revalidatePath("/admin/pagos");
+}
+
+/* ─────────────── PAYPAL PAYMENTS ─────────────── */
+
+export async function approvePaypalPayment(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  const now = new Date();
+
+  // Atomically claim the payment (prevents double approval)
+  let payment;
+  try {
+    payment = await prisma.paypalPayment.update({
+      where: { id, status: "pending" },
+      data: { status: "approved", approved_at: now },
+      include: { user: { select: { email: true, full_name: true } } },
+    });
+  } catch {
+    // Record not found or not pending — already approved/rejected
+    revalidatePath("/admin/pagos");
+    return;
+  }
+
+  // Check user doesn't already have an active tier
+  const existingActive = await prisma.tierPurchase.findFirst({
+    where: { user_id: payment.user_id, status: "active" },
+  });
+  if (existingActive) {
+    revalidatePath("/admin/pagos");
+    return;
+  }
+
+  // Create TierPurchase
+  const tierPurchase = await prisma.tierPurchase.create({
+    data: {
+      user_id: payment.user_id,
+      tier: payment.tier,
+      status: "active",
+      payment_provider: "paypal",
+      payment_reference: payment.id,
+      amount_paid_cents: payment.amount_usd_cents,
+      currency: "USD",
+    },
+  });
+
+  // Auto-create scholarship slot for Pro purchases
+  if (payment.tier === "pro") {
+    try {
+      const { createScholarshipForProPurchase } = await import("@/lib/scholarships/helpers");
+      await createScholarshipForProPurchase(payment.user_id, tierPurchase.id);
+    } catch {
+      // Don't block approval if scholarship creation fails
+    }
+  }
+
+  // Send confirmation email to user
+  try {
+    const { getResendClient } = await import("@/lib/email/resend");
+    const resend = getResendClient();
+    const tierLabel = payment.tier === "pro" ? "Pro" : "Basic";
+    await resend.emails.send({
+      from: "ProLevelCode <no-reply@prolevelcode.com>",
+      to: payment.user.email,
+      subject: `Tu plan ${tierLabel} fue activado`,
+      html: `
+        <h2>Tu plan ${tierLabel} esta activo</h2>
+        <p>Hola${payment.user.full_name ? ` ${payment.user.full_name}` : ""},</p>
+        <p>Tu pago PayPal fue verificado y tu plan <strong>${tierLabel}</strong> ya esta disponible.</p>
+        <p><a href="${process.env.NEXT_PUBLIC_APP_URL || "https://prolevelcode.com"}/cursos">Ir a mis cursos</a></p>
+      `,
+    });
+  } catch {
+    // silent
+  }
+
+  revalidatePath("/admin/pagos");
+}
+
+export async function rejectPaypalPayment(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  await prisma.paypalPayment.update({
+    where: { id },
+    data: { status: "rejected" },
+  });
+
+  revalidatePath("/admin/pagos");
+}
+
+export async function revokeTierPurchase(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  await prisma.tierPurchase.update({
+    where: { id },
+    data: { status: "refunded" },
+  });
+
+  revalidatePath("/admin/pagos");
 }
 
 /* ─────────────── ENROLLMENTS ─────────────── */
@@ -258,4 +532,421 @@ export async function deleteEnrollment(fd: FormData) {
   const id = str(fd, "id");
   await prisma.enrollment.delete({ where: { id } });
   revalidatePath("/admin/matriculas");
+}
+
+/* ─────────────── SCHOLARSHIP ADMIN ─────────────── */
+
+function scholarshipWinnerEmailHtml(name: string, loginUrl: string, cursosUrl: string) {
+  return `
+    <div style="font-family:'Segoe UI',Roboto,sans-serif;max-width:580px;margin:0 auto;color:#e2e8f0;">
+      <div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:16px;padding:44px 36px;border:1px solid rgba(148,163,184,0.15);">
+        <div style="text-align:center;margin-bottom:28px;"><span style="font-size:48px;">🎓</span></div>
+        <h1 style="font-size:26px;font-weight:700;color:#fff;margin:0 0 6px;text-align:center;">
+          Hola${name ? ` ${name}` : ""}, felicidades
+        </h1>
+        <p style="font-size:16px;color:#34d399;font-weight:600;text-align:center;margin:0 0 28px;">
+          Has sido seleccionado para recibir una beca en ProLevelCode
+        </p>
+        <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:24px;margin-bottom:24px;">
+          <p style="font-size:15px;color:#d1d5db;margin:0;line-height:1.7;">
+            Leimos tu aplicacion y queremos decirte que tu historia y tus ganas de aprender nos inspiraron.
+            Esta beca te abre las puertas a nuestros cursos para que puedas formarte en programacion,
+            desarrollo web y uso de inteligencia artificial de forma practica.
+          </p>
+        </div>
+        <h2 style="font-size:17px;font-weight:600;color:#fff;margin:0 0 12px;">Que incluye tu beca?</h2>
+        <ul style="font-size:14px;color:#94a3b8;line-height:1.8;padding-left:20px;margin:0 0 24px;">
+          <li>Acceso completo a los cursos de nivel <strong style="color:#34d399;">Basic</strong></li>
+          <li>Contenido actualizado y en constante crecimiento</li>
+          <li>Lecciones paso a paso para que aprendas haciendo</li>
+          <li>Comunidad de estudiantes con quienes crecer juntos</li>
+        </ul>
+        <p style="font-size:14px;color:#94a3b8;margin:0 0 28px;line-height:1.6;">
+          Esta oportunidad es posible gracias a un miembro Pro de nuestra comunidad que decidio
+          compartir su beca con alguien que realmente la necesitara. Ahora te toca a ti aprovecharla al maximo.
+        </p>
+        <div style="text-align:center;margin:32px 0;">
+          <a href="${loginUrl}" style="display:inline-block;background:linear-gradient(120deg,#00ff88,#2dd4bf,#3b82f6);color:#04180f;font-weight:700;font-size:16px;padding:16px 40px;border-radius:50px;text-decoration:none;">
+            Comenzar a aprender
+          </a>
+        </div>
+        <p style="font-size:13px;color:#64748b;margin:0 0 8px;text-align:center;line-height:1.6;">
+          Inicia sesion con tu cuenta y ve directo a
+          <a href="${cursosUrl}" style="color:#6366f1;text-decoration:underline;">Mis Cursos</a> para empezar.
+        </p>
+        <div style="border-top:1px solid rgba(148,163,184,0.12);margin-top:32px;padding-top:20px;">
+          <p style="font-size:13px;color:#64748b;margin:0;line-height:1.6;text-align:center;">
+            Si conoces a alguien mas que quiera aprender, cuentale sobre ProLevelCode.<br/>Juntos llegamos mas lejos. 🚀
+          </p>
+        </div>
+        <p style="font-size:12px;color:#475569;margin:28px 0 0;text-align:center;">— El equipo de ProLevelCode</p>
+      </div>
+    </div>`;
+}
+
+export async function adminAssignScholarship(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const scholarshipId = str(fd, "scholarship_id");
+  const applicationId = str(fd, "application_id");
+
+  if (!scholarshipId || !applicationId) return;
+
+  const scholarship = await prisma.scholarship.findUnique({ where: { id: scholarshipId } });
+  const application = await prisma.scholarshipApplication.findUnique({
+    where: { id: applicationId },
+    include: { user: { select: { id: true, email: true, full_name: true } } },
+  });
+
+  if (!scholarship || !application || scholarship.status !== "unassigned" || application.status !== "pending") {
+    revalidatePath("/admin/becas");
+    return;
+  }
+
+  // Determine if permanent
+  const { isEarlyProScholarship } = await import("@/lib/scholarships/helpers");
+  const isPermanent = await isEarlyProScholarship(scholarship.tier_purchase_id);
+  const now = new Date();
+  const expiresAt = isPermanent ? null : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  // 1) Send welcome email to recipient BEFORE activating
+  const { getResendClient } = await import("@/lib/email/resend");
+  const { env } = await import("@/lib/env");
+  const resend = getResendClient();
+  const firstName = application.user.full_name?.split(" ")[0] ?? "";
+
+  await resend.emails.send({
+    from: "ProLevelCode <no-reply@prolevelcode.com>",
+    to: application.user.email,
+    subject: "Felicidades — Ganaste una beca en ProLevelCode",
+    html: scholarshipWinnerEmailHtml(firstName, `${env.appUrl}/login`, `${env.appUrl}/dashboard/cursos`),
+  });
+
+  // 2) Activate scholarship
+  await prisma.$transaction([
+    prisma.scholarship.update({
+      where: { id: scholarship.id },
+      data: {
+        status: "active",
+        recipient_email: application.user.email,
+        recipient_user_id: application.user.id,
+        application_id: application.id,
+        applicant_reason: application.reason,
+        assigned_at: now,
+        redeemed_at: now,
+        expires_at: expiresAt,
+      },
+    }),
+    prisma.scholarshipApplication.update({
+      where: { id: application.id },
+      data: { status: "approved", reviewed_at: now },
+    }),
+  ]);
+
+  // 3) Notify Pro user (grantor)
+  try {
+    const grantor = await prisma.user.findUnique({
+      where: { id: scholarship.grantor_id },
+      select: { email: true },
+    });
+    if (grantor?.email) {
+      await resend.emails.send({
+        from: "ProLevelCode <no-reply@prolevelcode.com>",
+        to: grantor.email,
+        subject: `Tu beca ${scholarship.scholarship_code} fue asignada`,
+        html: `
+          <h2>Tu beca fue asignada</h2>
+          <p>Codigo: <strong>${scholarship.scholarship_code}</strong></p>
+          <p>Asignada a: <strong>${application.user.email}</strong></p>
+          <p>Su mensaje:</p>
+          <blockquote style="border-left:3px solid #6366f1;padding-left:12px;color:#555;">${application.reason}</blockquote>
+          <p><a href="${env.appUrl}/dashboard/beca">Ver mis becas</a></p>
+        `,
+      });
+    }
+  } catch {
+    // silent — grantor notification is best-effort
+  }
+
+  revalidatePath("/admin/becas");
+}
+
+export async function adminGrantScholarshipDirect(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  const app = await prisma.scholarshipApplication.findUnique({
+    where: { id },
+    include: { user: { select: { id: true, email: true, full_name: true } } },
+  });
+  if (!app || app.status !== "pending") return;
+
+  // 1) Send welcome email BEFORE activating
+  const { getResendClient } = await import("@/lib/email/resend");
+  const { env } = await import("@/lib/env");
+  const resend = getResendClient();
+  const firstName = app.user.full_name?.split(" ")[0] ?? "";
+
+  await resend.emails.send({
+    from: "ProLevelCode <no-reply@prolevelcode.com>",
+    to: app.user.email,
+    subject: "Felicidades — Ganaste una beca en ProLevelCode",
+    html: scholarshipWinnerEmailHtml(firstName, `${env.appUrl}/login`, `${env.appUrl}/dashboard/cursos`),
+  });
+
+  // 2) Activate scholarship
+  const existing = await prisma.tierPurchase.findFirst({
+    where: { user_id: app.user.id, tier: { in: ["basic", "pro"] }, status: "active" },
+  });
+
+  await prisma.$transaction([
+    prisma.scholarshipApplication.update({
+      where: { id },
+      data: { status: "approved", reviewed_at: new Date() },
+    }),
+    ...(existing
+      ? []
+      : [
+          prisma.tierPurchase.create({
+            data: {
+              user_id: app.user.id,
+              tier: "basic",
+              status: "active",
+              payment_provider: "admin_grant",
+              payment_reference: "Beca aprobada por admin",
+              amount_paid_cents: 0,
+              currency: "USD",
+            },
+          }),
+        ]),
+  ]);
+
+  revalidatePath("/admin/becas");
+}
+
+export async function adminRejectApplication(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  await prisma.scholarshipApplication.update({
+    where: { id },
+    data: { status: "rejected", reviewed_at: new Date() },
+  });
+
+  revalidatePath("/admin/becas");
+}
+
+/* ─────────────── SCHOLARSHIP EMAIL BLAST ─────────────── */
+
+export async function sendScholarshipWelcomeEmails() {
+  await requireRole(["admin", "superadmin"]);
+
+  const { getResendClient } = await import("@/lib/email/resend");
+  const { env } = await import("@/lib/env");
+  const resend = getResendClient();
+
+  // Find all active scholarship recipients with email
+  const activeScholarships = await prisma.scholarship.findMany({
+    where: {
+      status: "active",
+      recipient_user_id: { not: null },
+    },
+    select: {
+      recipient_email: true,
+      scholarship_code: true,
+      recipient: { select: { email: true, full_name: true } },
+    },
+  });
+
+  // Also find users who got Basic via admin_grant (beca directa)
+  const adminGranted = await prisma.tierPurchase.findMany({
+    where: {
+      payment_provider: "admin_grant",
+      status: "active",
+      payment_reference: { contains: "Beca" },
+    },
+    select: {
+      user: { select: { email: true, full_name: true } },
+    },
+  });
+
+  // Collect unique emails
+  const emailSet = new Map<string, string>();
+  for (const s of activeScholarships) {
+    const email = s.recipient?.email ?? s.recipient_email;
+    const name = s.recipient?.full_name ?? null;
+    if (email) emailSet.set(email, name ?? "");
+  }
+  for (const g of adminGranted) {
+    if (g.user.email) emailSet.set(g.user.email, g.user.full_name ?? "");
+  }
+
+  const loginUrl = `${env.appUrl}/login`;
+  const dashboardUrl = `${env.appUrl}/dashboard/cursos`;
+  let sent = 0;
+
+  for (const [email, name] of emailSet) {
+    const greeting = name ? `Hola ${name.split(" ")[0]}` : "Hola";
+
+    try {
+      await resend.emails.send({
+        from: "ProLevelCode <no-reply@prolevelcode.com>",
+        to: email,
+        subject: "Tu beca en ProLevelCode esta lista — activa tu cuenta",
+        html: `
+          <div style="font-family:'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#e2e8f0;">
+            <div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:16px;padding:40px 32px;border:1px solid rgba(148,163,184,0.15);">
+
+              <h1 style="font-size:24px;font-weight:700;color:#fff;margin:0 0 8px;">
+                ${greeting}, felicidades 🎉
+              </h1>
+
+              <p style="font-size:15px;color:#94a3b8;margin:0 0 24px;line-height:1.6;">
+                Has recibido una <strong style="color:#34d399;">beca gratuita</strong> en ProLevelCode
+                que te da acceso a nuestros cursos Basic.
+              </p>
+
+              <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:20px;margin-bottom:24px;">
+                <p style="font-size:14px;color:#d1d5db;margin:0;line-height:1.7;">
+                  Esta es una oportunidad real para aprender programacion, desarrollo web
+                  y tecnologia de forma practica. Cada leccion esta pensada para que avances
+                  paso a paso, a tu ritmo.
+                </p>
+              </div>
+
+              <p style="font-size:14px;color:#94a3b8;margin:0 0 24px;line-height:1.6;">
+                Creemos que el conocimiento transforma vidas. Aprovecha esta beca al maximo,
+                dedica tiempo a cada leccion, practica los ejercicios y no dudes en comentar
+                tus dudas dentro de la plataforma.
+              </p>
+
+              <div style="text-align:center;margin:32px 0;">
+                <a href="${loginUrl}" style="display:inline-block;background:linear-gradient(120deg,#00ff88,#2dd4bf,#3b82f6);color:#04180f;font-weight:700;font-size:15px;padding:14px 36px;border-radius:50px;text-decoration:none;">
+                  Activar mi cuenta
+                </a>
+              </div>
+
+              <p style="font-size:13px;color:#64748b;margin:0 0 8px;line-height:1.6;">
+                Una vez dentro, ve directamente a
+                <a href="${dashboardUrl}" style="color:#6366f1;text-decoration:underline;">Mis Cursos</a>
+                y comienza a aprender.
+              </p>
+
+              <div style="border-top:1px solid rgba(148,163,184,0.12);margin-top:28px;padding-top:20px;">
+                <p style="font-size:13px;color:#64748b;margin:0;line-height:1.6;">
+                  💬 <strong style="color:#94a3b8;">Una ultima cosa:</strong> si conoces a alguien
+                  que tambien quiera aprender — un companero de clase, un amigo, un familiar —
+                  cuentale sobre ProLevelCode. Cuantos mas seamos, mejor aprendemos juntos.
+                </p>
+              </div>
+
+              <p style="font-size:12px;color:#475569;margin:28px 0 0;text-align:center;">
+                — El equipo de ProLevelCode
+              </p>
+            </div>
+          </div>
+        `,
+      });
+      sent++;
+    } catch {
+      // Continue with next email if one fails
+    }
+
+    // Small delay between emails to avoid rate limits
+    await new Promise((r) => setTimeout(r, 300));
+  }
+
+  revalidatePath("/admin/becas");
+  return sent;
+}
+
+/* ─────────────── PRO QUERIES ─────────────── */
+
+export async function answerProQuery(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  const answer = str(fd, "answer");
+
+  if (!id || !answer) return;
+
+  await prisma.proQuery.update({
+    where: { id },
+    data: {
+      answer,
+      status: "answered",
+      answered_at: new Date(),
+    },
+  });
+
+  revalidatePath("/admin/consultas");
+}
+
+/* ─────────────── REVIEWS ─────────────── */
+
+export async function publishAsTestimonial(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const reviewId = str(fd, "review_id");
+  if (!reviewId) return;
+
+  const review = await prisma.courseReview.findUnique({
+    where: { id: reviewId },
+    include: {
+      user: { select: { full_name: true } },
+      course: { select: { title: true } },
+    },
+  });
+
+  if (!review) {
+    revalidatePath("/admin/resenas");
+    return;
+  }
+
+  try {
+    await prisma.testimonial.create({
+      data: {
+        author_name: review.user.full_name || "Estudiante",
+        content: review.comment,
+        rating: review.rating,
+        service_or_course: review.course.title,
+        is_published: true,
+        is_featured: false,
+      },
+    });
+  } catch (err) {
+    console.error("[publishAsTestimonial] failed:", err);
+  }
+
+  revalidatePath("/admin/resenas");
+}
+
+export async function deleteReview(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const reviewId = str(fd, "review_id");
+  const type = str(fd, "type");
+  if (!reviewId) return;
+
+  if (type === "lesson") {
+    await prisma.lessonReview.delete({ where: { id: reviewId } });
+  } else {
+    await prisma.courseReview.delete({ where: { id: reviewId } });
+  }
+
+  revalidatePath("/admin/resenas");
+}
+
+/* ─────────────── USERS ─────────────── */
+
+export async function deleteUser(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const id = str(fd, "id");
+  if (!id) return;
+
+  // Prevent deleting admin/superadmin accounts
+  const user = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  if (!user) return;
+  if (user.role === "admin" || user.role === "superadmin") return;
+
+  await prisma.user.delete({ where: { id } });
+  revalidatePath("/admin/usuarios");
 }
