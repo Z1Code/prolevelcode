@@ -52,10 +52,7 @@ async function getCourseThumbnail(course: {
     // fallback
   }
 
-  const youtubeId = course.preview_video_url ?? null;
-  return youtubeId
-    ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
-    : null;
+  return null;
 }
 
 export default async function CourseDetailPage({ params }: CourseDetailPageProps) {
