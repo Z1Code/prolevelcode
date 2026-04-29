@@ -360,6 +360,50 @@ export default async function DashboardCoursesPage() {
                   <ProModuleCard mod={mod} slug={resolveSlug(mod)} locked={!isPro} videoMinutes={resolveMinutes(mod)} />
                 </StaggerCard>
               ))}
+              <StaggerCard key="proyectos-reales">
+                {isPro ? (
+                  <Link href="/dashboard/proyectos" className="block">
+                    <div className="group relative overflow-hidden rounded-xl border border-amber-400/[0.12] bg-gradient-to-br from-amber-500/[0.04] via-white/[0.02] to-transparent p-5 transition-all duration-200 hover:border-amber-400/25 hover:shadow-[0_0_24px_rgba(251,191,36,0.08)]">
+                      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.06] via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                      <div className="relative">
+                        <div className="mb-3 flex items-center justify-between">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400 transition-colors group-hover:bg-amber-500/15">
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                              <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                            </svg>
+                          </div>
+                          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-amber-600/50 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-amber-400">
+                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <h3 className="text-sm font-semibold text-amber-200 transition-colors group-hover:text-amber-100">
+                          Proyectos reales
+                        </h3>
+                        <p className="mt-1.5 text-xs leading-relaxed text-amber-400/40">
+                          Mira cómo se construyen apps completas de principio a fin, en video.
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="relative overflow-hidden rounded-xl border border-amber-400/[0.06] bg-white/[0.015] p-5 opacity-40 select-none">
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.03] via-transparent to-transparent" />
+                    <div className="relative">
+                      <div className="mb-3 flex items-center justify-between">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/[0.07] text-amber-400/50">
+                          <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-amber-400/60">
+                          PRO
+                        </span>
+                      </div>
+                      <h3 className="text-sm font-medium text-slate-400">Proyectos reales</h3>
+                    </div>
+                  </div>
+                )}
+              </StaggerCard>
             </StaggerGrid>
           </div>
 

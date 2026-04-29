@@ -93,17 +93,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </div>
               <span className={tierBadge.feature}>PRO</span>
             </Link>
-            <Link className="nav-link-active group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-all duration-200 hover:bg-white/[0.06] hover:text-white" href="/dashboard/proyectos">
-              <div className="flex items-center gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600/30 to-violet-500/10 text-violet-400 ring-1 ring-violet-500/20 transition-all duration-200 group-hover:from-violet-600/40 group-hover:text-violet-300">
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                  </svg>
-                </span>
-                Proyectos reales
-              </div>
-              <span className={tierBadge.feature}>PRO</span>
-            </Link>
 
             <div className="!mt-3 border-t border-white/[0.06] pt-3">
               <Link className="nav-link-active group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-slate-400 transition-all duration-200 hover:bg-white/[0.06] hover:text-white" href="/cursos">
