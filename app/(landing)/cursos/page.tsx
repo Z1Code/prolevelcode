@@ -37,14 +37,14 @@ export default async function CoursesPage() {
   const courseIds = courses.map((c) => c.id).filter(Boolean);
   const thumbLessons = courseIds.length
     ? await prisma.lesson.findMany({
-        where: { course_id: { in: courseIds }, mux_status: "ready", thumbnail_url: { not: null } },
+        where: { course_id: { in: courseIds } },
         orderBy: { sort_order: "asc" },
         select: { course_id: true, youtube_video_id: true, bunny_video_id: true, bunny_thumbnail_url: true },
       })
     : [];
 
   const thumbnailMap = new Map<string, string>();
-  for (const lesson of previewLessons) {
+  for (const lesson of thumbLessons) {
     if (!thumbnailMap.has(lesson.course_id)) {
       if (lesson.bunny_thumbnail_url) {
         thumbnailMap.set(lesson.course_id, lesson.bunny_thumbnail_url);
