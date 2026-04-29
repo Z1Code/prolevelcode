@@ -22,15 +22,6 @@ export const env = {
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean),
 
-<<<<<<< HEAD
-  // Mux Video
-  muxTokenId: process.env.MUX_TOKEN_ID?.trim(),
-  muxTokenSecret: process.env.MUX_TOKEN_SECRET?.trim(),
-  muxSigningKey: process.env.MUX_SIGNING_KEY?.trim(),
-  muxPrivateKey: process.env.MUX_PRIVATE_KEY?.trim(),
-  muxWebhookSecret: process.env.MUX_WEBHOOK_SECRET?.trim(),
-  muxDrmConfigId: process.env.MUX_DRM_CONFIG_ID?.trim(),
-=======
   // Video tokens
   tokenDefaultTtl: Number((process.env.TOKEN_DEFAULT_TTL ?? "14400").trim()),
   tokenDefaultMaxViews: Number((process.env.TOKEN_DEFAULT_MAX_VIEWS ?? "3").trim()),
@@ -50,7 +41,6 @@ export const env = {
   cryptoWalletAddress: process.env.CRYPTO_WALLET_ADDRESS?.trim(),
   cryptoSolanaAddress: process.env.CRYPTO_SOLANA_ADDRESS?.trim(),
   bscscanApiKey: process.env.BSCSCAN_API_KEY?.trim(),
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 };
 
 export function requireEnv<T extends keyof typeof env>(key: T): NonNullable<(typeof env)[T]> {

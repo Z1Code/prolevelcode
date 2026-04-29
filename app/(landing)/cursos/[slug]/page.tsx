@@ -24,12 +24,9 @@ interface CourseModule {
   lessons: CourseLesson[];
 }
 
-<<<<<<< HEAD
-=======
 /**
  * Compute thumbnail URL server-side so no video IDs leak to the client.
  */
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 async function getCourseThumbnail(course: {
   id: string;
   thumbnail_url?: string | null;
@@ -37,17 +34,6 @@ async function getCourseThumbnail(course: {
   if (course.thumbnail_url) return course.thumbnail_url;
 
   try {
-<<<<<<< HEAD
-    const lesson = await prisma.lesson.findFirst({
-      where: { course_id: course.id, mux_status: "ready", thumbnail_url: { not: null } },
-      orderBy: { sort_order: "asc" },
-      select: { thumbnail_url: true },
-    });
-    return lesson?.thumbnail_url ?? null;
-  } catch {
-    return null;
-  }
-=======
     const previewLesson = await prisma.lesson.findFirst({
       where: { course_id: course.id, is_free_preview: true },
       orderBy: { sort_order: "asc" },
@@ -70,7 +56,6 @@ async function getCourseThumbnail(course: {
   return youtubeId
     ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
     : null;
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 }
 
 export default async function CourseDetailPage({ params }: CourseDetailPageProps) {

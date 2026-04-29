@@ -1,16 +1,10 @@
 "use client";
 
-<<<<<<< HEAD
-import { useMemo, useState } from "react";
-import MuxPlayer from "@mux/mux-player-react";
-import { Button } from "@/components/ui/button";
-=======
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getDeviceFingerprint } from "@/lib/tokens/fingerprint";
 import { LessonReviewModal } from "./lesson-review-modal";
 import { LessonCommentSection } from "./lesson-comment-section";
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 
 interface LessonOption {
   id: string;
@@ -48,23 +42,17 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
   const [tokenData, setTokenData] = useState<TokenPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-<<<<<<< HEAD
-=======
   const [showOverlay, setShowOverlay] = useState(true);
   const [completed, setCompleted] = useState<Set<string>>(new Set(completedLessonIds));
   const [completing, setCompleting] = useState(false);
   const [reviewModal, setReviewModal] = useState<{ lessonId: string; courseId: string; title: string } | null>(null);
   const fingerprintRef = useRef<string | null>(null);
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 
   const currentLesson = useMemo(
     () => lessons.find((lesson) => lesson.id === selectedLessonId),
     [lessons, selectedLessonId],
   );
 
-<<<<<<< HEAD
-  async function generateToken() {
-=======
   useEffect(() => {
     getDeviceFingerprint().then((fp) => {
       fingerprintRef.current = fp;
@@ -72,7 +60,6 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
   }, []);
 
   async function handlePlay() {
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
     if (!currentLesson) return;
 
     setLoading(true);
@@ -341,41 +328,6 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
             )}
           </AnimatePresence>
 
-<<<<<<< HEAD
-      <div className="liquid-surface p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-semibold">{currentLesson?.title ?? "Selecciona leccion"}</h3>
-            <p className="text-sm text-slate-400">Reproduccion protegida con DRM.</p>
-          </div>
-          <Button onClick={generateToken} disabled={loading || !currentLesson}>
-            {loading ? "Cargando..." : "Reproducir"}
-          </Button>
-        </div>
-
-        {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
-
-        {tokenData ? (
-          <div className="mt-4">
-            <MuxPlayer
-              playbackId={tokenData.playbackId}
-              tokens={{
-                playback: tokenData.tokens.playback,
-                thumbnail: tokenData.tokens.thumbnail,
-                storyboard: tokenData.tokens.storyboard,
-                drm: tokenData.tokens.drm,
-              }}
-              accentColor="#34d399"
-              className="aspect-video w-full rounded-xl"
-            />
-            <p className="mt-2 text-xs text-slate-400">
-              Expira: {new Date(tokenData.expiresAt).toLocaleString("es-ES")}
-            </p>
-          </div>
-        ) : (
-          <div className="liquid-surface-soft mt-4 aspect-video rounded-xl border border-dashed border-white/20" />
-        )}
-=======
           {/* Comments section */}
           {currentLesson && (
             <LessonCommentSection
@@ -384,7 +336,6 @@ export function SecureCoursePlayer({ lessons, completedLessonIds }: SecureCourse
             />
           )}
         </div>
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       </div>
 
       {/* Review modal */}

@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-import { getMux } from "@/lib/mux";
-import { prisma } from "@/lib/prisma";
-import type { VideoTokenResponse } from "@/lib/types";
-
-interface GenerateMuxTokensParams {
-  userId: string;
-  lessonId: string;
-  courseId: string;
-=======
 import { nanoid } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { checkCourseAccess } from "@/lib/access/check-access";
@@ -19,7 +9,6 @@ interface GenerateVideoTokenParams {
   courseId: string;
   ipAddress: string;
   userAgent: string;
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 }
 
 export async function generateMuxTokens(params: GenerateMuxTokensParams): Promise<VideoTokenResponse> {
@@ -30,19 +19,6 @@ export async function generateMuxTokens(params: GenerateMuxTokensParams): Promis
     throw new Error("NO_ENROLLMENT");
   }
 
-<<<<<<< HEAD
-  const lesson = await prisma.lesson.findUnique({
-    where: { id: lessonId },
-    select: { mux_playback_id: true, mux_status: true },
-  });
-
-  if (!lesson || lesson.mux_status !== "ready" || !lesson.mux_playback_id) {
-    throw new Error("VIDEO_NOT_READY");
-  }
-
-  const playbackId = lesson.mux_playback_id;
-  const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000);
-=======
   // Reuse existing valid token if available
   const existing = await prisma.videoToken.findFirst({
     where: {
@@ -67,7 +43,6 @@ export async function generateMuxTokens(params: GenerateMuxTokensParams): Promis
   // Create new token — generous limits
   const token = nanoid(32);
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
 
   const mux = getMux();
   const [playbackToken, thumbnailToken, storyboardToken, drmToken] = await Promise.all([
@@ -83,30 +58,6 @@ export async function generateMuxTokens(params: GenerateMuxTokensParams): Promis
       lesson_id: lessonId,
       course_id: courseId,
       expires_at: expiresAt,
-<<<<<<< HEAD
-    },
-  });
-
-  await prisma.tokenUsageLog.create({
-    data: {
-      token_id: videoToken.id,
-      user_id: userId,
-      action: "generated",
-    },
-  });
-
-  return {
-    playbackId,
-    tokens: {
-      playback: playbackToken,
-      thumbnail: thumbnailToken,
-      storyboard: storyboardToken,
-      drm: drmToken,
-    },
-    expiresAt: expiresAt.toISOString(),
-  };
-}
-=======
       max_views: 10,
       ttl_seconds: 86400,
       ip_address: ipAddress,
@@ -204,4 +155,3 @@ export function renderSecurePlayerHtml(input: SecurePlayerInput) {
 </body>
 </html>`;
 }
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee

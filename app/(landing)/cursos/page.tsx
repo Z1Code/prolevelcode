@@ -16,9 +16,6 @@ export const metadata: Metadata = {
 export default async function CoursesPage() {
   const courses = await getPublishedCourses();
 
-<<<<<<< HEAD
-  // Get first ready lesson per course for thumbnails
-=======
   const basicCourses = courses.filter((c) => (c.tier_access ?? "basic") === "basic");
   const proCourses = courses.filter((c) => (c.tier_access ?? "basic") === "pro");
 
@@ -37,26 +34,16 @@ export default async function CoursesPage() {
   }
 
   // Build thumbnail map from preview lessons
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
   const courseIds = courses.map((c) => c.id).filter(Boolean);
   const thumbLessons = courseIds.length
     ? await prisma.lesson.findMany({
         where: { course_id: { in: courseIds }, mux_status: "ready", thumbnail_url: { not: null } },
         orderBy: { sort_order: "asc" },
-<<<<<<< HEAD
-        select: { course_id: true, thumbnail_url: true },
-=======
         select: { course_id: true, youtube_video_id: true, bunny_video_id: true, bunny_thumbnail_url: true },
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       })
     : [];
 
   const thumbnailMap = new Map<string, string>();
-<<<<<<< HEAD
-  for (const lesson of thumbLessons) {
-    if (lesson.thumbnail_url && !thumbnailMap.has(lesson.course_id)) {
-      thumbnailMap.set(lesson.course_id, lesson.thumbnail_url);
-=======
   for (const lesson of previewLessons) {
     if (!thumbnailMap.has(lesson.course_id)) {
       if (lesson.bunny_thumbnail_url) {
@@ -66,7 +53,6 @@ export default async function CoursesPage() {
       } else if (lesson.youtube_video_id) {
         thumbnailMap.set(lesson.course_id, `https://img.youtube.com/vi/${lesson.youtube_video_id}/mqdefault.jpg`);
       }
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
     }
   }
 
@@ -91,46 +77,10 @@ export default async function CoursesPage() {
         Cursos orientados a resultados con proyectos reales y acceso de por vida.
       </p>
 
-<<<<<<< HEAD
-      <div className="mt-10 space-y-4">
-        {courses.map((course) => {
-          const thumb = course.thumbnail_url || thumbnailMap.get(course.id) || null;
-
-          return (
-            <Card key={course.id} className="p-5">
-              <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-                {thumb ? (
-                  <img
-                    src={thumb}
-                    alt={course.title}
-                    className="aspect-video w-full rounded-xl border border-white/10 object-cover"
-                  />
-                ) : (
-                  <div className="aspect-video rounded-xl border border-white/10 bg-gradient-to-br from-blue-500/40 via-slate-950 to-violet-500/25" />
-                )}
-                <div>
-                  <h2 className="text-2xl font-semibold">{course.title}</h2>
-                  <p className="mt-2 text-slate-400">{course.subtitle ?? course.description}</p>
-                  <p className="mt-4 text-sm text-slate-300">
-                    {course.total_lessons ?? 0} lecciones - {course.total_duration_minutes ?? 0} min
-                  </p>
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <span className="liquid-pill text-sm">{currencyFormatter(course.price_cents, course.currency)}</span>
-                    <Link href={`/cursos/${course.slug}`}>
-                      <Button size="sm">Ver curso</Button>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-=======
       <div className="mt-6 flex items-center gap-3">
         <Link href="/planes">
           <Button size="sm">Ver planes ($29 / $99)</Button>
         </Link>
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       </div>
 
         <CourseTimeline

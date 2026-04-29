@@ -61,16 +61,10 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
     }),
     prisma.user.count({ where: { created_at: { gte: thirtyDaysAgo } } }),
     prisma.course.count({ where: { is_published: true } }),
-<<<<<<< HEAD
-    prisma.videoToken.count({ where: { expires_at: { gt: now } } }),
-    prisma.enrollment.findMany({
-      orderBy: { enrolled_at: "desc" },
-=======
     prisma.videoToken.count({ where: { is_revoked: false, expires_at: { gt: now } } }),
     prisma.tierPurchase.findMany({
       where: purchaseWhere,
       orderBy: { purchased_at: "desc" },
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       take: 8,
       select: {
         id: true,
@@ -82,11 +76,7 @@ export async function getAdminMetrics(): Promise<AdminMetricsData> {
       },
     }),
     prisma.videoToken.findMany({
-<<<<<<< HEAD
-      where: { expires_at: { gt: now } },
-=======
       where: { is_revoked: false, expires_at: { gt: now }, user: { email: { notIn: excludedEmails } } },
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       orderBy: { created_at: "desc" },
       take: 8,
       select: {

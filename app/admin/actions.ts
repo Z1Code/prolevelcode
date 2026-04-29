@@ -213,19 +213,12 @@ export async function createLesson(fd: FormData) {
   await requireRole(["admin", "superadmin"]);
   const course_id = str(fd, "course_id");
   const title = str(fd, "title");
-<<<<<<< HEAD
-=======
   const bunny_video_id = str(fd, "bunny_video_id") || null;
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
   const duration_minutes = int(fd, "duration_minutes") || null;
   const is_free_preview = bool(fd, "is_free_preview");
   const is_pro_only = bool(fd, "is_pro_only");
 
-<<<<<<< HEAD
-  if (!title) {
-=======
   if (!title || !bunny_video_id) {
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
     revalidatePath(`/admin/cursos/${course_id}/lecciones`);
     return;
   }
@@ -239,10 +232,7 @@ export async function createLesson(fd: FormData) {
     data: {
       course_id,
       title,
-<<<<<<< HEAD
-=======
       bunny_video_id,
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       duration_minutes,
       sort_order: (maxOrder._max.sort_order ?? 0) + 1,
       is_free_preview,
@@ -261,30 +251,19 @@ export async function updateLesson(fd: FormData) {
   const id = str(fd, "id");
   const course_id = str(fd, "course_id");
   const title = str(fd, "title");
-<<<<<<< HEAD
-=======
   const bunny_video_id = str(fd, "bunny_video_id") || null;
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
   const duration_minutes = int(fd, "duration_minutes") || null;
   const is_free_preview = bool(fd, "is_free_preview");
   const is_pro_only = bool(fd, "is_pro_only");
 
-<<<<<<< HEAD
-  if (!title) {
-=======
   if (!title || !bunny_video_id) {
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
     revalidatePath(`/admin/cursos/${course_id}/lecciones`);
     return;
   }
 
   await prisma.lesson.update({
     where: { id },
-<<<<<<< HEAD
-    data: { module_id, title, duration_minutes, is_free_preview },
-=======
     data: { title, bunny_video_id, duration_minutes, is_free_preview, is_pro_only },
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
   });
 
   revalidatePath(`/admin/cursos/${course_id}/lecciones`);
@@ -949,4 +928,70 @@ export async function deleteUser(fd: FormData) {
 
   await prisma.user.delete({ where: { id } });
   revalidatePath("/admin/usuarios");
+}
+
+/* ─────────────── showcase ─────────────── */
+
+export async function createShowcaseProject(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const title = str(fd, "title");
+  if (!title) return;
+  const slug = str(fd, "slug") || slugify(title);
+  await prisma.showcaseProject.create({
+    data: {
+      slug,
+      title,
+      description: str(fd, "description") || null,
+      app_url: str(fd, "app_url") || null,
+      tech_tags: str(fd, "tech_tags")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+      sort_order: int(fd, "sort_order"),
+    },
+  });
+  revalidatePath("/admin/showcase");
+}
+
+export async function publishShowcaseProject(id: string, published: boolean) {
+  await requireRole(["admin", "superadmin"]);
+  await prisma.showcaseProject.update({ where: { id }, data: { is_published: published } });
+  revalidatePath("/admin/showcase");
+  revalidatePath("/");
+}
+
+export async function deleteShowcaseProject(id: string) {
+  await requireRole(["admin", "superadmin"]);
+  await prisma.showcaseProject.delete({ where: { id } });
+  revalidatePath("/admin/showcase");
+  revalidatePath("/");
+}
+
+export async function addShowcaseVideo(fd: FormData) {
+  await requireRole(["admin", "superadmin"]);
+  const projectId = str(fd, "project_id");
+  const bunnyVideoId = str(fd, "bunny_video_id");
+  const title = str(fd, "title");
+  if (!projectId || !bunnyVideoId || !title) return;
+  const { getBunnyThumbnailUrl } = await import("@/lib/bunny/signed-url");
+  await prisma.showcaseVideo.create({
+    data: {
+      project_id: projectId,
+      title,
+      description: str(fd, "description") || null,
+      bunny_video_id: bunnyVideoId,
+      bunny_thumbnail_url: getBunnyThumbnailUrl(bunnyVideoId),
+      duration_minutes: int(fd, "duration_minutes") || null,
+      sort_order: int(fd, "sort_order"),
+    },
+  });
+  revalidatePath("/admin/showcase");
+  revalidatePath("/");
+}
+
+export async function deleteShowcaseVideo(id: string) {
+  await requireRole(["admin", "superadmin"]);
+  await prisma.showcaseVideo.delete({ where: { id } });
+  revalidatePath("/admin/showcase");
+  revalidatePath("/");
 }

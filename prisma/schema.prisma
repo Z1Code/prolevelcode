@@ -632,3 +632,37 @@ model LessonComment {
   @@index([course_id])
   @@map("lesson_comments")
 }
+
+model ShowcaseProject {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug        String           @unique
+  title       String
+  description String?
+  app_url     String?
+  tech_tags   String[]
+  sort_order  Int              @default(0)
+  is_published Boolean         @default(false)
+  created_at  DateTime         @default(now()) @db.Timestamptz(6)
+
+  videos      ShowcaseVideo[]
+
+  @@map("showcase_projects")
+}
+
+model ShowcaseVideo {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  project_id          String          @db.Uuid
+  title               String
+  description         String?
+  bunny_video_id      String
+  bunny_thumbnail_url String?
+  duration_minutes    Int?
+  sort_order          Int             @default(0)
+  is_published        Boolean         @default(true)
+  created_at          DateTime        @default(now()) @db.Timestamptz(6)
+
+  project ShowcaseProject @relation(fields: [project_id], references: [id], onDelete: Cascade)
+
+  @@index([project_id, sort_order])
+  @@map("showcase_videos")
+}

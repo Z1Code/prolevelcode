@@ -2,17 +2,6 @@ import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminTokensPage() {
-<<<<<<< HEAD
-  const tokens = await prisma.videoToken.findMany({
-    orderBy: { created_at: "desc" },
-    take: 100,
-    select: {
-      id: true,
-      expires_at: true,
-      user: { select: { email: true } },
-      lesson: { select: { title: true } },
-    },
-=======
   // Test accounts excluded from all metrics.
   // Prisma groupBy does NOT support relation filters in `where` -- only scalar
   // fields of the model itself are allowed. We resolve the excluded user IDs
@@ -21,7 +10,6 @@ export default async function AdminTokensPage() {
   const excludedUsers = await prisma.user.findMany({
     where: { email: { in: excludedEmails } },
     select: { id: true },
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
   });
   const excludedUserIds = excludedUsers.map((u) => u.id);
 
@@ -156,28 +144,6 @@ export default async function AdminTokensPage() {
   return (
     <div className="page-enter space-y-6">
       <h2 className="text-2xl font-semibold">Monitor de tokens</h2>
-<<<<<<< HEAD
-      <Card className="mt-4 overflow-x-auto p-0">
-        <table className="liquid-table w-full text-left text-sm">
-          <thead className="text-slate-400">
-            <tr>
-              <th className="px-4 py-3">Usuario</th>
-              <th className="px-4 py-3">Leccion</th>
-              <th className="px-4 py-3">Expira</th>
-              <th className="px-4 py-3">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tokens.map((token) => (
-              <tr key={token.id}>
-                <td className="px-4 py-3">{token.user.email}</td>
-                <td className="px-4 py-3">{token.lesson.title}</td>
-                <td className="px-4 py-3">{token.expires_at.toLocaleString("es-ES")}</td>
-                <td className="px-4 py-3">
-                  {token.expires_at > new Date() ? "Activo" : "Expirado"}
-                </td>
-              </tr>
-=======
 
       {/* ── Summary stats ── */}
       <div className="stagger-enter grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -345,7 +311,6 @@ export default async function AdminTokensPage() {
                   </p>
                 </div>
               </div>
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
             ))}
           </div>
         </Card>

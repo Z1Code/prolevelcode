@@ -69,14 +69,6 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
   }));
 
   return (
-<<<<<<< HEAD
-    <div>
-      <Link href="/dashboard/cursos" className="mb-3 inline-flex text-xs text-slate-400 hover:text-slate-200">← Mis cursos</Link>
-      <h2 className="text-2xl font-semibold">{course.title}</h2>
-      <p className="mt-2 text-sm text-slate-400">Reproduccion segura con proteccion DRM.</p>
-      <div className="mt-4">
-        <SecureCoursePlayer lessons={playerLessons} />
-=======
     <DashboardShell>
       <Link
         href="/dashboard/cursos"
@@ -143,7 +135,6 @@ export default async function DashboardCoursePage({ params }: DashboardCoursePag
 
       <div className="mt-5">
         <SecureCoursePlayer lessons={playerLessons} completedLessonIds={completedLessonIds} />
->>>>>>> d257dd548c744f37ab00ed59f2d3839e003b43ee
       </div>
 
       {/* Course review section — shown when >= 70% complete */}
